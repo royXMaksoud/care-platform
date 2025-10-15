@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: second-pod
+  labels:
+    app: second-pod
+spec:
+  containers:
+  - name: second-container
+    image: nginx:latest
+    ports:
+    - containerPort: 80

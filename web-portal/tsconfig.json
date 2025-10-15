@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "jsx": "react-jsx",          // ✅ correct place
+    "module": "esnext",
+    "target": "esnext",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "paths": {
+      "@/*": ["src/*"],
+      "@care/ui/*": ["src/packages/ui/*"],
+      "@care/hooks/*": ["src/packages/hooks/*"],
+      "@care/permissions/*": ["src/packages/permissions/*"],
+      "@care/i18n/*": ["src/packages/i18n/*"],
+      "@care/audit/*": ["src/packages/audit/*"],
+      "@care/notify/*": ["src/packages/notify/*"],
+      "@care/utils/*": ["src/packages/utils/*"],
+      "@apps/*": ["src/apps/*"]
+    }
+  },
+  "include": ["src", "vite.config.ts"]
+}

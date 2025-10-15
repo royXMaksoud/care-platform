@@ -1,0 +1,17 @@
+{
+  "login": {
+    "title": "تسجيل الدخول",
+    "username": "اسم المستخدم",
+    "password": "كلمة المرور",
+    "loginButton": "تسجيل الدخول",
+    "language": "اللغة",
+    "loading": "جاري تسجيل الدخول...",
+    "error": "فشل تسجيل الدخول. يرجى المحاولة مرة أخرى.",
+    "usernameRequired": "اسم المستخدم مطلوب",
+    "passwordRequired": "كلمة المرور مطلوبة"
+  },
+  "languages": {
+    "english": "الإنجليزية",
+    "arabic": "العربية"
+  }
+} 

@@ -1,0 +1,304 @@
+/**
+ * PERMISSIONS CONSTANTS
+ * 
+ * ⚠️ IMPORTANT: These values MUST match exactly with backend data
+ * If you change anything here, make sure it matches the backend
+ * 
+ * To verify the correct names, check the API response:
+ * GET /auth/me/permissions
+ */
+
+// ============================================
+// SYSTEMS
+// ============================================
+export const SYSTEMS = {
+  // Content Management System
+  CMS: 'Content Management System',
+  
+  // Appointments System  
+  APPOINTMENTS: 'Appointments',
+  
+  // Chatbot AI System
+  CHATBOT: 'ChatbotAI',
+  
+  // Access Management System
+  ACCESS_MANAGEMENT: 'Access Management',
+}
+
+// ============================================
+// TENANTS (Access Management System)
+// ============================================
+// NOTE: Tenants are NOT part of CMS!
+// They belong to "Access Management" System with sections:
+//   - "Tenants" (CRUD for tenants)
+//   - "Tenants Subscription" (CRUD for subscriptions)
+export const TENANTS = {
+  ACCESS_MANAGEMENT: 'Access Management',
+}
+
+// Access Management Sections
+export const ACCESS_SECTIONS = {
+  TENANTS: 'Tenants',
+  SUBSCRIPTIONS: 'Tenants Subscription',
+}
+
+// ============================================
+// SECTIONS (CMS)
+// ============================================
+export const CMS_SECTIONS = {
+  CODE_TABLE: 'Code Table',
+  USER_MANAGEMENT: 'User Management',
+  SYSTEMS: 'System',
+  SECTIONS: 'System Section',
+  ORGANIZATIONS: 'Organizations',
+  ACTIONS: 'System Section Action',
+  TENANTS: 'Tenants',
+  SUBSCRIPTIONS: 'Tenants Subscription',  // Note: "Tenants Subscription" not "Tenant Subscriptions"
+  TEST_CMS: 'Test CMS',  // Test section
+}
+
+// ============================================
+// ACTION CODES
+// ============================================
+
+/**
+ * Code Table Action Codes
+ * Based on your API response
+ */
+export const CODE_TABLE_ACTIONS = {
+  CREATE: 'CRE',        // "Create Code Table"
+  DELETE: 'Del',        // "Delete Code Table"
+  LIST: 'List',         // "List Code Table"
+  UPDATE: 'UP',         // "Update Code Table"
+}
+
+/**
+ * User Management Action Codes
+ * Based on your API response
+ */
+export const USER_MANAGEMENT_ACTIONS = {
+  CREATE: 'CRE',   // "Create User"
+  DELETE: 'Del',   // "Delete User"
+  LIST: 'List',    // "List Users"
+  UPDATE: 'UP',    // "Update User"
+}
+
+/**
+ * System Action Codes
+ * All CMS sections use the same pattern
+ */
+export const SYSTEM_ACTIONS = {
+  CREATE: 'CRE',   // "Create System"
+  DELETE: 'Del',   // "Delete System"
+  LIST: 'List',    // "List Systems"
+  UPDATE: 'UP',    // "Update System"
+}
+
+/**
+ * System Section Action Codes
+ */
+export const SYSTEM_SECTION_ACTIONS = {
+  CREATE: 'CRE',   // "Create System Section"
+  DELETE: 'Del',   // "Delete System Section"
+  LIST: 'List',    // "List System Section"
+  UPDATE: 'UP',    // "Update System Section"
+}
+
+/**
+ * System Section Action (Actions page) Codes
+ */
+export const SECTION_ACTION_ACTIONS = {
+  CREATE: 'CRE',
+  DELETE: 'Del',
+  LIST: 'List',
+  UPDATE: 'UP',
+}
+
+/**
+ * Tenants Action Codes
+ */
+export const TENANTS_ACTIONS = {
+  CREATE: 'CRE',
+  DELETE: 'Del',
+  LIST: 'List',
+  UPDATE: 'UP',
+}
+
+/**
+ * Tenants Subscription Action Codes
+ */
+export const SUBSCRIPTIONS_ACTIONS = {
+  CREATE: 'CRE',
+  DELETE: 'Del',
+  LIST: 'List',
+  UPDATE: 'UP',
+}
+
+/**
+ * Appointments Action Codes
+ * Example - adjust based on your actual data
+ */
+export const APPOINTMENTS_ACTIONS = {
+  CREATE: 'create',
+  UPDATE: 'update',
+  LIST: 'list',
+  DELETE: 'delete',
+  CANCEL: 'cancel',
+}
+export const ORGANIZATIONS_ACTIONS = {
+  CREATE: 'create',
+  UPDATE: 'update',
+  LIST: 'list',
+  DELETE: 'delete',
+  CANCEL: 'cancel',
+}
+
+// ============================================
+// MENU ITEMS CONFIGURATION
+// ============================================
+
+/**
+ * CMS Menu Items
+ * Used in Home.jsx to show/hide menu items based on permissions
+ */
+export const CMS_MENU_ITEMS = [
+  {
+    id: 'systems',
+    to: 'systems',
+    label: 'Systems',
+    sectionName: CMS_SECTIONS.SYSTEMS,
+    systemName: SYSTEMS.CMS,
+    requiredPermission: 'List',
+  },
+  {
+    id: 'sections',
+    to: 'sections',
+    label: 'Sections',
+    sectionName: CMS_SECTIONS.SECTIONS,
+    systemName: SYSTEMS.CMS,
+    requiredPermission: 'List',
+  },
+  {
+    id: 'actions',
+    to: 'actions',
+    label: 'Actions',
+    sectionName: CMS_SECTIONS.ACTIONS,
+    systemName: SYSTEMS.CMS,
+    requiredPermission: 'List',
+  },
+  {
+    id: 'tenants',
+    to: 'tenants',
+    label: 'Tenants',
+    sectionName: CMS_SECTIONS.TENANTS,
+    systemName: SYSTEMS.CMS,
+    requiredPermission: 'List',
+  },
+  {
+    id: 'users',
+    to: 'users',
+    label: 'Users',
+    sectionName: CMS_SECTIONS.USER_MANAGEMENT,
+    systemName: SYSTEMS.CMS,
+    requiredPermission: 'List',
+  },
+  {
+    id: 'subscriptions',
+    to: 'subscriptions',
+    label: 'Tenant Subscriptions',
+    sectionName: CMS_SECTIONS.SUBSCRIPTIONS,
+    systemName: SYSTEMS.CMS,
+    requiredPermission: 'List',
+  },
+  {
+    id: 'codeTable',
+    to: 'codeTable',
+    label: 'Code Table',
+    sectionName: CMS_SECTIONS.CODE_TABLE,
+    systemName: SYSTEMS.CMS,
+    requiredPermission: 'List',
+  },
+  {
+    id: 'organizations',
+    to: 'organizations',
+    label: 'Organizations',
+    sectionName: CMS_SECTIONS.ORGANIZATIONS,
+    systemName: SYSTEMS.CMS,
+    requiredPermission: 'List',
+  },
+  
+]
+
+// ============================================
+// SCOPE CONSTANTS (if needed)
+// ============================================
+
+/**
+ * Gender Scope IDs
+ * From your API response
+ */
+export const GENDER_SCOPES = {
+  FEMALE: 'b9002472-a2c2-4f62-9a9f-7571ccdb7fde',
+  MALE: '4cb34397-aba7-4b3d-8d72-627c2d107d70',
+}
+
+/**
+ * Code Table IDs
+ * From your API response
+ */
+export const CODE_TABLES = {
+  GENDER: '8969b32a-2ff5-4004-9dca-ad6a2425d762',
+}
+
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
+
+/**
+ * Get section name by route path
+ * @param {string} path - Route path (e.g., 'codeTable')
+ * @returns {string|null} Section name or null
+ */
+export function getSectionNameByPath(path) {
+  const item = CMS_MENU_ITEMS.find(item => item.to === path)
+  return item?.sectionName || null
+}
+
+/**
+ * Get system name by route path
+ * @param {string} path - Route path
+ * @returns {string|null} System name or null
+ */
+export function getSystemNameByPath(path) {
+  const item = CMS_MENU_ITEMS.find(item => item.to === path)
+  return item?.systemName || null
+}
+
+/**
+ * Get required permission by route path
+ * @param {string} path - Route path
+ * @returns {string|null} Required permission code or null
+ */
+export function getRequiredPermissionByPath(path) {
+  const item = CMS_MENU_ITEMS.find(item => item.to === path)
+  return item?.requiredPermission || null
+}
+
+// ============================================
+// EXPORT ALL
+// ============================================
+
+export default {
+  SYSTEMS,
+  CMS_SECTIONS,
+  CODE_TABLE_ACTIONS,
+  USER_MANAGEMENT_ACTIONS,
+  APPOINTMENTS_ACTIONS,
+  CMS_MENU_ITEMS,
+  GENDER_SCOPES,
+  CODE_TABLES,
+  getSectionNameByPath,
+  getSystemNameByPath,
+  getRequiredPermissionByPath,
+}
+
