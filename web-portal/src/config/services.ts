@@ -6,6 +6,7 @@ export const SERVICES: Record<string, string> = {
   access: '/access',
   appointments: '/appointments',
   complaints: '/complaints',
+  das: '/das',
 //add more services 
 }
 

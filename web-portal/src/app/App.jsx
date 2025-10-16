@@ -6,7 +6,9 @@ import { Card } from '@/components/ui/card'
 import ShellSwitcher from '@/layout/ShellSwitcher'
 import HomeCare from '@/pages/home/HomeCare'
 // lazy-load CMS module
-const CMSRoutes = lazy(() => import('@/modules/cms/routes'))  
+const CMSRoutes = lazy(() => import('@/modules/cms/routes'))
+// lazy-load DAS module
+const DASRoutes = lazy(() => import('@/modules/das/routes'))  
 
 
 
@@ -87,9 +89,17 @@ export default function App() {
               </Suspense>
             }
           />
+          <Route
+            path="/das/*"
+            element={
+              <Suspense fallback={<div className="p-6">Loading…</div>}>
+                <DASRoutes />
+              </Suspense>
+            }
+          />
 
           {modules
-          .filter(m => m.path !== '/cms')
+          .filter(m => m.path !== '/cms' && m.path !== '/das')
           .map((m, idx) => (
             <Route
               key={m.path || `${m.name}-${idx}`}

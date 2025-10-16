@@ -491,7 +491,7 @@ export default function CrudPage({
       )}
 
       {/* Data Table - Takes remaining space */}
-      <div className="flex-1 overflow-hidden bg-card">
+      <div className="flex-1 overflow-hidden bg-card min-h-0">
         <DataTable
           title={title}
           service={service}

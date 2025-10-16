@@ -23,6 +23,9 @@ export const SYSTEMS = {
   
   // Access Management System
   ACCESS_MANAGEMENT: 'Access Management',
+  
+  // Data Analysis Service
+  DAS: 'Data Analysis Service',
 }
 
 // ============================================
@@ -145,12 +148,40 @@ export const APPOINTMENTS_ACTIONS = {
   DELETE: 'delete',
   CANCEL: 'cancel',
 }
+
 export const ORGANIZATIONS_ACTIONS = {
   CREATE: 'create',
   UPDATE: 'update',
   LIST: 'list',
   DELETE: 'delete',
   CANCEL: 'cancel',
+}
+
+// ============================================
+// DAS SECTIONS
+// ============================================
+export const DAS_SECTIONS = {
+  FILES: 'Files',
+  DATASETS: 'Datasets',
+  ANALYSIS: 'Analysis',
+  PIPELINES: 'Pipelines',
+  JOBS: 'Jobs',
+}
+
+/**
+ * DAS Action Codes
+ */
+export const DAS_ACTIONS = {
+  CREATE: 'CRE',
+  DELETE: 'Del',
+  LIST: 'List',
+  UPDATE: 'UP',
+  UPLOAD: 'Upload',
+  DOWNLOAD: 'Download',
+  VALIDATE: 'Validate',
+  JOIN: 'Join',
+  PROFILE: 'Profile',
+  EXECUTE: 'Execute',
 }
 
 // ============================================

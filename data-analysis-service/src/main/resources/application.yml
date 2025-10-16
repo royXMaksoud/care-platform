@@ -1,0 +1,133 @@
+server:
+  port: 6072
+
+spring:
+  application:
+    name: data-analysis-service
+  
+  cloud:
+    discovery:
+      enabled: true
+  
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:das_db}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:P@ssw0rd}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        default_schema: public
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+  
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 200MB
+      max-request-size: 200MB
+      file-size-threshold: 2MB
+
+  messages:
+    basename: i18n/messages
+    fallback-to-system-locale: false
+    encoding: UTF-8
+    cache-duration: 0
+
+  jackson:
+    time-zone: UTC
+    serialization:
+      WRITE_DATES_AS_TIMESTAMPS: false
+      FAIL_ON_EMPTY_BEANS: false
+    deserialization:
+      FAIL_ON_UNKNOWN_PROPERTIES: false
+
+  validation:
+    enabled: true
+
+  web:
+    locale: en
+    locale-resolver: accept-header
+
+# JWT configuration (must match auth-service)
+jwt:
+  secret: ${JWT_SECRET:SuperSecureKeyThatIsAtLeast64CharactersLongToAvoidWeakKeyException1234567890}
+  expiration: ${JWT_EXPIRATION:86400000}
+  refreshExpiration: ${JWT_REFRESH_EXPIRATION:2592000000}
+
+# Care platform security settings
+care:
+  security:
+    csrf:
+      enabled: false
+    cors:
+      allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:8080,http://localhost:5173}
+      allowed-methods: GET,POST,PUT,DELETE,OPTIONS
+      allowed-headers: Authorization,Content-Type,X-Requested-With
+
+# Storage configuration
+storage:
+  root: storage/
+
+# Actuator endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+  health:
+    defaults:
+      enabled: true
+
+# Swagger/OpenAPI
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    try-it-out-enabled: true
+    operationsSorter: method
+  default-produces-media-type: application/json
+
+# Eureka Client Configuration
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${server.port}
+    lease-renewal-interval-in-seconds: 5
+    lease-expiration-duration-in-seconds: 15
+
+# Logging
+logging:
+  level:
+    root: INFO
+    com.portal.das: DEBUG
+    com.sharedlib.core: DEBUG
+    org.springframework.web: INFO
+    org.springframework.security: INFO
+    org.hibernate: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

@@ -417,7 +417,7 @@ export default function DataTable({
 
       {/* Compact Table */}
       <div className="relative rounded-lg border border-border overflow-hidden bg-card">
-        <div className="overflow-x-auto scrollbar-modern">
+        <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-300px)] scrollbar-modern">
           <table className="w-full">
             <thead>
               {table.getHeaderGroups().map((hg) => (

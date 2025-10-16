@@ -71,7 +71,7 @@ export default function SectionActionList() {
   }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
+    <div className="h-screen flex flex-col overflow-hidden min-h-0">
       <CrudPage
         title="System Section Actions"
         service="access"

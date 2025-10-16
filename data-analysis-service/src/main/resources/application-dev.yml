@@ -1,0 +1,117 @@
+server:
+  port: 6072
+
+spring:
+  application:
+    name: data-analysis-service
+  
+  # Use H2 database for development
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password: 
+    driver-class-name: org.h2.Driver
+  
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.H2Dialect
+        default_schema: public
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+  
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 200MB
+      max-request-size: 200MB
+      file-size-threshold: 2MB
+
+  # i18n configuration (uses shared-lib messages)
+  messages:
+    basename: i18n/messages
+    fallback-to-system-locale: false
+    encoding: UTF-8
+    cache-duration: 0
+
+  jackson:
+    time-zone: UTC
+    serialization:
+      WRITE_DATES_AS_TIMESTAMPS: false
+      FAIL_ON_EMPTY_BEANS: false
+    deserialization:
+      FAIL_ON_UNKNOWN_PROPERTIES: false
+
+  validation:
+    enabled: true
+
+  web:
+    locale: en
+    locale-resolver: accept-header
+
+# JWT configuration (shared-lib)
+# Must match the secret used by auth-service
+jwt:
+  secret: SuperSecureKeyThatIsAtLeast64CharactersLongToAvoidWeakKeyException1234567890
+  expiration: 86400000
+  refreshExpiration: 2592000000
+
+# Care platform security settings
+care:
+  security:
+    csrf:
+      enabled: false
+    cors:
+      allowed-origins: http://localhost:3000,http://localhost:8080,http://localhost:5173
+      allowed-methods: GET,POST,PUT,DELETE,OPTIONS
+      allowed-headers: Authorization,Content-Type,X-Requested-With,Accept-Language,X-User-Id
+
+# Storage configuration
+storage:
+  root: storage/
+
+# Actuator endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,h2-console
+  endpoint:
+    health:
+      show-details: when-authorized
+  health:
+    defaults:
+      enabled: true
+
+# Swagger/OpenAPI
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    try-it-out-enabled: true
+  default-produces-media-type: application/json
+
+# Logging with MDC
+logging:
+  level:
+    root: INFO
+    com.portal.das: DEBUG
+    com.sharedlib.core: DEBUG
+    org.springframework.web: INFO
+    org.springframework.security: INFO
+    org.hibernate: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] [%X{requestId}] [%X{userId}] %-5level %logger{36} - %msg%n"

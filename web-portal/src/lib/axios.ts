@@ -7,10 +7,34 @@ export const api = axios.create({
   withCredentials: false,
 })
 
-// Attach Authorization on every request
+// Attach Authorization, Accept-Language, and X-User-Id on every request
 api.interceptors.request.use((cfg) => {
-  const t = authStorage?.getToken?.()
-  if (t) cfg.headers = { ...(cfg.headers || {}), Authorization: `Bearer ${t}` }
+  // JWT Token
+  const token = authStorage?.getToken?.()
+  if (token) {
+    cfg.headers.Authorization = `Bearer ${token}`
+  }
+
+  // Language for i18n
+  const lang = localStorage.getItem('lang') || 
+               authStorage?.getUser?.()?.lang || 
+               'en'
+  cfg.headers['Accept-Language'] = lang
+
+  // User ID for tracking and multi-tenancy
+  const user = authStorage?.getUser?.()
+  if (user?.userId) {
+    cfg.headers['X-User-Id'] = user.userId
+  }
+
+  // ETag for permissions caching
+  if (cfg.url?.includes('/auth/me/permissions')) {
+    const etag = authStorage?.getPermsEtag?.()
+    if (etag) {
+      cfg.headers['If-None-Match'] = etag
+    }
+  }
+
   return cfg
 })
 

@@ -1,0 +1,74 @@
+# Test configuration for data-analysis-service
+server:
+  port: 0 # Random port for tests
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+  
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+  
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 10MB
+  
+  messages:
+    basename: i18n/messages
+    fallback-to-system-locale: false
+    encoding: UTF-8
+    cache-duration: 0
+
+# Storage configuration for tests
+storage:
+  root-path: ${java.io.tmpdir}/das-test-storage
+
+# JWT configuration for tests
+jwt:
+  secret: TestSecureKeyThatIsAtLeast64CharactersLongForTestingPurposesOnly1234567890
+  expiration: 86400000
+  refreshExpiration: 2592000000
+
+# Security configuration for tests
+care:
+  security:
+    csrf:
+      enabled: false
+    cors:
+      allowed-origins: http://localhost:3000
+      allowed-methods: GET,POST,PUT,DELETE,OPTIONS
+      allowed-headers: Authorization,Content-Type,X-Requested-With
+
+# Actuator configuration for tests
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+# Logging configuration for tests
+logging:
+  level:
+    root: WARN
+    com.portal.das: DEBUG
+    com.sharedlib.core: INFO
+    org.springframework.web: WARN
+    org.springframework.security: WARN
+    org.hibernate: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+

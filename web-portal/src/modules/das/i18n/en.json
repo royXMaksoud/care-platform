@@ -1,0 +1,212 @@
+{
+  "das": {
+    "title": "Data Analysis Service",
+    "subtitle": "Upload, explore, clean, and analyze your data",
+    "upload": {
+      "title": "Upload Files",
+      "dragDrop": "Drag & drop files here",
+      "browse": "or click to browse",
+      "browseFiles": "Browse Files",
+      "formats": "Supported formats: CSV, Excel (XLSX, XLS)",
+      "selected": "Selected Files",
+      "clearAll": "Clear All",
+      "uploadRegister": "Upload & Register",
+      "processing": "Processing...",
+      "success": "Dataset registered successfully",
+      "failed": "Upload failed"
+    },
+    "datasets": {
+      "title": "My Datasets",
+      "noDatasets": "No Datasets Yet",
+      "noDatasetsCta": "Upload files above to create your first dataset",
+      "loading": "Loading datasets...",
+      "error": "Error loading datasets",
+      "tryAgain": "Try Again",
+      "columns": {
+        "name": "Name",
+        "rows": "Rows",
+        "columns": "Columns",
+        "createdAt": "Created At"
+      },
+      "actions": {
+        "view": "View Details",
+        "download": "Download CSV",
+        "delete": "Delete Dataset",
+        "deleteConfirm": "Are you sure you want to delete this dataset?"
+      }
+    },
+    "details": {
+      "back": "Back",
+      "download": "Download",
+      "delete": "Delete",
+      "reProfile": "Re-Profile",
+      "notFound": "Dataset Not Found",
+      "notFoundMessage": "The requested dataset could not be loaded",
+      "stats": {
+        "totalRows": "Total Rows",
+        "totalColumns": "Total Columns",
+        "fileId": "File ID"
+      }
+    },
+    "tabs": {
+      "profile": "Profile",
+      "charts": "Charts",
+      "quality": "Quality",
+      "join": "Join",
+      "pipelines": "Pipelines",
+      "jobs": "Jobs"
+    },
+    "profile": {
+      "title": "Dataset Profile",
+      "search": "Search columns...",
+      "showing": "Showing {count} of {total} columns",
+      "columns": {
+        "name": "Column Name",
+        "type": "Type",
+        "confidence": "Confidence",
+        "nulls": "Nulls",
+        "valid": "Valid",
+        "invalid": "Invalid",
+        "unique": "Unique",
+        "examples": "Examples"
+      },
+      "explore": "Explore",
+      "noColumns": "No columns found",
+      "adjustSearch": "Try adjusting your search term"
+    },
+    "charts": {
+      "title": "Data Visualization",
+      "selectColumn": "Select Column",
+      "copyJson": "Copy JSON",
+      "download": "Download",
+      "loading": "Loading chart data...",
+      "summary": "Summary Statistics",
+      "distribution": "Distribution (Histogram)",
+      "topCategories": "Top Categories",
+      "timeSeries": "Time Series"
+    },
+    "quality": {
+      "title": "Data Quality Validation",
+      "rules": "Validation Rules",
+      "addRule": "Add Rule",
+      "addFirstRule": "Add First Rule",
+      "noRules": "No validation rules yet",
+      "validate": "Validate Dataset",
+      "validating": "Validating...",
+      "saveTemplate": "Save Template",
+      "loadTemplate": "Load Template",
+      "templateSaved": "Template saved to local storage",
+      "templateLoaded": "Template loaded",
+      "report": {
+        "title": "Validation Report",
+        "downloadViolations": "Download Violations CSV",
+        "totalRows": "Total Rows",
+        "totalViolations": "Total Violations",
+        "rulesChecked": "Rules Checked",
+        "violations": "violations",
+        "rows": "Rows"
+      },
+      "fields": {
+        "column": "Column",
+        "required": "Required",
+        "expectedType": "Expected Type",
+        "min": "Min",
+        "max": "Max",
+        "regex": "Regex Pattern",
+        "regexPlaceholder": "e.g., ^[A-Za-z0-9]+@.*$"
+      }
+    },
+    "join": {
+      "title": "Join Datasets",
+      "configure": "Configure Join",
+      "rightDataset": "Right Dataset",
+      "selectDataset": "Select a dataset...",
+      "joinType": "Join Type",
+      "joinKeys": "Join Keys",
+      "addKey": "Add Key",
+      "noKeys": "No join keys configured",
+      "addFirstKey": "Add First Key",
+      "suffixes": {
+        "left": "Left Suffix",
+        "right": "Right Suffix",
+        "leftPlaceholder": "_left",
+        "rightPlaceholder": "_right"
+      },
+      "runJoin": "Run Join",
+      "joining": "Joining...",
+      "success": "Join Successful!",
+      "successMessage": "Created new dataset with {rows} rows and {columns} columns"
+    },
+    "pipelines": {
+      "title": "Pipeline Execution",
+      "templates": "Templates",
+      "customJson": "Custom JSON",
+      "async": "Run Asynchronously (for large operations)",
+      "noTemplates": "No pipeline templates available",
+      "operations": "operations",
+      "run": "Run",
+      "running": "Running...",
+      "customPipeline": "Custom Pipeline JSON",
+      "loadExample": "Load Example",
+      "placeholder": "Paste your pipeline JSON here...",
+      "success": "Pipeline Executed Successfully",
+      "generatedDatasets": "Generated {count} new dataset(s)",
+      "createdArtifacts": "Created {count} artifact(s)",
+      "viewDataset": "View Dataset"
+    },
+    "jobs": {
+      "title": "Job Monitoring",
+      "noJobs": "No Jobs Running",
+      "noJobsMessage": "Asynchronous jobs will appear here when you run large operations",
+      "asyncHint": "Enable 'Run Asynchronously' in Pipelines tab for long-running tasks",
+      "activeJobs": "Active Jobs",
+      "refresh": "Refresh",
+      "jobId": "Job ID",
+      "progress": "Progress",
+      "started": "Started",
+      "finished": "Finished",
+      "duration": "Duration",
+      "error": "Error",
+      "result": "Result",
+      "status": {
+        "pending": "Pending",
+        "running": "Running",
+        "succeeded": "Succeeded",
+        "failed": "Failed"
+      }
+    },
+    "column": {
+      "analysis": "Column Analysis",
+      "exportJson": "Export JSON",
+      "loading": "Loading column analysis...",
+      "summaryStats": "Summary Statistics",
+      "numericStats": "Numeric Statistics",
+      "topValues": "Top Values",
+      "count": "Total Count",
+      "nulls": "Null Values",
+      "nonNulls": "Non-Null Values",
+      "uniques": "Unique Values",
+      "min": "Minimum",
+      "max": "Maximum",
+      "mean": "Mean",
+      "std": "Std Dev",
+      "q1": "Q1 (25%)",
+      "median": "Median (50%)",
+      "q3": "Q3 (75%)"
+    },
+    "common": {
+      "loading": "Loading...",
+      "error": "Error",
+      "success": "Success",
+      "cancel": "Cancel",
+      "save": "Save",
+      "close": "Close",
+      "refresh": "Refresh",
+      "back": "Back",
+      "next": "Next",
+      "previous": "Previous",
+      "page": "Page {current} of {total}"
+    }
+  }
+}
+

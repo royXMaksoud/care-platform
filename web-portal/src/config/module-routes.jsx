@@ -19,6 +19,11 @@ const MAP = new Map([
   
   ['finance', '/finance'],
   ['access', '/access'],
+  
+  // Data Analysis Service
+  ['das', '/das'],
+  ['data-analysis-service', '/das'],
+  ['data analysis service', '/das'],
 ])
 
 
