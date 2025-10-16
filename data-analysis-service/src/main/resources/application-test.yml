@@ -19,6 +19,9 @@ spring:
     hibernate:
       ddl-auto: none
     show-sql: false
+    properties:
+      hibernate:
+        default_schema: public
   
   servlet:
     multipart:
