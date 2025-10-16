@@ -12,12 +12,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.filter.CorsFilter;
-
-import java.util.Arrays;
+// CORS imports removed - handled by Gateway
 
 /**
  * Security configuration for Data Analysis Service
@@ -47,39 +42,7 @@ public class SecurityConfig {
         return new JwtAuthenticationFilter(tokenProvider);
     }
 
-    @Bean
-    public CorsFilter corsFilter() {
-        return new CorsFilter(corsConfigurationSource());
-    }
-
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        
-        // Explicitly set allowed origins including localhost:5173
-        configuration.setAllowedOrigins(Arrays.asList(
-            "http://localhost:3000",
-            "http://localhost:5173", 
-            "http://localhost:8080",
-            "http://localhost:6060"
-        ));
-        
-        // Set allowed methods
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-        
-        // Set allowed headers
-        configuration.setAllowedHeaders(Arrays.asList("*"));
-        
-        // Allow credentials
-        configuration.setAllowCredentials(true);
-        
-        // Set max age
-        configuration.setMaxAge(3600L);
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
-    }
+    // CORS is handled by Gateway - no need for CORS beans here
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
