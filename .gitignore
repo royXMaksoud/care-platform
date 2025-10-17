@@ -15,7 +15,8 @@ out/
 .gradle/
 **/build/
 **/out/
-
+set-env.ps1
+.env
 # Logs & temp
 logs/
 **/logs/

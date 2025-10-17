@@ -1,3 +1,6 @@
+server:
+  port: 8888
+
 spring:
   application:
     name: config-server
@@ -8,27 +11,24 @@ spring:
       server:
         native:
           search-locations: classpath:/config
-        # Alternative: Use Git repository
-        # git:
-        #   uri: https://github.com/your-org/config-repo
-        #   default-label: main
-        #   clone-on-start: true
+        git:
+          uri: https://github.com/royXMaksoud/care-config-repo  
+          default-label: main
+          clone-on-start: false
+          skip-ssl-validation: true
+          username: ${GIT_USERNAME:}
+          password: ${GIT_TOKEN:}
+    discovery:
+      enabled: false
 
-server:
-  port: 8888
+# Eureka disabled - using native config
+# eureka:
+#   client:
+#     serviceUrl:
+#       defaultZone: http://localhost:8761/eureka/
+#     register-with-eureka: false
+#     fetch-registry: false
 
-# Eureka Client Configuration
-eureka:
-  client:
-    serviceUrl:
-      defaultZone: http://localhost:8761/eureka/
-    register-with-eureka: true
-    fetch-registry: true
-  instance:
-    preferIpAddress: true
-    instance-id: ${spring.application.name}:${server.port}
-
-# Management endpoints for health checks
 management:
   endpoints:
     web:
