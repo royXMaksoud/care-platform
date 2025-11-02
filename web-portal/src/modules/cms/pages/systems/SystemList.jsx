@@ -2,6 +2,8 @@ import React, { useMemo } from 'react'
 import CrudPage from '@/features/crud/CrudPage'
 import { usePermissionCheck } from '@/contexts/PermissionsContext'
 import { SYSTEMS, CMS_SECTIONS } from '@/config/permissions-constants'
+import CMSBreadcrumb from '../../components/CMSBreadcrumb'
+import { useTranslation } from 'react-i18next'
 
 const systemColumns = [
   { id: 'code', accessorKey: 'code', header: 'Code', cell: (info) => info.getValue() },
@@ -33,6 +35,7 @@ const systemFields = [
 export default function SystemsListPage() {
   // Get permissions for System section
   const { getSectionPermissions, isLoading } = usePermissionCheck()
+  const { t } = useTranslation()
   
   const permissions = useMemo(() => 
     getSectionPermissions(CMS_SECTIONS.SYSTEMS, SYSTEMS.CMS),
@@ -70,8 +73,11 @@ export default function SystemsListPage() {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
+      <div className="px-4 pt-4">
+        <CMSBreadcrumb />
+      </div>
       <CrudPage
-        title="Systems"
+        title={t('cms.systems') || 'Systems'}
         service="access"
         resourceBase="/api/systems"
         idKey="systemId"

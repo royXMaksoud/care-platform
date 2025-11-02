@@ -4,6 +4,8 @@ import CrudPage from '@/features/crud/CrudPage'
 import { usePermissionCheck } from '@/contexts/PermissionsContext'
 import { SYSTEMS, CMS_SECTIONS } from '@/config/permissions-constants'
 import { useOrganizationTypes } from '@/hooks/useOrganizationTypes'
+import CMSBreadcrumb from '../../components/CMSBreadcrumb'
+import { useTranslation } from 'react-i18next'
 
 const organizationColumns = [
   { 
@@ -90,6 +92,7 @@ const getOrganizationFields = (organizationTypes) => [
 
 export default function OrganizationListPage() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   
   // Get permissions
   const { getSectionPermissions, isLoading } = usePermissionCheck()
@@ -163,8 +166,11 @@ export default function OrganizationListPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       <div className="container mx-auto px-4 py-8">
+        <div className="mb-4">
+          <CMSBreadcrumb />
+        </div>
         <CrudPage
-          title="Organizations"
+          title={t('cms.organizations') || 'Organizations'}
           service="access"
           resourceBase="/api/organizations"
           idKey="organizationId"

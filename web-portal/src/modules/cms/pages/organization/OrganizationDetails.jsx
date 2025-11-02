@@ -6,6 +6,8 @@ import CrudPage from '@/features/crud/CrudPage'
 import { usePermissionCheck } from '@/contexts/PermissionsContext'
 import { SYSTEMS, CMS_SECTIONS } from '@/config/permissions-constants'
 import { useOrganizationTypes } from '@/hooks/useOrganizationTypes'
+import CMSBreadcrumb from '../../components/CMSBreadcrumb'
+import { useTranslation } from 'react-i18next'
 
 // Static columns and fields - defined outside component
 const languageColumns = [
@@ -36,6 +38,7 @@ const languageFields = [
 export default function OrganizationDetailsPage() {
   const { organizationId } = useParams()
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState('info')
   const [organization, setOrganization] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -138,17 +141,13 @@ export default function OrganizationDetailsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
       <div className="container mx-auto px-6 py-6 max-w-7xl">
+        {/* Breadcrumb */}
+        <div className="mb-4">
+          <CMSBreadcrumb currentPageLabel={organization?.name || t('cms.organizations')} />
+        </div>
+        
         {/* Modern Header */}
         <div className="mb-6">
-          <button
-            onClick={() => navigate('/cms/organizations')}
-            className="group flex items-center gap-2 text-blue-600 hover:text-blue-800 mb-4 transition-all"
-          >
-            <svg className="w-5 h-5 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            <span className="font-semibold">Back to Organizations</span>
-          </button>
           <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-6 shadow-lg text-white">
             <div className="flex items-center justify-between">
               <div>
