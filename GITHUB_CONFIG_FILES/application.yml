@@ -1,0 +1,25 @@
+# Common configuration for ALL services
+# This will be loaded by every service
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: http://localhost:9411/api/v2/spans
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,refresh
+
+logging:
+  pattern:
+    level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
+  level:
+    root: INFO
+    org.springframework.cloud: DEBUG
+    com.ftp: DEBUG
+    com.care: DEBUG
+    com.portal: DEBUG
+

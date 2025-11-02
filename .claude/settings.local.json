@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat:*)",
+      "Bash(cp:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(if not exist help mkdir help)",
+      "Bash(if not exist helpdocs mkdir helpdocs)",
+      "Bash(if not exist helpscripts mkdir helpscripts)",
+      "Bash(tree:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

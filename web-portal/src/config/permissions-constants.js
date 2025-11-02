@@ -50,6 +50,8 @@ export const ACCESS_SECTIONS = {
 // ============================================
 export const CMS_SECTIONS = {
   CODE_TABLE: 'Code Table',
+  CODE_COUNTRY: 'Code Country',
+  LOCATION: 'Location',
   USER_MANAGEMENT: 'User Management',
   SYSTEMS: 'System',
   SECTIONS: 'System Section',
@@ -73,6 +75,28 @@ export const CODE_TABLE_ACTIONS = {
   DELETE: 'Del',        // "Delete Code Table"
   LIST: 'List',         // "List Code Table"
   UPDATE: 'UP',         // "Update Code Table"
+}
+
+/**
+ * Code Country Action Codes
+ * Based on your API response
+ */
+export const CODE_COUNTRY_ACTIONS = {
+  CREATE: 'CRE',        // "Create Code Country"
+  DELETE: 'Del',        // "Delete Code Country"
+  LIST: 'List',         // "List Code Country"
+  UPDATE: 'UP',         // "Update Code Country"
+}
+
+/**
+ * Location Action Codes
+ * Based on your API response
+ */
+export const LOCATION_ACTIONS = {
+  CREATE: 'CRE',        // "Create Location"
+  DELETE: 'Del',        // "Delete Location"
+  LIST: 'List',         // "List Location"
+  UPDATE: 'UP',         // "Update Location"
 }
 
 /**
@@ -250,10 +274,50 @@ export const CMS_MENU_ITEMS = [
     requiredPermission: 'List',
   },
   {
+    id: 'codeCountry',
+    to: 'codeCountry',
+    label: 'Countries',
+    sectionName: CMS_SECTIONS.CODE_COUNTRY,
+    systemName: SYSTEMS.CMS,
+    requiredPermission: 'List',
+  },
+  {
+    id: 'location',
+    to: 'location',
+    label: 'Country Location (City, District, Sub-District...)',
+    sectionName: CMS_SECTIONS.CODE_COUNTRY, // Use CODE_COUNTRY permissions (same as Countries)
+    systemName: SYSTEMS.CMS,
+    requiredPermission: 'List',
+  },
+  {
     id: 'organizations',
     to: 'organizations',
     label: 'Organizations',
-    sectionName: CMS_SECTIONS.ORGANIZATIONS,
+    sectionName: CMS_SECTIONS.CODE_COUNTRY, // Use CODE_COUNTRY permissions (same as Countries)
+    systemName: SYSTEMS.CMS,
+    requiredPermission: 'List',
+  },
+  {
+    id: 'organizationBranches',
+    to: 'organization-branches',
+    label: 'Organization Branches',
+    sectionName: CMS_SECTIONS.CODE_COUNTRY, // Use CODE_COUNTRY permissions (same as Countries)
+    systemName: SYSTEMS.CMS,
+    requiredPermission: 'List',
+  },
+  {
+    id: 'dutyStations',
+    to: 'duty-stations',
+    label: 'Duty Stations',
+    sectionName: CMS_SECTIONS.CODE_COUNTRY, // Use CODE_COUNTRY permissions (same as Countries)
+    systemName: SYSTEMS.CMS,
+    requiredPermission: 'List',
+  },
+  {
+    id: 'operations',
+    to: 'operations',
+    label: 'Operations',
+    sectionName: CMS_SECTIONS.CODE_COUNTRY, // Use CODE_COUNTRY permissions (same as Countries)
     systemName: SYSTEMS.CMS,
     requiredPermission: 'List',
   },
@@ -323,6 +387,8 @@ export default {
   SYSTEMS,
   CMS_SECTIONS,
   CODE_TABLE_ACTIONS,
+  CODE_COUNTRY_ACTIONS,
+  LOCATION_ACTIONS,
   USER_MANAGEMENT_ACTIONS,
   APPOINTMENTS_ACTIONS,
   CMS_MENU_ITEMS,

@@ -87,7 +87,8 @@ export default function TenantDetailsPage() {
         focalPointPhone: formData.focalPointPhone || null,
         address: formData.address || null,
         comment: formData.comment || null,
-        isActive: formData.isActive,
+        isActive: true, // ✅ Always TRUE - cannot be deactivated
+        rowVersion: formData.rowVersion,
       }
       
       console.log('💾 Updating tenant with payload:', payload)

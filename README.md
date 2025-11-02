@@ -222,19 +222,52 @@ Built with **Resilience4j 2.2.0** implementing multiple fault tolerance patterns
 
 - **Java**: JDK 17 or higher
 - **Maven**: 3.8+ (or use included Maven wrapper)
+- **Node.js**: 18+ (for React frontend)
 - **Docker**: 20.10+ (for containerized deployment)
 - **Docker Compose**: 2.0+ (optional, for orchestration)
 - **PostgreSQL**: 14+ (if running without Docker)
 
-### Option 1: Docker Compose (Recommended)
+### Option 1: Quick Start with PowerShell (⚡ Recommended for Development)
 
-This is the fastest way to get all services running:
+**The fastest way to get started on Windows:**
 
-```bash
+```powershell
 # Clone the repository
 git clone https://github.com/royXMaksoud/care.git
 cd care
 
+# Ensure PostgreSQL is running (localhost:5432)
+# Database: cms_db, User: postgres, Password: P@ssw0rd
+
+# Quick start (essential services only - ~1 minute)
+.\QUICK_START.ps1
+
+# OR Full startup (all infrastructure - ~3 minutes)
+.\START_ALL.ps1
+
+# Stop all services
+.\STOP_ALL.ps1
+```
+
+**What QUICK_START.ps1 does:**
+- ✅ Starts Gateway, Auth Service, Access Management, React Frontend
+- ✅ Skips Config Server and Eureka (standalone mode)
+- ✅ Perfect for daily development
+- ⚡ Fast startup (~1 minute)
+
+**What START_ALL.ps1 does:**
+- ✅ Starts complete microservices infrastructure
+- ✅ Includes Config Server, Eureka, all services
+- ✅ Full service discovery and configuration
+- ⏱️ Slower startup (~3 minutes)
+
+📚 **For detailed instructions, see [help/docs/README_START_SERVICES.md](help/docs/README_START_SERVICES.md)**
+
+### Option 2: Docker Compose
+
+This is the best way for containerized deployment:
+
+```bash
 # Create environment file
 cp env.template .env
 # Edit .env with your configuration (optional)
@@ -254,73 +287,58 @@ docker-compose ps
 # Auth API:   http://localhost:6061/swagger-ui/index.html
 ```
 
-### Option 2: Manual Setup
+### Option 3: Manual Setup
 
-For development or debugging, you can run services individually:
+For development or debugging, you can run services individually.
 
-#### Step 1: Start PostgreSQL
+**See detailed manual setup guide:** [help/docs/README_START_SERVICES.md](help/docs/README_START_SERVICES.md)
 
-```bash
-# Using Docker
-docker run -d \
-  --name care-postgres \
-  -e POSTGRES_DB=cms_db \
-  -e POSTGRES_USER=postgres \
-  -e POSTGRES_PASSWORD=P@ssw0rd \
-  -p 5432:5432 \
-  postgres:14-alpine
-
-# Or install PostgreSQL locally and create database
-createdb -U postgres cms_db
-```
-
-#### Step 2: Build Shared Library
+#### Quick Manual Start:
 
 ```bash
+# 1. Start PostgreSQL
+# Ensure PostgreSQL is running on localhost:5432 with database 'cms_db'
+
+# 2. Build Shared Library
 cd shared-libs/core-shared-lib/core-shared-lib
 mvn clean install
 cd ../../..
-```
 
-#### Step 3: Start Services (in order)
+# 3. Start Services (use correct Maven command!)
+# ⚠️ Common mistake: mvn java-spring:run ❌
+# ✅ Correct: mvn spring-boot:run
 
-```bash
-# 1. Start Service Registry (Eureka)
-cd service-registry
-mvn spring-boot:run
-# Wait for startup, then in a new terminal:
-
-# 2. Start Auth Service
-cd auth-service/auth-service
-mvn spring-boot:run
-# Wait for startup, then in a new terminal:
-
-# 3. Start Access Management Service
-cd access-management-service
-mvn spring-boot:run
-# Wait for startup, then in a new terminal:
-
-# 4. Start Reference Data Service
-cd reference-data-service
-mvn spring-boot:run
-# Wait for startup, then in a new terminal:
-
-# 5. Start Gateway Service
+# Start Gateway
 cd gateway-service
 mvn spring-boot:run
+
+# Start Auth Service (in new terminal)
+cd auth-service/auth-service
+mvn spring-boot:run -Dspring-boot.run.arguments="--spring.cloud.config.enabled=false"
+
+# Start Access Management (in new terminal)
+cd access-management-service
+mvn spring-boot:run -Dspring-boot.run.arguments="--spring.cloud.config.enabled=false"
+
+# Start Frontend (in new terminal)
+cd web-portal
+npm run dev
 ```
 
-#### Step 4: Verify Services
+#### Verify Services
 
 ```bash
-# Check Eureka Dashboard
-open http://localhost:8761
+# Frontend
+open http://localhost:5173
 
-# Check service health
-curl http://localhost:6061/actuator/health
-curl http://localhost:6062/actuator/health
-curl http://localhost:6063/management/health
+# Gateway
 curl http://localhost:6060/actuator/health
+
+# Auth Service
+curl http://localhost:6061/actuator/health
+
+# Access Management
+curl http://localhost:6062/actuator/health
 ```
 
 ## ⚙️ Configuration
@@ -531,11 +549,23 @@ care/
 │           ├── pom.xml
 │           └── Dockerfile
 │
-├── help/                      # Documentation
-│   ├── Resilience4j guides
-│   ├── Docker guides
-│   └── Deployment guides
+├── help/                      # 📚 Documentation & Scripts Hub
+│   ├── README.md             # Documentation index
+│   ├── docs/                 # All documentation files
+│   │   ├── README_START_SERVICES.md
+│   │   ├── SERVICE_RUNBOOK.md
+│   │   ├── DEPLOYMENT_GUIDE.md
+│   │   ├── TROUBLESHOOTING.md
+│   │   ├── SERVICE_COMMUNICATION.md
+│   │   ├── DOCUMENTATION_SUMMARY.md
+│   │   └── CONTRIBUTING.md
+│   └── scripts/              # Helper PowerShell scripts
+│       ├── set-env.ps1
+│       └── START_ALL_SERVICES.ps1 (legacy)
 │
+├── QUICK_START.ps1            # ⚡ Fast startup script
+├── START_ALL.ps1              # 🏗️ Full startup script
+├── STOP_ALL.ps1               # ❌ Stop all services
 ├── docker-compose.yml         # Container orchestration
 ├── env.template               # Environment template
 └── README.md                  # This file
@@ -684,30 +714,44 @@ For production deployment:
 
 ## 📖 Documentation
 
-Comprehensive documentation is available in the `help/` directory:
+**📚 [Complete Documentation Hub](help/README.md)** - Start here for all documentation
 
-### Getting Started
+Comprehensive documentation is organized in the `help/` directory:
 
-- **[Docker Setup Guide](help/DOCKER_SETUP_GUIDE.md)** - Complete Docker configuration guide
-- **[GitHub Guide](help/GITHUB_PREPARATION_GUIDE.md)** - Repository setup and workflow
-- **[Quick Start](help/RESILIENCE4J_QUICK_START.md)** - 5-minute Resilience4j guide
+### 🚀 Getting Started
 
-### Technical Guides
+- **[How to Start Services](help/docs/README_START_SERVICES.md)** - Complete startup guide (Quick/Full/Manual)
+- **[Troubleshooting Guide](help/docs/TROUBLESHOOTING.md)** - Common issues and solutions
+- **[Deployment Guide](help/docs/DEPLOYMENT_GUIDE.md)** - Production deployment instructions
 
-- **[Resilience4j Implementation](help/RESILIENCE4J_IMPLEMENTATION_SUMMARY.md)** - Complete fault tolerance guide
-- **[Auth Service Guide](help/AUTH_SERVICE_RESILIENCE4J_GUIDE.md)** - Authentication service details
-- **[Access Management Guide](help/ACCESS_MANAGEMENT_RESILIENCE4J_GUIDE.md)** - Access control details
-- **[Gateway Guide](help/GATEWAY_RESILIENCE4J_GUIDE.md)** - API Gateway configuration
+### 📋 Operations & Architecture
 
-### Implementation Details
+- **[Service Runbook](help/docs/SERVICE_RUNBOOK.md)** - Operations manual and API reference
+- **[Service Communication](help/docs/SERVICE_COMMUNICATION.md)** - Inter-service communication patterns
+- **[Documentation Summary](help/docs/DOCUMENTATION_SUMMARY.md)** - Overview of all documentation
 
-- **[Login Protection](help/LOGIN_PROTECTION_IMPLEMENTED.md)** - Security implementation
-- **[Docker Build Fix](help/DOCKER_BUILD_CONTEXT_FIX.md)** - Shared library solution
-- **[Complete Setup](help/COMPLETE_SETUP_SUMMARY.md)** - Full implementation summary
+### 👥 Contributing
 
-### Service-Specific Documentation
+- **[Contributing Guide](help/docs/CONTRIBUTING.md)** - How to contribute to the project
 
-Each service has its own `help/` directory with service-specific guides and troubleshooting.
+### 🔧 PowerShell Scripts
+
+All startup scripts are in the root directory for quick access:
+- **QUICK_START.ps1** - ⚡ Fast development startup (~1 min)
+- **START_ALL.ps1** - 🏗️ Full microservices startup (~3 min)
+- **STOP_ALL.ps1** - ❌ Stop all running services
+
+Helper scripts are in `help/scripts/`:
+- **set-env.ps1** - Environment variable configuration
+- **START_ALL_SERVICES.ps1** - Legacy startup script (deprecated)
+
+### 📁 Service-Specific Documentation
+
+Each service has its own `help/` directory with:
+- Service-specific guides
+- API documentation
+- Troubleshooting tips
+- Configuration examples
 
 ## 🔒 Security
 

@@ -57,6 +57,9 @@ export function useAuth() {
 
   function logout() {
     authStorage.clearAll()
+    // Clear session storage to force fresh permissions on next login
+    sessionStorage.removeItem('perms_loaded')
+    sessionStorage.clear()
     window.location.href = '/auth/login'
   }
 

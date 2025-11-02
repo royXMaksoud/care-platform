@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { fetchMyPermissions } from '../api/permissions.api'
+import authStorage from '../auth/authStorage'
 
 /**
  * Permissions Context
@@ -14,12 +15,29 @@ const PermissionsContext = createContext(null)
  */
 export function PermissionsProvider({ children }) {
   // Fetch permissions once and cache them
+  // On first load after login, force fresh data to avoid stale cache
+  const isFirstLoad = sessionStorage.getItem('perms_loaded') !== 'true'
+  
+  // ✅ Only fetch permissions if user has a token (is authenticated)
+  const hasToken = Boolean(authStorage.getToken())
+  
   const { data: permissionsData, isLoading, error, refetch } = useQuery({
     queryKey: ['me', 'permissions'],
-    queryFn: () => fetchMyPermissions({ force: false }),
+    queryFn: () => fetchMyPermissions({ force: isFirstLoad }),
+    enabled: hasToken, // ✅ Only fetch if user is authenticated
     staleTime: 5 * 60 * 1000, // 5 minutes
     cacheTime: 10 * 60 * 1000, // 10 minutes
+    onSuccess: () => {
+      // Mark permissions as loaded in this session
+      sessionStorage.setItem('perms_loaded', 'true')
+    }
   })
+
+  // Function to force refresh permissions (bypass cache)
+  const refreshPermissions = async () => {
+    sessionStorage.removeItem('perms_loaded')
+    return refetch({ queryKey: ['me', 'permissions'], exact: true })
+  }
 
   // Create optimized lookup maps for fast permission checks
   const permissionMaps = useMemo(() => {
@@ -77,6 +95,7 @@ export function PermissionsProvider({ children }) {
     isLoading,
     error,
     refetch,
+    refreshPermissions, // Function to force refresh
   }
 
   return (
@@ -276,11 +295,15 @@ export function usePermissionCheck() {
     return sections
   }
 
+  // Get refreshPermissions from context
+  const { refreshPermissions } = usePermissionsContext()
+
   return {
     hasPermission,
     hasSectionAccess,
     getSectionPermissions,
     getAccessibleSections,
+    refreshPermissions, // Expose refresh function
     isLoading,
     permissionsData,
   }

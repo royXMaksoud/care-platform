@@ -1,15 +1,18 @@
 // src/modules/cms/pages/codeTable/CodeTableDetail.jsx
 // Tailwind only. Each grid is filtered by the current codeTableId.
 
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import CrudPage from '@/features/crud/CrudPage'
+import { api } from '@/lib/axios'
 
 export default function CodeTableDetail() {
   const { codeTableId } = useParams()
   const navigate = useNavigate()
   const [tab, setTab] = useState('languages')
   const [copied, setCopied] = useState(false)
+  const [codeTableInfo, setCodeTableInfo] = useState(null)
+  const [loadingInfo, setLoadingInfo] = useState(false)
 
   const shortId = codeTableId ? `${String(codeTableId).slice(0, 8)}…` : ''
 
@@ -21,38 +24,69 @@ export default function CodeTableDetail() {
     } catch {}
   }
 
+  // Load CodeTable info including parent details
+  useEffect(() => {
+    if (!codeTableId) return
+    
+    const loadCodeTableInfo = async () => {
+      setLoadingInfo(true)
+      try {
+        const response = await api.get(`/access/api/code-tables/${codeTableId}`)
+        setCodeTableInfo(response.data)
+      } catch (err) {
+        console.error('Failed to load code table info:', err)
+      } finally {
+        setLoadingInfo(false)
+      }
+    }
+    
+    loadCodeTableInfo()
+  }, [codeTableId])
+
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       {/* Compact Header */}
-      <div className="flex-none border-b bg-card px-4 py-2 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => navigate(-1)}
-            className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-background text-foreground hover:bg-muted transition text-sm"
-            aria-label="Back"
-            title="Back"
-          >
-            ←
-          </button>
-          <div>
-            <h2 className="text-base font-semibold">Code Table</h2>
-            <p className="text-xs text-muted-foreground">Manage languages, values, and translations</p>
-          </div>
-        </div>
-
-        {codeTableId && (
-          <div className="flex items-center gap-2">
-            <span className="rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground border border-border">
-              {shortId}
-            </span>
+      <div className="flex-none border-b bg-card px-4 py-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
             <button
-              onClick={copyId}
-              className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-0.5 text-xs hover:bg-muted transition"
-              title="Copy full CodeTableId"
+              onClick={() => navigate(-1)}
+              className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-background text-foreground hover:bg-muted transition text-sm"
+              aria-label="Back"
+              title="Back"
             >
-              <span className="inline-block h-3 w-3">⧉</span>
-              {copied ? 'Copied' : 'Copy'}
+              ←
             </button>
+            <div>
+              <h2 className="text-base font-semibold">
+                {loadingInfo ? 'Loading...' : (codeTableInfo?.name || 'Code Table')}
+              </h2>
+              <p className="text-xs text-muted-foreground">Manage languages, values, and translations</p>
+            </div>
+          </div>
+
+          {codeTableId && (
+            <div className="flex items-center gap-2">
+              <span className="rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground border border-border">
+                {shortId}
+              </span>
+              <button
+                onClick={copyId}
+                className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-0.5 text-xs hover:bg-muted transition"
+                title="Copy full CodeTableId"
+              >
+                <span className="inline-block h-3 w-3">⧉</span>
+                {copied ? 'Copied' : 'Copy'}
+              </button>
+            </div>
+          )}
+        </div>
+        
+        {/* Display Parent Info if exists */}
+        {codeTableInfo?.parentId && (
+          <div className="mt-2 flex items-center gap-2 text-xs">
+            <span className="text-muted-foreground">Parent:</span>
+            <ParentCodeTableLink parentId={codeTableInfo.parentId} />
           </div>
         )}
       </div>
@@ -335,5 +369,44 @@ function EmptyState() {
         Choose a value to view and edit its translations.
       </p>
     </div>
+  )
+}
+
+/** Component to display parent CodeTable as a clickable link */
+function ParentCodeTableLink({ parentId }) {
+  const navigate = useNavigate()
+  const [parentName, setParentName] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const loadParentInfo = async () => {
+      try {
+        const response = await api.get(`/access/api/code-tables/${parentId}`)
+        setParentName(response.data?.name || parentId)
+      } catch (err) {
+        console.error('Failed to load parent info:', err)
+        setParentName(parentId)
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    if (parentId) {
+      loadParentInfo()
+    }
+  }, [parentId])
+
+  if (loading) {
+    return <span className="text-muted-foreground">Loading...</span>
+  }
+
+  return (
+    <button
+      onClick={() => navigate(`/cms/codeTable/${parentId}`)}
+      className="text-blue-600 hover:underline"
+      title="Navigate to parent table"
+    >
+      {parentName}
+    </button>
   )
 }

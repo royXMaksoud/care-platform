@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import ReactDOM from 'react-dom'
 import { api } from '@/lib/axios'
+import SearchableSelect from '@/components/SearchableSelect'
 
 export default function CrudFormModal({
   open,
@@ -191,24 +192,16 @@ export default function CrudFormModal({
                   </div>
                 )}
                 {f.type === 'select' && (
-                  <select 
-                    id={inputId} 
-                    className="border rounded-xl px-3 py-2"
-                    value={form[f.name] ?? ''} 
-                    onChange={(e) => update(f.name, e.target.value)}
-                    required={f.required}
-                    disabled={loadingFields[f.name]}
-                  >
-                    <option value="">
-                      {loadingFields[f.name] ? 'Loading...' : (f.placeholder || 'Select…')}
-                    </option>
-                    {/* Use API options if available, otherwise use static options */}
-                    {(selectOptions[f.name] || f.options || []).map((o) => (
-                      <option key={String(o.value)} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
+                  <SearchableSelect
+                    options={selectOptions[f.name] || f.options || []}
+                    value={form[f.name] ?? ''}
+                    onChange={(value) => update(f.name, value)}
+                    placeholder={loadingFields[f.name] ? 'Loading...' : (f.placeholder || 'Select…')}
+                    isLoading={loadingFields[f.name]}
+                    isDisabled={f.disabled || loadingFields[f.name]}
+                    isClearable={!f.required}
+                    isSearchable={true}
+                  />
                 )}
               </div>
             )

@@ -14,6 +14,8 @@ import { Toaster } from 'sonner'
 
 import App from './app/App.jsx'
 import Login from './auth/Login.jsx'
+import OAuthCallback from './auth/OAuthCallback.jsx'
+import NewUserWelcome from './auth/NewUserWelcome.jsx'
 import ProtectedRoute from './auth/ProtectedRoute.jsx'
 import { PermissionsProvider } from './contexts/PermissionsContext'
 import { AppearanceProvider } from './contexts/AppearanceContext'
@@ -21,13 +23,16 @@ import { AppearanceProvider } from './contexts/AppearanceContext'
 const queryClient = new QueryClient({ defaultOptions: { queries: { refetchOnWindowFocus: false, retry: 1 } } })
 
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
+  // ✅ StrictMode removed to prevent double API calls in development
+  // <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <AppearanceProvider>
         <PermissionsProvider>
           <BrowserRouter>
             <Routes>
               <Route path="/auth/login" element={<Login />} />
+              <Route path="/oauth/callback" element={<OAuthCallback />} />
+              <Route path="/welcome" element={<ProtectedRoute><NewUserWelcome /></ProtectedRoute>} />
               <Route path="/*" element={<ProtectedRoute><App /></ProtectedRoute>} />
             </Routes>
           </BrowserRouter>
@@ -35,5 +40,5 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         </PermissionsProvider>
       </AppearanceProvider>
     </QueryClientProvider>
-  </React.StrictMode>
+  // </React.StrictMode>
 )

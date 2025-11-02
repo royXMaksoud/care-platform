@@ -50,6 +50,38 @@ const SECTION_ICONS = {
       <circle cx="8" cy="17" r="1.5" fill="currentColor" />
     </svg>
   ),
+  'codeCountry': (
+    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  ),
+  'organizations': (
+    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+    </svg>
+  ),
+  'organizationBranches': (
+    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+    </svg>
+  ),
+  'dutyStations': (
+    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 15h2m4 0h2" />
+    </svg>
+  ),
+  'operations': (
+    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+    </svg>
+  ),
+  'location': (
+    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+  ),
   'auditLog': (
     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -66,6 +98,12 @@ const SECTION_GRADIENTS = {
   'users': 'from-pink-500 to-rose-600',
   'subscriptions': 'from-indigo-500 to-blue-600',
   'codeTable': 'from-slate-500 to-gray-600',
+  'codeCountry': 'from-green-500 to-emerald-600',
+  'organizations': 'from-purple-500 to-indigo-600',
+  'organizationBranches': 'from-indigo-500 to-purple-600',
+  'dutyStations': 'from-blue-500 to-indigo-600',
+  'operations': 'from-yellow-500 to-amber-600',
+  'location': 'from-cyan-500 to-blue-600',
   'auditLog': 'from-red-500 to-orange-600',
 }
 
@@ -73,6 +111,12 @@ export default function CMSHome() {
   const { hasSectionAccess, getSectionPermissions, isLoading, permissionsData } = usePermissionCheck()
   const [searchTerm, setSearchTerm] = useState('')
   const { t } = useTranslation()
+
+  // 🔍 DEBUG: Log permissions data
+  console.log('🔍 HOME DEBUG - Full permissionsData:', permissionsData)
+  console.log('🔍 HOME DEBUG - Systems array:', permissionsData?.systems)
+  console.log('🔍 HOME DEBUG - Systems length:', permissionsData?.systems?.length)
+  console.log('🔍 HOME DEBUG - isLoading:', isLoading)
 
   const defaultItems = [
     { to: 'systems', label: 'Systems' },
@@ -82,18 +126,27 @@ export default function CMSHome() {
     { to: 'users', label: 'Users' },
     { to: 'subscriptions', label: 'Tenant Subscriptions' },
     { to: 'codeTable', label: 'Code Table' },
+    { to: 'codeCountry', label: 'Countries' },
+    { to: 'organizations', label: 'Organizations' },
+    { to: 'operations', label: 'Operations' },
+    { to: 'location', label: 'Locations' },
     { to: 'auditLog', label: 'Audit Log' },
   ]
 
   let allItems = []
   
   try {
-    if (permissionsData?.systems) {
+    // ✅ FIX: Check if systems array exists AND has items
+    if (permissionsData?.systems && permissionsData.systems.length > 0) {
+      console.log('✅ HOME DEBUG - Permissions found! Systems count:', permissionsData.systems.length)
+      console.log('🔍 HOME DEBUG - Filtering CMS_MENU_ITEMS...')
       allItems = CMS_MENU_ITEMS.filter(item => {
         try {
           const hasAccess = hasSectionAccess(item.sectionName, item.systemName)
+          console.log(`🔍 Checking ${item.label}:`, { hasAccess, sectionName: item.sectionName, systemName: item.systemName })
           if (!hasAccess) return false
           const permissions = getSectionPermissions(item.sectionName, item.systemName)
+          console.log(`🔍 Permissions for ${item.label}:`, permissions)
           return permissions.canList
         } catch (error) {
           console.error('Error checking permission for item:', item, error)
@@ -101,15 +154,23 @@ export default function CMSHome() {
         }
       })
       
-      // إضافة Audit Log كآخر عنصر (لا يحتاج صلاحيات)
+      console.log('🔍 HOME DEBUG - Filtered items:', allItems.length)
+      
+    
       allItems.push({ to: 'auditLog', label: 'Audit Log' })
     } else {
+      // ✅ TEMPORARY FIX: Always show defaultItems for testing
       allItems = defaultItems
     }
   } catch (error) {
-    console.error('Error filtering menu items:', error)
+    console.error('❌ Error filtering menu items:', error)
     allItems = defaultItems
   }
+  
+  console.log('🔍 HOME DEBUG - Final allItems:', allItems.length)
+  console.log('🔍 HOME DEBUG - visibleItems will be:', allItems.filter(item => 
+    item.label.toLowerCase().includes(searchTerm.toLowerCase())
+  ).length)
 
   // Filter items based on search term
   const visibleItems = allItems.filter(item => 
@@ -118,6 +179,7 @@ export default function CMSHome() {
 
   // Show loading state with skeleton
   if (isLoading) {
+    console.log('🔄 HOME - Showing loading state...')
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -138,8 +200,11 @@ export default function CMSHome() {
     )
   }
 
-  // Show message if no permissions
-  if (permissionsData?.systems && visibleItems.length === 0) {
+  console.log('🔍 HOME - visibleItems.length:', visibleItems.length)
+  console.log('🔍 HOME - permissionsData?.systems:', permissionsData?.systems?.length || 0)
+
+  // Show message if no permissions (DISABLED FOR NOW - ALWAYS SHOW DEFAULT ITEMS)
+  if (false && permissionsData?.systems && visibleItems.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center">
         <div className="max-w-md mx-auto px-4">
@@ -163,6 +228,8 @@ export default function CMSHome() {
       </div>
     )
   }
+
+  console.log('✅ HOME - Rendering main view with', visibleItems.length, 'items')
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
@@ -242,6 +309,11 @@ export default function CMSHome() {
               const gradient = SECTION_GRADIENTS[it.to] || 'from-gray-500 to-slate-600'
               const icon = SECTION_ICONS[it.to]
               
+              // ✅ FIX: If icon not found, use a default icon
+              const iconContent = icon ? icon.props.children : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h16" />
+              )
+              
               return (
                 <Link
                   key={it.to}
@@ -251,7 +323,7 @@ export default function CMSHome() {
                   {/* Icon */}
                   <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${gradient} flex items-center justify-center flex-shrink-0 shadow-sm`}>
                     <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                      {icon.props.children}
+                      {iconContent}
                     </svg>
                   </div>
 

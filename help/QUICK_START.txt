@@ -1,0 +1,96 @@
+================================================================================
+  QUICK START GUIDE - CORS FIXED!
+================================================================================
+
+STEP 1: Stop Everything
+------------------------
+cd C:\Java\care\Code
+.\STOP_ALL.ps1
+
+
+STEP 2: Open 4 PowerShell Windows
+----------------------------------
+
+WINDOW 1 - Gateway:
+    cd C:\Java\care\Code
+    .\START_GATEWAY.ps1
+    Wait for: "Started GatewayServiceApplication"
+
+WINDOW 2 - Auth Service:
+    cd C:\Java\care\Code
+    .\START_AUTH.ps1
+    Wait for: "Started AuthServiceApplication"
+
+WINDOW 3 - Access Management:
+    cd C:\Java\care\Code
+    .\START_AMS.ps1
+    Wait for: "Started AccessManagementServiceApplication"
+
+WINDOW 4 - Frontend:
+    cd C:\Java\care\Code
+    .\START_FRONTEND.ps1
+    Wait for: "VITE ready"
+
+
+STEP 3: Test in Browser
+------------------------
+1. Open: http://localhost:5173
+2. Clear cache: Ctrl + Shift + Delete
+3. Hard reload: Ctrl + Shift + R
+4. Try login!
+5. Check Network tab (F12) - should see:
+   POST http://localhost:6060/auth/login - Status 200
+   NO CORS ERRORS!
+
+
+Verify Services Running:
+------------------------
+netstat -ano | findstr "6060 6061 6062 5173"
+
+Should see:
+  6060 = Gateway (LISTENING)
+  6061 = Auth (LISTENING)
+  6062 = AMS (LISTENING)
+  5173 = Frontend (LISTENING)
+
+
+================================================================================
+  WHAT WAS FIXED?
+================================================================================
+
+PROBLEM:
+  - Frontend was calling Gateway (port 6060)
+  - Gateway had NO CORS configuration
+  - All requests failed with CORS error
+  - Postman worked (doesn't enforce CORS)
+
+SOLUTION:
+  - Added CORS configuration to Gateway
+  - Configured allowed origins: localhost:5173
+  - Configured allowed methods: GET, POST, PUT, DELETE, etc.
+  - Frontend now successfully calls Gateway!
+
+FILES CHANGED:
+  1. gateway-service/.../GatewaySecurityConfig.java (CORS added)
+  2. web-portal/src/lib/axios.ts (baseURL = 6060)
+  3. web-portal/src/shared/lib/axios.jsx (baseURL = 6060)
+
+
+================================================================================
+  IMPORTANT NOTES
+================================================================================
+
+1. Always start Gateway FIRST!
+2. Don't close PowerShell windows while services are running
+3. Clear browser cache after any changes
+4. All API calls should go to localhost:6060 (Gateway)
+5. Check Network tab to verify URLs
+
+
+================================================================================
+  STATUS: READY TO USE!
+================================================================================
+
+Last Updated: 2025-10-24
+CORS Issue: FIXED ✅
+

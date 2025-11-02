@@ -1,0 +1,20 @@
+# Bootstrap configuration for data-analysis-service
+# Loads configuration from Config Server before application.yml
+
+spring:
+  application:
+    name: data-analysis-service
+  cloud:
+    config:
+      uri: http://localhost:8888
+      fail-fast: false
+      retry:
+        max-attempts: 3
+        initial-interval: 1000
+      request-connect-timeout: 5000
+      request-read-timeout: 5000
+
+# Server port (must be defined here for early initialization)
+server:
+  port: 6072
+

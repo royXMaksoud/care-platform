@@ -11,6 +11,18 @@ import TenantDetails from './pages/tenants/TenantDetails'
 import UsersList from './pages/users/UserList'
 import CodeTablesList from './pages/codeTable/CodeTableList'
 import CodeTableDetail from './pages/codeTable/CodeTableDetail'
+import CountryList from './pages/codeCountry/CountryList'
+import CountryDetails from './pages/codeCountry/CountryDetails'
+import OrganizationList from './pages/codeOrganization/OrganizationList'
+import OrganizationDetails from './pages/codeOrganization/OrganizationDetails'
+import OrganizationBranchList from './pages/organizationBranch/OrganizationBranchList'
+import OrganizationBranchDetails from './pages/organizationBranch/OrganizationBranchDetails'
+import DutyStationList from './pages/dutyStation/DutyStationList'
+import DutyStationDetails from './pages/dutyStation/DutyStationDetails'
+import OperationList from './pages/operation/OperationList'
+import OperationDetails from './pages/operation/OperationDetails'
+import LocationList from './pages/location/LocationList'
+import LocationDetails from './pages/location/LocationDetails'
 import AuditLogList from './pages/auditlog/AuditLogList'
 
 // 👇 lazy load
@@ -38,6 +50,30 @@ export default function CMSRoutes() {
         {/* Code Tables Routes */}
         <Route path="codeTable" element={<CodeTablesList />} />
         <Route path="codeTable/:codeTableId" element={<CodeTableDetail />} />
+
+        {/* Code Countries Routes */}
+        <Route path="codeCountry" element={<CountryList />} />
+        <Route path="codeCountry/:countryId" element={<CountryDetails />} />
+
+        {/* Code Organizations Routes */}
+        <Route path="organizations" element={<OrganizationList />} />
+        <Route path="organizations/:organizationId" element={<OrganizationDetails />} />
+
+        {/* Organization Branches Routes */}
+        <Route path="organization-branches" element={<OrganizationBranchList />} />
+        <Route path="organization-branches/:organizationBranchId" element={<OrganizationBranchDetails />} />
+        
+        {/* Duty Stations Routes */}
+        <Route path="duty-stations" element={<DutyStationList />} />
+        <Route path="duty-stations/:dutyStationId" element={<DutyStationDetails />} />
+
+        {/* Operations Routes */}
+        <Route path="operations" element={<OperationList />} />
+        <Route path="operations/:id" element={<OperationDetails />} />
+
+        {/* Locations Routes */}
+        <Route path="location" element={<LocationList />} />
+        <Route path="location/:locationId" element={<LocationDetails />} />
 
         {/* Audit Log Route */}
         <Route path="auditLog" element={<AuditLogList />} />

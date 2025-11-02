@@ -38,26 +38,149 @@ export default function UsersList() {
       },
       meta: { type: 'string', filterKey: 'fullName', operators: ['LIKE','EQUAL','STARTS_WITH','ENDS_WITH','IN'] },
     },
-    { id: 'emailAddress', accessorKey: 'emailAddress', header: 'Email', cell: (i) => i.getValue() },
-    {
-      id: 'enabled', accessorKey: 'enabled', header: 'Enabled',
-      cell: (i) => (i.getValue() ? 'Yes' : 'No'), meta: { type: 'boolean' },
+    { 
+      id: 'emailAddress', 
+      accessorKey: 'emailAddress', 
+      header: 'Email', 
+      cell: (i) => i.getValue() 
     },
-    { id: 'language', accessorKey: 'language', header: 'Language', cell: (i) => i.getValue() },
-    { id: 'type', accessorKey: 'type', header: 'Type', cell: (i) => i.getValue() },
     {
-      id: 'createdAt', accessorKey: 'createdAt', header: 'Created',
+      id: 'accountKind',
+      accessorKey: 'accountKind',
+      header: 'Account Kind',
+      cell: ({ getValue }) => {
+        const kind = getValue()
+        if (!kind) return '-'
+        
+        const styles = {
+          ADMIN: 'bg-red-100 text-red-800 border-red-300',
+          OPERATOR: 'bg-blue-100 text-blue-800 border-blue-300',
+          GENERAL: 'bg-gray-100 text-gray-800 border-gray-300',
+        }
+        
+        return (
+          <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${styles[kind] || styles.GENERAL}`}>
+            {kind}
+          </span>
+        )
+      },
+      meta: { type: 'enum', filterKey: 'accountKind', operators: ['EQUAL','IN'] },
+    },
+    {
+      id: 'authMethod',
+      accessorKey: 'authMethod',
+      header: 'Login Method',
+      cell: ({ getValue, row }) => {
+        const method = getValue()
+        const provider = row.original.lastAuthProvider
+        
+        if (method === 'LOCAL') {
+          return (
+            <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-semibold border border-blue-300">
+              🔐 Local
+            </span>
+          )
+        } else if (method === 'OAUTH') {
+          return (
+            <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold border border-green-300">
+              🌐 OAuth {provider && <span className="text-[10px]">({provider})</span>}
+            </span>
+          )
+        } else if (method === 'FEDERATED_AD') {
+          return (
+            <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-semibold border border-purple-300">
+              🏢 AD
+            </span>
+          )
+        }
+        return '-'
+      },
+      meta: { type: 'enum', filterKey: 'authMethod', operators: ['EQUAL','IN'] },
+    },
+    {
+      id: 'enabled',
+      accessorKey: 'enabled',
+      header: 'Status',
+      cell: ({ getValue }) => {
+        const enabled = getValue()
+        return (
+          <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${
+            enabled 
+              ? 'bg-green-100 text-green-800 border-green-300' 
+              : 'bg-red-100 text-red-800 border-red-300'
+          }`}>
+            {enabled ? '✓ Enabled' : '✗ Disabled'}
+          </span>
+        )
+      },
+      meta: { type: 'boolean' },
+    },
+    {
+      id: 'passwordExpiresAt',
+      accessorKey: 'passwordExpiresAt',
+      header: 'Password Expires',
+      cell: ({ getValue }) => {
+        const value = getValue()
+        if (!value) return <span className="text-gray-400">N/A</span>
+        
+        const expiry = new Date(value)
+        const now = new Date()
+        const isExpired = expiry < now
+        const isExpiringSoon = expiry < new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) // 7 days
+        
+        return (
+          <span className={`text-xs ${
+            isExpired ? 'text-red-600 font-semibold' :
+            isExpiringSoon ? 'text-orange-600 font-medium' :
+            'text-gray-600'
+          }`}>
+            {expiry.toLocaleDateString()}
+            {isExpired && ' (Expired!)'}
+            {!isExpired && isExpiringSoon && ' (Soon)'}
+          </span>
+        )
+      },
+      meta: { type: 'date', operators: ['EQUAL','BEFORE','AFTER','BETWEEN'] },
+    },
+    {
+      id: 'validTo',
+      accessorKey: 'validTo',
+      header: 'Account Valid Until',
+      cell: ({ getValue }) => {
+        const value = getValue()
+        if (!value) return <span className="text-gray-400">Never expires</span>
+        
+        const expiry = new Date(value)
+        const now = new Date()
+        const isExpired = expiry < now
+        
+        return (
+          <span className={`text-xs ${isExpired ? 'text-red-600 font-semibold' : 'text-gray-600'}`}>
+            {expiry.toLocaleDateString()}
+            {isExpired && ' (Expired!)'}
+          </span>
+        )
+      },
+      meta: { type: 'date', operators: ['EQUAL','BEFORE','AFTER','BETWEEN'] },
+    },
+    { 
+      id: 'language', 
+      accessorKey: 'language', 
+      header: 'Language', 
+      cell: (i) => i.getValue() || 'en' 
+    },
+    {
+      id: 'createdAt', 
+      accessorKey: 'createdAt', 
+      header: 'Created',
       cell: (i) => (i.getValue() ? new Date(i.getValue()).toLocaleString() : ''),
       meta: { type: 'date', operators: ['EQUAL','BEFORE','AFTER','BETWEEN'] },
     },
     {
-      id: 'updatedAt', accessorKey: 'updatedAt', header: 'Updated',
-      cell: (i) => (i.getValue() ? new Date(i.getValue()).toLocaleString() : ''),
-      meta: { type: 'date', operators: ['EQUAL','BEFORE','AFTER','BETWEEN'] },
-    },
-    {
-      id: 'lastLogin', accessorKey: 'lastLogin', header: 'Last login',
-      cell: (i) => (i.getValue() ? new Date(i.getValue()).toLocaleString() : ''),
+      id: 'lastLogin', 
+      accessorKey: 'lastLogin', 
+      header: 'Last login',
+      cell: (i) => (i.getValue() ? new Date(i.getValue()).toLocaleString() : 'Never'),
       meta: { type: 'date', operators: ['EQUAL','BEFORE','AFTER','BETWEEN'] },
     },
   ], [])

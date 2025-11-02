@@ -9,15 +9,16 @@ spring:
   cloud:
     config:
       server:
-        native:
-          search-locations: classpath:/config
         git:
           uri: https://github.com/royXMaksoud/care-config-repo  
           default-label: main
-          clone-on-start: false
+          clone-on-start: true
           skip-ssl-validation: true
           username: ${GIT_USERNAME:}
           password: ${GIT_TOKEN:}
+          timeout: 10
+        native:
+          search-locations: classpath:/config
     discovery:
       enabled: true
 

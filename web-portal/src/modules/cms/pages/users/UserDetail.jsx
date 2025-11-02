@@ -11,7 +11,8 @@ export default function UserDetail() {
   const [u, setU] = useState(null)
   const [form, setForm] = useState({
     firstName: '', fatherName: '', surName: '', fullName: '',
-    emailAddress: '', language: 'en', type: 'USER', enabled: true, profileImageUrl: ''
+    emailAddress: '', language: 'en', accountKind: 'GENERAL', type: 'USER', 
+    enabled: true, profileImageUrl: '', authMethod: '', isEmailVerified: false
   })
 
   const load = async () => {
@@ -26,9 +27,12 @@ export default function UserDetail() {
         fullName: data.fullName ?? '',
         emailAddress: data.emailAddress ?? '',
         language: data.language ?? 'en',
+        accountKind: data.accountKind ?? 'GENERAL',
         type: data.type ?? 'USER',
         enabled: !!data.enabled,
         profileImageUrl: data.profileImageUrl ?? '',
+        authMethod: data.authMethod ?? '',
+        isEmailVerified: !!data.isEmailVerified,
       })
     } finally {
       setBusy(false)
@@ -49,9 +53,11 @@ export default function UserDetail() {
         fullName: form.fullName?.trim() || null,
         emailAddress: form.emailAddress?.trim() || null,
         language: form.language || null,
+        accountKind: form.accountKind || null,
         type: form.type || null,
         enabled: !!form.enabled,
         profileImageUrl: form.profileImageUrl || null,
+        isEmailVerified: form.isEmailVerified,
       })
       await load()
     } finally {
@@ -194,16 +200,28 @@ export default function UserDetail() {
               </div>
               <div>
                 <label className="block text-xs font-medium text-foreground mb-1">
-                  Type
+                  Account Kind
                 </label>
                 <select 
                   className="w-full px-2 py-1.5 text-sm border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-ring bg-background"
-                  value={form.type}
-                  onChange={(e)=>setForm(f=>({...f, type:e.target.value}))}
+                  value={form.accountKind}
+                  onChange={(e)=>setForm(f=>({...f, accountKind:e.target.value}))}
                 >
-                  <option value="USER">USER</option>
-                  <option value="ADMIN">ADMIN</option>
+                  <option value="GENERAL">General User</option>
+                  <option value="OPERATOR">Operator</option>
+                  <option value="ADMIN">Administrator</option>
                 </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-foreground mb-1">
+                  Login Method
+                </label>
+                <input 
+                  className="w-full px-2 py-1.5 text-sm border border-input rounded-md bg-gray-50"
+                  value={form.authMethod || 'LOCAL'}
+                  readOnly
+                  disabled
+                />
               </div>
               <div className="flex items-center gap-2 pt-5">
                 <input 
@@ -215,6 +233,18 @@ export default function UserDetail() {
                 />
                 <label htmlFor="enabled" className="text-xs font-medium text-foreground">
                   Enabled
+                </label>
+              </div>
+              <div className="flex items-center gap-2 pt-5">
+                <input 
+                  id="isEmailVerified" 
+                  type="checkbox" 
+                  className="w-3.5 h-3.5 text-primary border-input rounded focus:ring-ring"
+                  checked={!!form.isEmailVerified}
+                  onChange={(e)=>setForm(f=>({...f, isEmailVerified:e.target.checked}))}
+                />
+                <label htmlFor="isEmailVerified" className="text-xs font-medium text-foreground">
+                  Email Verified
                 </label>
               </div>
             </div>

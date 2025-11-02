@@ -23,12 +23,38 @@ export default function CodeTableFormModal({
   }, [initial])
 
   const [busy, setBusy] = useState(false)
+  const [codeTablesList, setCodeTablesList] = useState([])
+  const [loadingCodeTables, setLoadingCodeTables] = useState(false)
   const [form, setForm] = useState({
     name: '',
     description: '',
+    parentId: '',
+    isReferenceTable: false,
+    hasScope: false,
+    entityName: '',
     isActive: true,
     rowVersion: null,
   })
+
+  // Load CodeTables list for dropdown
+  useEffect(() => {
+    if (!open) return
+    
+    const loadCodeTables = async () => {
+      setLoadingCodeTables(true)
+      try {
+        const response = await api.get(full(`${resourceBase}/lookup`))
+        setCodeTablesList(response.data || [])
+      } catch (err) {
+        console.error('Failed to load code tables:', err)
+        toast.error('Failed to load code tables list')
+      } finally {
+        setLoadingCodeTables(false)
+      }
+    }
+    
+    loadCodeTables()
+  }, [open])
 
   useEffect(() => {
     if (!open) return
@@ -36,6 +62,10 @@ export default function CodeTableFormModal({
       setForm({
         name: initial.name ?? '',
         description: initial.description ?? '',
+        parentId: initial.parentId ?? '',
+        isReferenceTable: Boolean(initial.isReferenceTable ?? false),
+        hasScope: Boolean(initial.hasScope ?? false),
+        entityName: initial.entityName ?? '',
         isActive: Boolean(initial.isActive ?? true),
         rowVersion: initial.rowVersion ?? null,
       })
@@ -43,6 +73,10 @@ export default function CodeTableFormModal({
       setForm({
         name: '',
         description: '',
+        parentId: '',
+        isReferenceTable: false,
+        hasScope: false,
+        entityName: '',
         isActive: true,
         rowVersion: null,
       })
@@ -64,19 +98,35 @@ export default function CodeTableFormModal({
     return true
   }
 
-  const buildCreatePayload = () => ({
-    name: form.name.trim(),
-    description: form.description?.trim() || null,
-    isActive: !!form.isActive,
-  })
+  const buildCreatePayload = () => {
+    const payload = {
+      name: form.name.trim(),
+      description: form.description?.trim() || null,
+      parentId: form.parentId || null,
+      isReferenceTable: !!form.isReferenceTable,
+      hasScope: !!form.hasScope,
+      entityName: form.entityName?.trim() || null,
+      isActive: !!form.isActive,
+    }
+    console.log('Create Payload:', payload)
+    return payload
+  }
 
-  const buildUpdatePayload = () => ({
-    [idKey]: initial?.[idKey],
-    name: form.name.trim(),
-    description: form.description?.trim() || null,
-    isActive: !!form.isActive,
-    ...(form.rowVersion != null ? { rowVersion: form.rowVersion } : {}),
-  })
+  const buildUpdatePayload = () => {
+    const payload = {
+      [idKey]: initial?.[idKey],
+      name: form.name.trim(),
+      description: form.description?.trim() || null,
+      parentId: form.parentId || null,
+      isReferenceTable: !!form.isReferenceTable,
+      hasScope: !!form.hasScope,
+      entityName: form.entityName?.trim() || null,
+      isActive: !!form.isActive,
+      ...(form.rowVersion != null ? { rowVersion: form.rowVersion } : {}),
+    }
+    console.log('Update Payload:', payload)
+    return payload
+  }
 
   const submit = async (e) => {
     e?.preventDefault?.()
@@ -157,6 +207,83 @@ export default function CodeTableFormModal({
               placeholder="Optional description"
             />
           </div>
+
+          {/* Parent CodeTable */}
+          <div className="grid gap-1">
+            <label htmlFor="parentId" className="text-sm font-medium">Parent Code Table</label>
+            <select
+              id="parentId"
+              name="parentId"
+              className="border rounded px-3 py-2"
+              value={form.parentId || ''}
+              onChange={handleChange}
+              disabled={loadingCodeTables}
+            >
+              <option value="">-- None (Root) --</option>
+              {codeTablesList
+                .filter(ct => isEdit ? ct.codeTableId !== initial?.[idKey] : true)
+                .map((ct) => (
+                  <option key={ct.codeTableId} value={ct.codeTableId}>
+                    {ct.name}
+                  </option>
+                ))}
+            </select>
+            <p className="text-xs text-gray-500">Optional: Select a parent table to create hierarchy</p>
+          </div>
+
+          {/* Reference Table */}
+          <div className="grid gap-1">
+            <label htmlFor="isReferenceTable" className="text-sm font-medium">Is Reference Table</label>
+            <select
+              id="isReferenceTable"
+              name="isReferenceTable"
+              className="border rounded px-3 py-2"
+              value={String(form.isReferenceTable)}
+              onChange={(e) => {
+                const newValue = e.target.value === 'true'
+                console.log('isReferenceTable changed to:', newValue)
+                setForm((f) => ({ ...f, isReferenceTable: newValue }))
+              }}
+            >
+              <option value="false">No</option>
+              <option value="true">Yes</option>
+            </select>
+          </div>
+
+          {/* Has Scope */}
+          <div className="grid gap-1">
+            <label htmlFor="hasScope" className="text-sm font-medium">Has Scope</label>
+            <select
+              id="hasScope"
+              name="hasScope"
+              className="border rounded px-3 py-2"
+              value={String(form.hasScope)}
+              onChange={(e) => {
+                const newValue = e.target.value === 'true'
+                console.log('hasScope changed to:', newValue)
+                setForm((f) => ({ ...f, hasScope: newValue }))
+              }}
+            >
+              <option value="false">No</option>
+              <option value="true">Yes</option>
+            </select>
+          </div>
+
+          {/* Entity Name - Only show if isReferenceTable is true */}
+          {form.isReferenceTable && (
+            <div className="grid gap-1">
+              <label htmlFor="entityName" className="text-sm font-medium">Entity Name</label>
+              <input
+                id="entityName"
+                name="entityName"
+                className="border rounded px-3 py-2"
+                value={form.entityName}
+                onChange={handleChange}
+                placeholder="e.g. CountryEntity"
+              />
+              <p className="text-xs text-gray-500">Enter the entity class name for this reference table</p>
+            </div>
+          )}
 
           {/* Active */}
           <div className="flex items-center gap-2">

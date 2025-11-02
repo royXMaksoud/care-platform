@@ -3,7 +3,7 @@ import axios from 'axios'
 import authStorage from '@/auth/authStorage'
 
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:6060', // gateway
+  baseURL: 'http://localhost:6060', // Gateway Service (CORS fixed!)
   // timeout: 15000, // optional
 })
 
@@ -30,7 +30,13 @@ api.interceptors.response.use(
   (res) => res,
   (err) => {
     const status = err?.response?.status
-    if (status === 401) {
+    const requestUrl = err?.config?.url || ''
+    
+    // Don't auto-logout for permissions API (new OAuth users may not have permissions yet)
+    const isPermissionsEndpoint = requestUrl.includes('/permissions/users/me') || 
+                                   requestUrl.includes('/auth/me/permissions')
+    
+    if (status === 401 && !isPermissionsEndpoint) {
       authStorage.clearAll()
       if (!location.pathname.startsWith('/auth')) {
         location.href = '/auth/login'

@@ -6,11 +6,13 @@ import CrudPage from '@/features/crud/CrudPage'
 import CodeTableFormModal from './CodeTableFormModal'// <- this file must exist
 import { usePermissionCheck } from '@/contexts/PermissionsContext'
 import { SYSTEMS, CMS_SECTIONS } from '@/config/permissions-constants'
+import { api } from '@/lib/axios'
 
 export default function CodeTableList() {
   const navigate = useNavigate()
   const location = useLocation()
   const [listKey, setListKey] = useState(0)
+  const [codeTablesMap, setCodeTablesMap] = useState({})
 
   // Get permissions for Code Table section
   const { getSectionPermissions, isLoading } = usePermissionCheck()
@@ -25,6 +27,26 @@ export default function CodeTableList() {
   const canUpdate = permissions.canUpdate
   const canDelete = permissions.canDelete
   const canList = permissions.canList
+
+  // Load CodeTables for parent lookup
+  useEffect(() => {
+    const loadCodeTables = async () => {
+      try {
+        const response = await api.get('/access/api/code-tables/lookup')
+        const map = {}
+        response.data.forEach((ct) => {
+          map[ct.codeTableId] = ct.name
+        })
+        setCodeTablesMap(map)
+      } catch (err) {
+        console.error('Failed to load code tables for lookup:', err)
+      }
+    }
+    
+    if (canList) {
+      loadCodeTables()
+    }
+  }, [canList])
 
   const columns = useMemo(() => [
     {
@@ -57,6 +79,38 @@ export default function CodeTableList() {
       meta: { type: 'string', filterKey: 'description', operators: ['LIKE', 'EQUAL', 'STARTS_WITH', 'ENDS_WITH', 'IN'] },
     },
     {
+      id: 'parentId',
+      accessorKey: 'parentId',
+      header: 'Parent Table',
+      cell: ({ getValue }) => {
+        const parentId = getValue()
+        if (!parentId) return '-'
+        return codeTablesMap[parentId] || parentId
+      },
+      meta: { type: 'string', filterKey: 'parentId', operators: ['EQUAL', 'IN'] },
+    },
+    {
+      id: 'isReferenceTable',
+      accessorKey: 'isReferenceTable',
+      header: 'Reference Table',
+      cell: (i) => (i.getValue() ? 'Yes' : 'No'),
+      meta: { type: 'boolean', filterKey: 'isReferenceTable', operators: ['EQUAL'] },
+    },
+    {
+      id: 'hasScope',
+      accessorKey: 'hasScope',
+      header: 'Has Scope',
+      cell: (i) => (i.getValue() ? 'Yes' : 'No'),
+      meta: { type: 'boolean', filterKey: 'hasScope', operators: ['EQUAL'] },
+    },
+    {
+      id: 'entityName',
+      accessorKey: 'entityName',
+      header: 'Entity Name',
+      cell: (i) => i.getValue() ?? '-',
+      meta: { type: 'string', filterKey: 'entityName', operators: ['LIKE', 'EQUAL', 'STARTS_WITH', 'ENDS_WITH', 'IN'] },
+    },
+    {
       id: 'isActive',
       accessorKey: 'isActive',
       header: 'Active',
@@ -70,7 +124,7 @@ export default function CodeTableList() {
       cell: (i) => (i.getValue() ? new Date(i.getValue()).toLocaleString() : ''),
       meta: { type: 'datetime', filterKey: 'createdDate', operators: ['EQUAL', 'BEFORE', 'AFTER', 'BETWEEN'] },
     },
-  ], [navigate])
+  ], [navigate, codeTablesMap])
 
   const formFields = [
     { type: 'text', name: 'name', label: 'Name', required: true },
@@ -134,12 +188,14 @@ export default function CodeTableList() {
       toCreatePayload={(f) => ({
         name: f.name?.trim(),
         description: f.description?.trim() || null,
+        parentId: f.parentId || null,
         isActive: !!f.isActive,
       })}
       toUpdatePayload={(f, row) => ({
         codeTableId: row.codeTableId ?? row.id,
         name: f.name?.trim(),
         description: f.description?.trim() || null,
+        parentId: f.parentId || null,
         isActive: !!f.isActive,
         ...(row.rowVersion != null ? { rowVersion: row.rowVersion } : {}),
       })}

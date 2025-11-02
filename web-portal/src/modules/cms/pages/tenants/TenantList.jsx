@@ -192,7 +192,7 @@ export default function TenantListPage() {
           focalPointPhone: f.focalPointPhone?.trim() || null,
           address: f.address?.trim() || null,
           comment: f.comment?.trim() || null,
-          isActive: f.isActive !== undefined ? !!f.isActive : true,
+          isActive: true, // ✅ Always TRUE for new records
         })}
         toUpdatePayload={(f, row) => ({
           tenantId: row.tenantId,
@@ -209,7 +209,8 @@ export default function TenantListPage() {
           focalPointPhone: f.focalPointPhone?.trim() || null,
           address: f.address?.trim() || null,
           comment: f.comment?.trim() || null,
-          isActive: f.isActive !== undefined ? !!f.isActive : row.isActive,
+          isActive: true, // ✅ Always TRUE - cannot be deactivated
+          rowVersion: row.rowVersion,
         })}
       />
     </div>

@@ -1,0 +1,205 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:14-alpine
+    container_name: care-postgres
+    environment:
+      POSTGRES_DB: cms_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-P@ssw0rd}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - care-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Service Registry (Eureka Server)
+  service-registry:
+    build:
+      context: ./service-registry
+      dockerfile: Dockerfile
+    container_name: care-service-registry
+    ports:
+      - "8761:8761"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      JAVA_OPTS: "-Xmx256m -Xms128m"
+    networks:
+      - care-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8761/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  # Config Server
+  config-server:
+    build:
+      context: ./config-server
+      dockerfile: Dockerfile
+    container_name: care-config-server
+    ports:
+      - "8888:8888"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      JAVA_OPTS: "-Xmx256m -Xms128m"
+      EUREKA_SERVER: http://service-registry:8761/eureka
+    networks:
+      - care-network
+    depends_on:
+      service-registry:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8888/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # Auth Service
+  auth-service:
+    build:
+      context: .
+      dockerfile: ./auth-service/auth-service/Dockerfile
+    container_name: care-auth-service
+    ports:
+      - "6061:6061"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      JAVA_OPTS: "-Xmx512m -Xms256m"
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: cms_db
+      DB_USERNAME: postgres
+      DB_PASSWORD: ${DB_PASSWORD:-P@ssw0rd}
+      JWT_SECRET: ${JWT_SECRET:-SuperSecureKeyThatIsAtLeast64CharactersLongToAvoidWeakKeyException1234567890}
+      EUREKA_SERVER: http://service-registry:8761/eureka
+      SERVER_PORT: 6061
+    networks:
+      - care-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      service-registry:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:6061/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # Access Management Service
+  access-management-service:
+    build:
+      context: .
+      dockerfile: ./access-management-service/Dockerfile
+    container_name: care-access-management
+    ports:
+      - "6062:6062"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      JAVA_OPTS: "-Xmx512m -Xms256m"
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: cms_db
+      DB_USERNAME: postgres
+      DB_PASSWORD: ${DB_PASSWORD:-P@ssw0rd}
+      JWT_SECRET: ${JWT_SECRET:-SuperSecureKeyThatIsAtLeast64CharactersLongToAvoidWeakKeyException1234567890}
+      EUREKA_SERVER: http://service-registry:8761/eureka
+      SERVER_PORT: 6062
+    networks:
+      - care-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      service-registry:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:6062/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+
+  # Reference Data Service
+  reference-data-service:
+    build:
+      context: .
+      dockerfile: ./reference-data-service/Dockerfile
+    container_name: care-reference-data
+    ports:
+      - "6063:6063"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      JAVA_OPTS: "-Xmx512m -Xms256m"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/cms_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-P@ssw0rd}
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://service-registry:8761/eureka
+      SERVER_PORT: 6063
+    networks:
+      - care-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      service-registry:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:6063/management/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+
+  # Gateway Service
+  gateway-service:
+    build:
+      context: ./gateway-service
+      dockerfile: Dockerfile
+    container_name: care-gateway
+    ports:
+      - "6060:6060"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      JAVA_OPTS: "-Xmx512m -Xms256m"
+      EUREKA_SERVER: http://service-registry:8761/eureka
+      SERVER_PORT: 6060
+      JWT_SECRET: ${JWT_SECRET:-SuperSecureKeyThatIsAtLeast64CharactersLongToAvoidWeakKeyException1234567890}
+    networks:
+      - care-network
+    depends_on:
+      service-registry:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+      access-management-service:
+        condition: service_healthy
+      reference-data-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:6060/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+networks:
+  care-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+

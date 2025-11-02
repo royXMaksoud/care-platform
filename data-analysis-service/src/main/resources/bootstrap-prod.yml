@@ -1,0 +1,29 @@
+# Bootstrap configuration for data-analysis-service - PRODUCTION
+# Loads configuration from Config Server before application.yml
+# This profile requires Config Server to be running
+
+spring:
+  application:
+    name: data-analysis-service
+  cloud:
+    config:
+      uri: ${CONFIG_SERVER_URI:http://localhost:8888}
+      fail-fast: true  # Production: fail if Config Server is not available
+      retry:
+        max-attempts: 10
+        initial-interval: 2000
+        max-interval: 10000
+        multiplier: 1.5
+      request-connect-timeout: 10000
+      request-read-timeout: 10000
+
+# Server port (must be defined here for early initialization)
+server:
+  port: ${SERVER_PORT:6072}
+
+# Logging for production
+logging:
+  level:
+    org.springframework.cloud.config: INFO
+    org.springframework.retry: INFO
+
