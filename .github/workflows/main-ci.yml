@@ -1,0 +1,196 @@
+name: 🚀 Build & Deploy to Docker & Kubernetes
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - '**.java'
+      - '**.dart'
+      - '**.jsx'
+      - 'pom.xml'
+      - 'pubspec.yaml'
+      - 'package.json'
+      - 'Dockerfile'
+      - 'docker-compose*.yml'
+      - 'k8s/**'
+      - '.github/workflows/**'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - production
+
+env:
+  REGISTRY: docker.io
+  IMAGE_VERSION: ${{ github.sha }}
+
+jobs:
+  # ===================================
+  # PHASE 1: Build Backend Services
+  # ===================================
+  build-backend:
+    name: 🏗️ Build Backend Services
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        service:
+          - service-registry
+          - config-server
+          - auth-service
+          - access-management-service
+          - reference-data-service
+          - appointment-service
+          - data-analysis-service
+          - chatbot-service
+          - gateway-service
+
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: ☕ Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: 🏗️ Build ${{ matrix.service }}
+        run: |
+          echo "Building ${{ matrix.service }}..."
+          if [ -f "${{ matrix.service }}/pom.xml" ]; then
+            mvn -f "${{ matrix.service }}/pom.xml" clean package -DskipTests -q
+          elif [ -f "${{ matrix.service}}/${{ matrix.service }}/pom.xml" ]; then
+            mvn -f "${{ matrix.service}}/${{ matrix.service }}/pom.xml" clean package -DskipTests -q
+          else
+            echo "⚠️ ${{ matrix.service }} not found, skipping"
+          fi
+
+      - name: 📦 Upload Artifact
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: ${{ matrix.service }}-jar
+          path: |
+            ${{ matrix.service }}/target/*.jar
+            ${{ matrix.service }}/${{ matrix.service }}/target/*.jar
+          retention-days: 1
+
+  # ===================================
+  # PHASE 2: Build Frontend
+  # ===================================
+  build-frontend:
+    name: 🎨 Build Web Portal
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: web-portal/package-lock.json
+
+      - name: 📦 Install Dependencies
+        working-directory: web-portal
+        run: npm ci
+
+      - name: 🏗️ Build Web Portal
+        working-directory: web-portal
+        run: npm run build
+
+      - name: 📤 Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: web-portal-build
+          path: web-portal/dist
+          retention-days: 1
+
+  # ===================================
+  # PHASE 3: Build Docker Images
+  # ===================================
+  build-docker:
+    name: 🐳 Build & Push Docker Images
+    runs-on: ubuntu-latest
+    needs: [build-backend, build-frontend]
+    if: github.ref == 'refs/heads/main'
+
+    strategy:
+      matrix:
+        service:
+          - name: auth-service
+            dockerfile: auth-service/auth-service/Dockerfile
+          - name: appointment-service
+            dockerfile: appointment-service/Dockerfile
+          - name: reference-data-service
+            dockerfile: reference-data-service/Dockerfile
+          - name: gateway-service
+            dockerfile: gateway-service/Dockerfile
+
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🐳 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 🔑 Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: 🏗️ Build & Push ${{ matrix.service.name }}
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ${{ matrix.service.dockerfile }}
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/care-${{ matrix.service.name }}:latest
+            ${{ secrets.DOCKER_USERNAME }}/care-${{ matrix.service.name }}:${{ github.sha }}
+
+  # ===================================
+  # PHASE 4: Deploy to Kubernetes
+  # ===================================
+  deploy-kubernetes:
+    name: ☸️ Deploy to Kubernetes
+    runs-on: ubuntu-latest
+    needs: build-docker
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: 'v1.27.0'
+
+      - name: 🔑 Configure kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBECONFIG_CONTENT }}" | base64 -d > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+          kubectl cluster-info
+
+      - name: 🚀 Apply Manifests
+        run: |
+          kubectl create namespace care-system --dry-run=client -o yaml | kubectl apply -f -
+          kubectl apply -k k8s/

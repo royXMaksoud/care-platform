@@ -1,0 +1,95 @@
+{
+  "appointment": {
+    "title": "Appointment Management",
+    "subtitle": "Manage schedules, appointments, and center configurations",
+    
+    "schedule": {
+      "title": "Schedule Management",
+      "subtitle": "Manage weekly schedules for centers",
+      "dayOfWeek": "Day of Week",
+      "startTime": "Start Time",
+      "endTime": "End Time",
+      "slotDuration": "Slot Duration",
+      "capacity": "Capacity per Slot",
+      "createSuccess": "Schedule created successfully",
+      "updateSuccess": "Schedule updated successfully",
+      "deleteSuccess": "Schedule deleted successfully",
+      "days": {
+        "0": "Sunday",
+        "1": "Monday",
+        "2": "Tuesday",
+        "3": "Wednesday",
+        "4": "Thursday",
+        "5": "Friday",
+        "6": "Saturday"
+      }
+    },
+    
+    "holiday": {
+      "title": "Holiday Management",
+      "subtitle": "Manage holidays and off-days",
+      "holidayDate": "Holiday Date",
+      "name": "Holiday Name",
+      "reason": "Reason",
+      "recurring": "Recurring Yearly",
+      "createSuccess": "Holiday created successfully",
+      "updateSuccess": "Holiday updated successfully",
+      "deleteSuccess": "Holiday deleted successfully"
+    },
+    
+    "serviceType": {
+      "title": "Service Type Management",
+      "subtitle": "Manage service types and categories",
+      "name": "Service Name",
+      "code": "Code",
+      "parent": "Parent Service",
+      "isLeaf": "Is Detailed Service",
+      "createSuccess": "Service type created successfully",
+      "updateSuccess": "Service type updated successfully",
+      "deleteSuccess": "Service type deleted successfully"
+    },
+    
+    "actionType": {
+      "title": "Action Type Management",
+      "subtitle": "Configure appointment outcomes",
+      "name": "Action Name",
+      "code": "Code",
+      "requiresTransfer": "Requires Transfer",
+      "completesAppointment": "Completes Appointment",
+      "createSuccess": "Action type created successfully",
+      "updateSuccess": "Action type updated successfully",
+      "deleteSuccess": "Action type deleted successfully"
+    },
+    
+    "beneficiary": {
+      "title": "Beneficiary Management",
+      "subtitle": "Manage patients and service recipients",
+      "nationalId": "National ID",
+      "fullName": "Full Name",
+      "motherName": "Mother Name",
+      "mobile": "Mobile Number",
+      "email": "Email",
+      "address": "Address",
+      "createSuccess": "Beneficiary created successfully",
+      "updateSuccess": "Beneficiary updated successfully",
+      "deleteSuccess": "Beneficiary deleted successfully"
+    },
+    
+    "appointments": {
+      "title": "Appointments",
+      "subtitle": "View and manage all appointments",
+      "date": "Date",
+      "time": "Time",
+      "patient": "Patient",
+      "center": "Center",
+      "service": "Service",
+      "status": "Status",
+      "priority": "Priority",
+      "updateStatus": "Update Status",
+      "cancel": "Cancel Appointment",
+      "transfer": "Transfer Appointment",
+      "history": "View History"
+    }
+  }
+}
+

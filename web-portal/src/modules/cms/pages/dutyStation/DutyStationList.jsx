@@ -4,6 +4,7 @@ import CrudPage from '@/features/crud/CrudPage'
 import { usePermissionCheck } from '@/contexts/PermissionsContext'
 import { SYSTEMS, CMS_SECTIONS } from '@/config/permissions-constants'
 import { api } from '@/lib/axios'
+import { useDutyStationTypes } from '@/hooks/useDutyStationTypes'
 
 const dutyStationColumns = [
   { 
@@ -61,6 +62,9 @@ export default function DutyStationListPage() {
   const [countries, setCountries] = useState([])
   const [locations, setLocations] = useState([])
   
+  // Get duty station types from hook
+  const { dutyStationTypes, loading: typesLoading } = useDutyStationTypes('en')
+  
   // Get permissions for Code Country section (using same permissions)
   const { getSectionPermissions, isLoading } = usePermissionCheck()
   
@@ -86,24 +90,29 @@ export default function DutyStationListPage() {
         
         // ✅ Use Promise.all to fetch all data in parallel (faster!)
         const [orgResponse, opResponse, branchResponse, countryResponse, locationResponse] = await Promise.all([
-          api.post('/access/api/code-organization-languages/filter', {
-            criteria: [{ field: 'languageCode', operator: 'EQUAL', value: userLanguage }]
+          // Fetch real Organizations (not code table)
+          api.post('/access/api/organizations/filter', {
+            criteria: []
           }, { params: { page: 0, size: 1000 } }),
           
-          api.post('/access/api/operation-languages/filter', {
-            criteria: [{ field: 'language', operator: 'EQUAL', value: userLanguage }]
+          // Fetch real Operations
+          api.post('/access/api/operations/filter', {
+            criteria: []
           }, { params: { page: 0, size: 1000 } }),
           
-          api.post('/access/api/organization-branch-languages/filter', {
-            criteria: [{ field: 'language', operator: 'EQUAL', value: userLanguage }]
+          // Fetch real Organization Branches
+          api.post('/access/api/organization-branches/filter', {
+            criteria: []
           }, { params: { page: 0, size: 1000 } }),
           
-          api.post('/access/api/code-country-languages/filter', {
-            criteria: [{ field: 'language', operator: 'EQUAL', value: userLanguage }]
+          // Fetch real Countries (not code table)
+          api.post('/access/api/code-countries/filter', {
+            criteria: []
           }, { params: { page: 0, size: 1000 } }),
           
-          api.post('/access/api/location-languages/filter', {
-            criteria: [{ field: 'language', operator: 'EQUAL', value: userLanguage }]
+          // Fetch real Locations
+          api.post('/access/api/locations/filter', {
+            criteria: []
           }, { params: { page: 0, size: 1000 } })
         ])
         
@@ -188,19 +197,31 @@ export default function DutyStationListPage() {
         ...locations.map(loc => ({ value: loc.locationId, label: loc.name }))
       ]
     },
+    { 
+      type: 'select', 
+      name: 'statusId', 
+      label: 'Status Type',
+      options: [
+        { value: '', label: '-- Select Status --' },
+        ...dutyStationTypes.map(type => ({ value: type.value, label: type.label }))
+      ]
+    },
     { type: 'textarea', name: 'address', label: 'Address' },
     { type: 'number', name: 'latitude', label: 'Latitude' },
     { type: 'number', name: 'longitude', label: 'Longitude' },
     // ✅ isActive removed - always TRUE
-  ], [organizations, operations, organizationBranches, countries, locations])
+  ], [organizations, operations, organizationBranches, countries, locations, dutyStationTypes])
 
   // Loading state
-  if (isLoading || !canList) {
+  if (isLoading || typesLoading || !canList) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
-          {isLoading ? (
-            <p className="text-gray-600">Loading permissions...</p>
+          {(isLoading || typesLoading) ? (
+            <>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading...</p>
+            </>
           ) : (
             <>
               <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>

@@ -7,9 +7,15 @@ abstract class Routes {
   static const login = '/login';
   static const register = '/register';
   static const appointments = '/appointments';
-  static const appointmentDetails = '/appointment-details';
+  static const appointmentDetailsOld = '/appointment-details';
   static const messages = '/messages';
   static const notifications = '/notifications';
   static const profile = '/profile';
   static const settings = '/settings';
+  
+  // Appointment routes
+  static const appointmentSearch = '/appointment/search';
+  static const appointmentList = '/appointment/list';
+  static const appointmentDetails = '/appointment/details';
+  static const appointmentBooking = '/appointment/booking';
 }

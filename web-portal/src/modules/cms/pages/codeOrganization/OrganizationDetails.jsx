@@ -6,6 +6,67 @@ import CrudPage from '@/features/crud/CrudPage'
 import { usePermissionCheck } from '@/contexts/PermissionsContext'
 import { SYSTEMS, CMS_SECTIONS } from '@/config/permissions-constants'
 
+// Static columns and fields - defined outside component to avoid re-creation
+const languageColumns = [
+  { id: 'languageCode', accessorKey: 'languageCode', header: 'Language Code' },
+  { id: 'name', accessorKey: 'name', header: 'Name' },
+  {
+    id: 'isActive',
+    accessorKey: 'isActive',
+    header: 'Status',
+    cell: (info) => (
+      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+        info.getValue() ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+      }`}>
+        {info.getValue() ? 'Active' : 'Inactive'}
+      </span>
+    ),
+  },
+]
+
+const languageFields = [
+  { type: 'text', name: 'languageCode', label: 'Language Code', required: true, placeholder: 'e.g., en, ar' },
+  { type: 'text', name: 'name', label: 'Translated Name', required: true },
+  { type: 'checkbox', name: 'isActive', label: 'Active', defaultValue: true },
+]
+
+// Separate component for Languages tab to avoid hooks order issues
+function OrganizationLanguagesTab({ organizationId }) {
+  return (
+    <CrudPage
+      key={`org-lang-${organizationId}`}
+      title="Organization Languages"
+      service="access"
+      resourceBase="/api/code-organization-languages"
+      idKey="organizationLanguageId"
+      columns={languageColumns}
+      formFields={languageFields}
+      pageSize={10}
+      fixedFilters={[
+        {
+          field: 'organizationId',
+          operator: 'EQUAL',
+          value: organizationId,
+          dataType: 'UUID',
+        },
+      ]}
+      toCreatePayload={(f) => ({
+        organizationId: organizationId,
+        languageCode: f.languageCode,
+        name: f.name,
+        isActive: true,
+      })}
+      toUpdatePayload={(f) => ({
+        organizationId: organizationId,
+        languageCode: f.languageCode,
+        name: f.name,
+        isActive: true,
+      })}
+      tableId={`organization-languages-${organizationId}`}
+    />
+  )
+}
+
 export default function OrganizationDetailsPage() {
   const { organizationId } = useParams()
   const navigate = useNavigate()
@@ -83,29 +144,6 @@ export default function OrganizationDetailsPage() {
       </div>
     )
   }
-
-  const languageColumns = [
-    { id: 'languageCode', accessorKey: 'languageCode', header: 'Language Code' },
-    { id: 'name', accessorKey: 'name', header: 'Name' },
-    {
-      id: 'isActive',
-      accessorKey: 'isActive',
-      header: 'Status',
-      cell: (info) => (
-        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-          info.getValue() ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-        }`}>
-          {info.getValue() ? 'Active' : 'Inactive'}
-        </span>
-      ),
-    },
-  ]
-
-  const languageFields = [
-    { type: 'text', name: 'languageCode', label: 'Language Code', required: true, placeholder: 'e.g., en, ar' },
-    { type: 'text', name: 'name', label: 'Translated Name', required: true },
-    { type: 'checkbox', name: 'isActive', label: 'Active', defaultValue: true },
-  ]
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
@@ -338,37 +376,10 @@ export default function OrganizationDetailsPage() {
               </div>
             )}
 
-            {activeTab === 'languages' && canManageLanguages && (
-              <CrudPage
-                title="Organization Languages"
-                service="access"
-                resourceBase="/api/code-organization-languages"
-                idKey="organizationLanguageId"
-                columns={languageColumns}
-                formFields={languageFields}
-                pageSize={10}
-                fixedFilters={[
-                  {
-                    field: 'organizationId',
-                    operator: 'EQUAL',
-                    value: organizationId,
-                    dataType: 'UUID',
-                  },
-                ]}
-                toCreatePayload={(f) => ({
-                  organizationId: organizationId,
-                  languageCode: f.languageCode,
-                  name: f.name,
-                  isActive: true, // ✅ Always TRUE for new records
-                })}
-                toUpdatePayload={(f) => ({
-                  organizationId: organizationId,
-                  languageCode: f.languageCode,
-                  name: f.name,
-                  isActive: true, // ✅ Always TRUE - cannot be deactivated
-                })}
-                tableId="organization-languages"
-              />
+            {canManageLanguages && organizationId && (
+              <div style={{ display: activeTab === 'languages' ? 'block' : 'none' }}>
+                <OrganizationLanguagesTab organizationId={organizationId} />
+              </div>
             )}
           </div>
         </div>

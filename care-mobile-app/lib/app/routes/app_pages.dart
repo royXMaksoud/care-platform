@@ -4,8 +4,14 @@ import '../modules/splash/splash_binding.dart';
 import '../modules/splash/splash_view.dart';
 import '../modules/welcome/welcome_binding.dart';
 import '../modules/welcome/welcome_view.dart';
+import '../modules/auth/login/login_binding.dart';
+import '../modules/auth/login/login_view.dart';
 import '../modules/home/home_binding.dart';
 import '../modules/home/home_view.dart';
+import '../modules/appointment/appointment_binding.dart';
+import '../modules/appointment/appointment_search_view.dart';
+import '../modules/appointment/appointment_list_view.dart';
+import '../modules/appointment/appointment_details_view.dart';
 
 import 'app_routes.dart';
 
@@ -27,21 +33,35 @@ class AppPages {
       transition: Transition.fadeIn,
     ),
     GetPage(
+      name: Routes.login,
+      page: () => const LoginView(),
+      binding: LoginBinding(),
+      transition: Transition.fadeIn,
+    ),
+    GetPage(
       name: Routes.home,
       page: () => const HomeView(),
       binding: HomeBinding(),
       transition: Transition.fadeIn,
     ),
-    // TODO: إضافة صفحات أخرى لاحقاً
-    // GetPage(
-    //   name: Routes.login,
-    //   page: () => const LoginView(),
-    //   binding: LoginBinding(),
-    // ),
-    // GetPage(
-    //   name: Routes.appointments,
-    //   page: () => const AppointmentsView(),
-    //   binding: AppointmentsBinding(),
-    // ),
+    GetPage(
+      name: Routes.appointmentSearch,
+      page: () => const AppointmentSearchView(),
+      binding: AppointmentBinding(),
+      transition: Transition.rightToLeft,
+    ),
+    GetPage(
+      name: Routes.appointmentList,
+      page: () => const AppointmentListView(),
+      binding: AppointmentBinding(),
+      transition: Transition.rightToLeft,
+    ),
+    GetPage(
+      name: Routes.appointmentDetails,
+      page: () => const AppointmentDetailsView(),
+      binding: AppointmentBinding(),
+      transition: Transition.rightToLeft,
+    ),
   ];
 }
+

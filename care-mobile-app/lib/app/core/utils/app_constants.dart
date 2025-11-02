@@ -5,9 +5,12 @@ class AppConstants {
 
   // API Base URLs (عدّلها حسب حاجتك)
   static const String authBaseUrl = 'http://10.0.2.2:6061'; // للمحاكي
-  static const String appointmentBaseUrl = 'http://10.0.2.2:8080';
+  static const String appointmentBaseUrl = 'http://10.0.2.2:6064'; // appointment-service
   static const String accessManagementBaseUrl = 'http://10.0.2.2:6062';
   static const String gatewayBaseUrl = 'http://10.0.2.2:6060';
+  
+  // Main base URL for mobile app
+  static const String baseUrl = gatewayBaseUrl; // Use gateway
 
   // للجهاز الحقيقي: استبدل 10.0.2.2 بـ IP الخاص بك
   // static const String authBaseUrl = 'http://192.168.1.100:6061';

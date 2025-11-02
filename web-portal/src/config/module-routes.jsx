@@ -9,7 +9,10 @@ const MAP = new Map([
   ['content-management-system', '/cms'],
              
 
-  ['appointments', '/appointments'],
+  ['appointment', '/appointment'],
+  ['appointments', '/appointment'],
+  ['appointment-service', '/appointment'],
+  ['appointment management', '/appointment'],
   ['reference data', '/reference-data'],
   ['complaints', '/complaints'],
   ['files', '/files'],

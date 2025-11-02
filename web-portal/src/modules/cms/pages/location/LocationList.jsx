@@ -5,77 +5,28 @@ import { usePermissionCheck } from '@/contexts/PermissionsContext'
 import { SYSTEMS, CMS_SECTIONS } from '@/config/permissions-constants'
 import { api } from '@/lib/axios'
 import { toast } from 'sonner'
+import LocationImportModal from '../../components/LocationImportModal'
+import LocationCreateModal from '../../components/LocationCreateModal'
+import { FileSpreadsheet, Plus } from 'lucide-react'
 
-const locationColumns = [
-  { 
-    id: 'code', 
-    accessorKey: 'code', 
-    header: 'Location Code',
-    cell: (info) => info.getValue() || '-'
-  },
-  { 
-    id: 'name', 
-    accessorKey: 'name', 
-    header: 'Location Name',
-    cell: (info) => (
-      <button 
-        onClick={() => {
-          // Navigation handled by onRowClick
-        }}
-        className="text-blue-600 hover:text-blue-800 font-medium hover:underline cursor-pointer"
-      >
-        {info.getValue()}
-      </button>
-    )
-  },
-  { 
-    id: 'level', 
-    accessorKey: 'level', 
-    header: 'Level', 
-    cell: (info) => info.getValue() ?? '-',
-    meta: { type: 'number' },
-  },
-  { 
-    id: 'countryId', 
-    accessorKey: 'countryId', 
-    header: 'Country', 
-    cell: (info) => {
-      const countryId = info.getValue()
-      // You can enhance this to show country name
-      return countryId ? countryId.substring(0, 8) + '...' : '-'
-    }
-  },
-  {
-    id: 'isActive',
-    accessorKey: 'isActive',
-    header: 'Status',
-    cell: (info) => (
-      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-        info.getValue() 
-          ? 'bg-green-100 text-green-800' 
-          : 'bg-gray-100 text-gray-800'
-      }`}>
-        {info.getValue() ? 'Active' : 'Inactive'}
-      </span>
-    ),
-    meta: { type: 'boolean' },
-  },
-  { 
-    id: 'createdAt', 
-    accessorKey: 'createdAt', 
-    header: 'Created At', 
-    cell: (info) => info.getValue() ? new Date(info.getValue()).toLocaleDateString() : '-',
-    meta: {
-      type: 'date',
-      operators: ['EQUAL', 'BEFORE', 'AFTER', 'BETWEEN']
-    },
-  },
-]
+const LEVEL_LABELS = {
+  0: 'Governorate',
+  1: 'District',
+  2: 'Subdistrict',
+  3: 'Community',
+  4: 'Neighborhood',
+}
+
+// Columns will be built inside the component to access country names
 
 export default function LocationListPage() {
   const navigate = useNavigate()
   const [countries, setCountries] = useState([])
   const [loadingCountries, setLoadingCountries] = useState(true)
+  const [importModalOpen, setImportModalOpen] = useState(false)
+  const [createModalOpen, setCreateModalOpen] = useState(false)
+  const [refreshKey, setRefreshKey] = useState(0)
+  const countryNameById = useMemo(() => Object.fromEntries((countries || []).map(c => [c.countryId, c.name])), [countries])
   
   // Get permissions for Location section
   const { getSectionPermissions, isLoading, permissionsData } = usePermissionCheck()
@@ -136,24 +87,34 @@ export default function LocationListPage() {
     }
   }, [])
 
-  const locationFields = useMemo(() => [
-    { 
-      type: 'select', 
-      name: 'countryId', 
-      label: 'Country', 
-      required: true,
-      options: countries.map(c => ({ value: c.countryId, label: c.name })),
-      loading: loadingCountries
-    },
-    { type: 'text', name: 'code', label: 'Location Code', required: true, placeholder: 'e.g., LOC001' },
-    { type: 'text', name: 'name', label: 'Location Name', required: true },
-    { type: 'number', name: 'level', label: 'Level', placeholder: '0 = root, 1 = province, 2 = city...' },
-    { type: 'text', name: 'parentLocationId', label: 'Parent Location ID (optional)', placeholder: 'UUID' },
-    { type: 'text', name: 'lineagePath', label: 'Lineage Path', placeholder: 'e.g., /country/province/city' },
-    { type: 'number', name: 'latitude', label: 'Latitude', step: 'any', placeholder: 'e.g., 33.5138' },
-    { type: 'number', name: 'longitude', label: 'Longitude', step: 'any', placeholder: 'e.g., 36.2765' },
-    { type: 'checkbox', name: 'isActive', label: 'Active', defaultValue: true },
-  ], [countries, loadingCountries])
+  const LEVEL_OPTIONS = [
+    { value: 0, label: 'Governorate' },
+    { value: 1, label: 'District' },
+    { value: 2, label: 'Subdistrict' },
+    { value: 3, label: 'Community' },
+    { value: 4, label: 'Neighborhood' },
+  ]
+
+  const handleCreateSuccess = () => {
+    setRefreshKey(prev => prev + 1)
+    toast.success('Location created successfully')
+  }
+
+  const handleImportSuccess = () => {
+    setRefreshKey(prev => prev + 1)
+  }
+
+  const handleCreateSubmit = async (payload) => {
+    try {
+      await api.post('/access/api/locations', payload)
+      handleCreateSuccess()
+      setCreateModalOpen(false)
+    } catch (err) {
+      const errorMsg = err?.response?.data?.message || 'Failed to create location'
+      toast.error(errorMsg)
+      throw err
+    }
+  }
 
   // Show loading state while fetching permissions
   if (isLoading) {
@@ -186,6 +147,75 @@ export default function LocationListPage() {
     )
   }
 
+  const columns = useMemo(() => [
+    { 
+      id: 'code', 
+      accessorKey: 'code', 
+      header: 'Location Code',
+      cell: (info) => info.getValue() || '-'
+    },
+    { 
+      id: 'name', 
+      accessorKey: 'name', 
+      header: 'Location Name',
+      cell: (info) => (
+        <button 
+          onClick={() => {
+            // Navigation handled by onRowClick
+          }}
+          className="text-blue-600 hover:text-blue-800 font-medium hover:underline cursor-pointer"
+        >
+          {info.getValue()}
+        </button>
+      )
+    },
+    { 
+      id: 'level', 
+      accessorKey: 'level', 
+      header: 'Level', 
+      cell: (info) => {
+        const v = info.getValue()
+        if (v === null || v === undefined || v === '') return '-'
+        return LEVEL_LABELS[v] ?? `Level ${v}`
+      },
+      meta: { type: 'string', enumValues: Object.values(LEVEL_LABELS) },
+    },
+    { 
+      id: 'countryId', 
+      accessorKey: 'countryId', 
+      header: 'Country', 
+      cell: (info) => {
+        const countryId = info.getValue()
+        return countryId ? (countryNameById[countryId] || countryId.substring(0, 8) + '...') : '-'
+      }
+    },
+    {
+      id: 'isActive',
+      accessorKey: 'isActive',
+      header: 'Status',
+      cell: (info) => (
+        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+          info.getValue() 
+            ? 'bg-green-100 text-green-800' 
+            : 'bg-gray-100 text-gray-800'
+        }`}>
+          {info.getValue() ? 'Active' : 'Inactive'}
+        </span>
+      ),
+      meta: { type: 'boolean' },
+    },
+    { 
+      id: 'createdAt', 
+      accessorKey: 'createdAt', 
+      header: 'Created At', 
+      cell: (info) => info.getValue() ? new Date(info.getValue()).toLocaleDateString() : '-',
+      meta: {
+        type: 'date',
+        operators: ['EQUAL', 'BEFORE', 'AFTER', 'BETWEEN']
+      },
+    },
+  ], [countryNameById])
+
   return (
     <div className="p-6">
       <CrudPage
@@ -193,32 +223,52 @@ export default function LocationListPage() {
         service="access"
         resourceBase="/api/locations"
         idKey="locationId"
-        columns={locationColumns}
+        columns={columns}
         pageSize={25}
-        formFields={locationFields}
-        enableCreate={canCreate}
+        enableCreate={false} // Disable default create, use custom modal
         enableEdit={canUpdate}
         enableDelete={canDelete}
-        showAddButton={canCreate}
+        showAddButton={false} // Hide default button
         tableId="locations-list"
-        toCreatePayload={(f) => ({
-          countryId: f.countryId,
-          code: f.code?.trim(),
-          name: f.name?.trim(),
-          level: f.level ? parseInt(f.level) : null,
-          parentLocationId: f.parentLocationId?.trim() || null,
-          lineagePath: f.lineagePath?.trim() || null,
-          latitude: f.latitude ? parseFloat(f.latitude) : null,
-          longitude: f.longitude ? parseFloat(f.longitude) : null,
-          isActive: true, // ✅ Always TRUE for new records
-        })}
+        key={refreshKey} // Force refresh when key changes
+        renderHeaderRight={() => (
+          <div className="flex items-center gap-2">
+            {canCreate && (
+              <>
+                <button
+                  onClick={() => setImportModalOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                  title="Import from Excel"
+                >
+                  <FileSpreadsheet className="h-4 w-4" />
+                  <span>Import Excel</span>
+                </button>
+                <button
+                  onClick={() => {
+                    try {
+                      setCreateModalOpen(true)
+                    } catch (error) {
+                      console.error('Error opening create modal:', error)
+                      toast.error('Failed to open create form. Please try again.')
+                    }
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                  title="Create New Location"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Create Location</span>
+                </button>
+              </>
+            )}
+          </div>
+        )}
         toUpdatePayload={(f, row) => ({
           locationId: row.locationId,
           countryId: f.countryId,
           code: f.code?.trim(),
           name: f.name?.trim(),
-          level: f.level ? parseInt(f.level) : null,
-          parentLocationId: f.parentLocationId?.trim() || null,
+          level: f.level === '' || f.level === undefined || f.level === null ? null : parseInt(f.level),
+          parentLocationId: f.parentLocationId || null,
           lineagePath: f.lineagePath?.trim() || null,
           latitude: f.latitude ? parseFloat(f.latitude) : null,
           longitude: f.longitude ? parseFloat(f.longitude) : null,
@@ -227,6 +277,23 @@ export default function LocationListPage() {
         })}
         onRowClick={(row) => navigate(`/cms/location/${row.locationId}`)}
       />
+
+      {/* Import Modal */}
+      <LocationImportModal
+        open={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        onSuccess={handleImportSuccess}
+      />
+
+      {/* Create Modal */}
+      {createModalOpen && (
+        <LocationCreateModal
+          open={createModalOpen}
+          mode="create"
+          onClose={() => setCreateModalOpen(false)}
+          onSubmit={handleCreateSubmit}
+        />
+      )}
     </div>
   )
 }

@@ -16,6 +16,15 @@ export default function LocationDetailsPage() {
   const [formData, setFormData] = useState({})
   const [countries, setCountries] = useState([])
   const [loadingCountries, setLoadingCountries] = useState(true)
+  const [parentOptions, setParentOptions] = useState([])
+  const [loadingParents, setLoadingParents] = useState(false)
+
+  const LEVEL_OPTIONS = [
+    { value: 0, label: 'Governorate (root)' },
+    { value: 1, label: 'District' },
+    { value: 2, label: 'Subdistrict' },
+    { value: 3, label: 'Community' },
+  ]
 
   // Get permissions
   const { getSectionPermissions, isLoading: permissionsLoading } = usePermissionCheck()
@@ -33,6 +42,7 @@ export default function LocationDetailsPage() {
   useEffect(() => {
     fetchLocation()
     fetchCountries()
+    // parents will be fetched after location load when we know the country
   }, [locationId])
 
   const fetchLocation = async () => {
@@ -70,15 +80,73 @@ export default function LocationDetailsPage() {
     }
   }
 
+  const fetchParents = async (countryIdForParents) => {
+    if (!countryIdForParents) {
+      setParentOptions([])
+      return
+    }
+    setLoadingParents(true)
+    try {
+      const { data } = await api.post('/access/api/locations/filter', {
+        criteria: [
+          {
+            key: 'countryId',
+            operator: 'EQUAL',
+            value: countryIdForParents,
+            dataType: 'UUID',
+          },
+          {
+            key: 'isActive',
+            operator: 'EQUAL',
+            value: true,
+            dataType: 'BOOLEAN',
+          },
+        ],
+      }, { params: { page: 0, size: 1000 } })
+      const rows = (data?.content || []).filter(r => r.locationId !== locationId)
+      setParentOptions(rows)
+    } catch (err) {
+      console.error('Failed to load parent locations:', err)
+      setParentOptions([])
+    } finally {
+      setLoadingParents(false)
+    }
+  }
+
+  // Recompute parents when location or country changes
+  useEffect(() => {
+    const cid = formData.countryId || location?.countryId
+    if (cid) fetchParents(cid)
+  }, [formData.countryId, location?.countryId])
+
+  const getLevelLabel = (lvl) => LEVEL_OPTIONS.find(o => o.value === (typeof lvl === 'number' ? lvl : parseInt(lvl)))?.label || `Level ${lvl}`
+
+  // Auto-generate lineage path from parent + name
+  useEffect(() => {
+    if (!editing) return
+    const selectedParent = parentOptions.find(p => p.locationId === formData.parentLocationId)
+    const namePart = formData.name?.trim() || ''
+    const base = selectedParent?.lineagePath ? selectedParent.lineagePath.replace(/\/$/, '') : ''
+    const computed = `${base}/${namePart}`.replace(/\/+/g, '/').replace(/^\/+/, '/').trim()
+    if (computed && computed !== formData.lineagePath) {
+      setFormData(prev => ({ ...prev, lineagePath: computed }))
+    }
+  }, [editing, formData.name, formData.parentLocationId, parentOptions])
+
   const handleUpdate = async () => {
     try {
+      // Helper: validate UUID format (36-char canonical form)
+      const isValidUUID = (value) =>
+        typeof value === 'string' && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(value.trim())
+
       const payload = {
         locationId: locationId,
         countryId: formData.countryId,
         code: formData.code?.trim(),
         name: formData.name?.trim(),
         level: formData.level ? parseInt(formData.level) : null,
-        parentLocationId: formData.parentLocationId?.trim() || null,
+        // Ensure only a valid UUID is sent; otherwise send null
+        parentLocationId: isValidUUID(formData.parentLocationId) ? formData.parentLocationId.trim() : null,
         lineagePath: formData.lineagePath?.trim() || null,
         latitude: formData.latitude ? parseFloat(formData.latitude) : null,
         longitude: formData.longitude ? parseFloat(formData.longitude) : null,
@@ -286,14 +354,44 @@ export default function LocationDetailsPage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Level</label>
                   {editing ? (
-                    <input
-                      type="number"
+                    <select
                       value={formData.level ?? ''}
                       onChange={(e) => setFormData({ ...formData, level: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
+                    >
+                      <option value="" disabled>
+                        Select level...
+                      </option>
+                      {LEVEL_OPTIONS.map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
                   ) : (
-                    <p className="text-gray-900">{location.level ?? '-'}</p>
+                    <p className="text-gray-900">{getLevelLabel(location.level)}</p>
+                  )}
+                </div>
+
+                {/* Parent Location */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Parent Location (optional)</label>
+                  {editing ? (
+                    <select
+                      value={formData.parentLocationId || ''}
+                      onChange={(e) => setFormData({ ...formData, parentLocationId: e.target.value || null })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      disabled={loadingParents}
+                    >
+                      <option value="">None (root)</option>
+                      {parentOptions.map(p => (
+                        <option key={p.locationId} value={p.locationId}>
+                          {p.name} ({getLevelLabel(p.level)})
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <p className="text-gray-900">
+                      {location.parentLocationId ? (parentOptions.find(p => p.locationId === location.parentLocationId)?.name || location.parentLocationId) : '—'}
+                    </p>
                   )}
                 </div>
 
@@ -306,7 +404,7 @@ export default function LocationDetailsPage() {
                       value={formData.lineagePath || ''}
                       onChange={(e) => setFormData({ ...formData, lineagePath: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="/country/province/city"
+                      placeholder="Auto-generated from parent + name (editable)"
                     />
                   ) : (
                     <p className="text-gray-900">{location.lineagePath || '-'}</p>
@@ -345,19 +443,40 @@ export default function LocationDetailsPage() {
                   )}
                 </div>
 
-                {/* Status */}
+                {/* Quick geolocation helper */}
+                {editing && (
+                  <div className="col-span-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!navigator.geolocation) {
+                          toast.error('Geolocation not supported by this browser')
+                          return
+                        }
+                        navigator.geolocation.getCurrentPosition(
+                          (pos) => {
+                            setFormData(prev => ({
+                              ...prev,
+                              latitude: pos.coords.latitude,
+                              longitude: pos.coords.longitude,
+                            }))
+                            toast.success('Location detected')
+                          },
+                          () => toast.error('Unable to fetch your location')
+                        )
+                      }}
+                      className="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
+                    >
+                      Use my current location
+                    </button>
+                  </div>
+                )}
+
+                {/* Status hidden in edit; always true */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
                   {editing ? (
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={formData.isActive || false}
-                        onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <span className="text-sm">Active</span>
-                    </label>
+                    <span className="text-gray-900">Active (always on)</span>
                   ) : (
                     <span className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${
                       location.isActive 

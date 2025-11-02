@@ -1,0 +1,54 @@
+name: Build & Deploy to Docker & Kubernetes 🚀
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment name (e.g. dev, prod)'
+        required: true
+        default: 'dev'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Build with Maven
+        run: mvn clean package -DskipTests
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build Docker image
+        run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/care-platform:${{ github.sha }} .
+          docker tag ${{ secrets.DOCKER_USERNAME }}/care-platform:${{ github.sha }} ${{ secrets.DOCKER_USERNAME }}/care-platform:latest
+
+      - name: Push Docker image
+        run: |
+          docker push ${{ secrets.DOCKER_USERNAME }}/care-platform:${{ github.sha }}
+          docker push ${{ secrets.DOCKER_USERNAME }}/care-platform:latest
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Create kubeconfig file
+        run: |
+          echo "${{ secrets.KUBECONFIG_CONTENT }}" > kubeconfig.yaml
+
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl --kubeconfig=kubeconfig.yaml apply -f k8s/deployment.yaml
+          kubectl --kubeconfig=kubeconfig.yaml rollout status deployment/care-deployment

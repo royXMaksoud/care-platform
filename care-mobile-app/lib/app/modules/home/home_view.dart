@@ -6,6 +6,7 @@ import 'package:animate_do/animate_do.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../widgets/voice_assistant_widget.dart';
+import '../../routes/app_routes.dart';
 import 'home_controller.dart';
 
 class HomeView extends GetView<HomeController> {
@@ -196,7 +197,7 @@ class HomeView extends GetView<HomeController> {
         title: 'المواعيد',
         icon: Icons.calendar_today,
         color: AppColors.primary,
-        onTap: () => Get.snackbar('قريباً', 'هذه الخدمة قيد التطوير'),
+        onTap: () => Get.toNamed(Routes.appointmentSearch),
       ),
       ServiceItem(
         title: 'الخدمات المالية',

@@ -6,6 +6,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'app/core/theme/app_theme.dart';
 import 'app/core/utils/app_constants.dart';
 import 'app/routes/app_pages.dart';
+import 'app/core/i18n/translations_loader.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,6 +16,9 @@ void main() async {
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
+
+  // تحميل الترجمات قبل تشغيل التطبيق
+  await TranslationsLoader.loadAll();
 
   runApp(const CareApp());
 }

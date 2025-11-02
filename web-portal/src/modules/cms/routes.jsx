@@ -13,8 +13,10 @@ import CodeTablesList from './pages/codeTable/CodeTableList'
 import CodeTableDetail from './pages/codeTable/CodeTableDetail'
 import CountryList from './pages/codeCountry/CountryList'
 import CountryDetails from './pages/codeCountry/CountryDetails'
-import OrganizationList from './pages/codeOrganization/OrganizationList'
-import OrganizationDetails from './pages/codeOrganization/OrganizationDetails'
+import CodeOrganizationList from './pages/codeOrganization/OrganizationList'
+import CodeOrganizationDetails from './pages/codeOrganization/OrganizationDetails'
+import OrganizationList from './pages/organization/OrganizationList'
+import OrganizationDetails from './pages/organization/OrganizationDetails'
 import OrganizationBranchList from './pages/organizationBranch/OrganizationBranchList'
 import OrganizationBranchDetails from './pages/organizationBranch/OrganizationBranchDetails'
 import DutyStationList from './pages/dutyStation/DutyStationList'
@@ -55,7 +57,11 @@ export default function CMSRoutes() {
         <Route path="codeCountry" element={<CountryList />} />
         <Route path="codeCountry/:countryId" element={<CountryDetails />} />
 
-        {/* Code Organizations Routes */}
+        {/* Code Organizations Routes (Code Table) */}
+        <Route path="codeOrganizations" element={<CodeOrganizationList />} />
+        <Route path="codeOrganizations/:organizationId" element={<CodeOrganizationDetails />} />
+
+        {/* Organizations Routes (Main Entity) */}
         <Route path="organizations" element={<OrganizationList />} />
         <Route path="organizations/:organizationId" element={<OrganizationDetails />} />
 

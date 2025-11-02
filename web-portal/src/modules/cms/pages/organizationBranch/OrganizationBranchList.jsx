@@ -4,6 +4,7 @@ import CrudPage from '@/features/crud/CrudPage'
 import { usePermissionCheck } from '@/contexts/PermissionsContext'
 import { SYSTEMS, CMS_SECTIONS } from '@/config/permissions-constants'
 import { api } from '@/lib/axios'
+import { useBranchTypes } from '@/hooks/useBranchTypes'
 
 const organizationBranchColumns = [
   { 
@@ -78,6 +79,9 @@ export default function OrganizationBranchListPage() {
   const [countries, setCountries] = useState([])
   const [locations, setLocations] = useState([])
   
+  // Get branch types from hook
+  const { branchTypes, loading: typesLoading } = useBranchTypes('en')
+  
   // Get permissions for Code Country section (using same permissions)
   const { getSectionPermissions, isLoading } = usePermissionCheck()
   
@@ -103,16 +107,19 @@ export default function OrganizationBranchListPage() {
         
         // ✅ Use Promise.all to fetch all data in parallel (faster!)
         const [orgResponse, countryResponse, locationResponse] = await Promise.all([
-          api.post('/access/api/code-organization-languages/filter', {
-            criteria: [{ field: 'languageCode', operator: 'EQUAL', value: userLanguage }]
+          // Fetch real Organizations (not code table)
+          api.post('/access/api/organizations/filter', {
+            criteria: []
           }, { params: { page: 0, size: 1000 } }),
           
-          api.post('/access/api/code-country-languages/filter', {
-            criteria: [{ field: 'language', operator: 'EQUAL', value: userLanguage }]
+          // Fetch real Countries (not code table)
+          api.post('/access/api/code-countries/filter', {
+            criteria: []
           }, { params: { page: 0, size: 1000 } }),
           
-          api.post('/access/api/location-languages/filter', {
-            criteria: [{ field: 'language', operator: 'EQUAL', value: userLanguage }]
+          // Fetch real Locations
+          api.post('/access/api/locations/filter', {
+            criteria: []
           }, { params: { page: 0, size: 1000 } })
         ])
         
@@ -176,15 +183,24 @@ export default function OrganizationBranchListPage() {
         ...locations.map(location => ({ value: location.locationId, label: location.name }))
       ]
     },
+    { 
+      type: 'select', 
+      name: 'branchTypeId', 
+      label: 'Branch Type',
+      options: [
+        { value: '', label: '-- Select Branch Type --' },
+        ...branchTypes.map(type => ({ value: type.value, label: type.label }))
+      ]
+    },
     { type: 'textarea', name: 'address', label: 'Address' },
     { type: 'number', name: 'latitude', label: 'Latitude', step: 'any' },
     { type: 'number', name: 'longitude', label: 'Longitude', step: 'any' },
     { type: 'checkbox', name: 'isHeadquarter', label: 'Is Headquarter', defaultValue: false },
     // ✅ isActive removed - always TRUE by default
-  ], [organizations, countries, locations])
+  ], [organizations, countries, locations, branchTypes])
 
-  // Show loading state while fetching permissions
-  if (isLoading) {
+  // Show loading state while fetching permissions or branch types
+  if (isLoading || typesLoading) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
@@ -245,16 +261,18 @@ export default function OrganizationBranchListPage() {
     <div className="h-full">
       <CrudPage
         title="Organization Branches"
-        entityName="Organization Branch"
-        entityIdField="organizationBranchId"
-        apiEndpoint="/access/api/organization-branches"
+        service="access"
+        resourceBase="/api/organization-branches"
+        idKey="organizationBranchId"
         columns={organizationBranchColumns}
         formFields={organizationBranchFields}
-        canEdit={canUpdate}
-        canDelete={canDelete}
+        enableCreate={canCreate}
+        enableEdit={canUpdate}
+        enableDelete={canDelete}
         onRowClick={handleRowClick}
         toCreatePayload={toCreatePayload}
         toUpdatePayload={toUpdatePayload}
+        tableId="organization-branches"
       />
     </div>
   )

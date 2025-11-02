@@ -8,7 +8,9 @@ import HomeCare from '@/pages/home/HomeCare'
 // lazy-load CMS module
 const CMSRoutes = lazy(() => import('@/modules/cms/routes'))
 // lazy-load DAS module
-const DASRoutes = lazy(() => import('@/modules/das/routes'))  
+const DASRoutes = lazy(() => import('@/modules/das/routes'))
+// lazy-load Appointment module
+const AppointmentRoutes = lazy(() => import('@/modules/appointment/routes'))  
 
 
 
@@ -97,9 +99,25 @@ export default function App() {
               </Suspense>
             }
           />
+          <Route
+            path="/appointment/*"
+            element={
+              <Suspense fallback={<div className="p-6">Loading…</div>}>
+                <AppointmentRoutes />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/appointments/*"
+            element={
+              <Suspense fallback={<div className="p-6">Loading…</div>}>
+                <AppointmentRoutes />
+              </Suspense>
+            }
+          />
 
           {modules
-          .filter(m => m.path !== '/cms' && m.path !== '/das')
+          .filter(m => m.path !== '/cms' && m.path !== '/das' && m.path !== '/appointment' && m.path !== '/appointments')
           .map((m, idx) => (
             <Route
               key={m.path || `${m.name}-${idx}`}

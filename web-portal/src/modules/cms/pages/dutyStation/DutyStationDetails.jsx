@@ -5,6 +5,7 @@ import { api } from '@/lib/axios'
 import CrudPage from '@/features/crud/CrudPage'
 import { usePermissionCheck } from '@/contexts/PermissionsContext'
 import { SYSTEMS, CMS_SECTIONS } from '@/config/permissions-constants'
+import { useDutyStationTypes } from '@/hooks/useDutyStationTypes'
 
 export default function DutyStationDetailsPage() {
   const { dutyStationId } = useParams()
@@ -25,6 +26,9 @@ export default function DutyStationDetailsPage() {
   // Get permissions (using CODE_COUNTRY permissions)
   const { getSectionPermissions, isLoading: permissionsLoading } = usePermissionCheck()
   
+  // Get duty station types for dropdown
+  const { dutyStationTypes, loading: typesLoading } = useDutyStationTypes('en')
+  
   const permissions = useMemo(() => 
     getSectionPermissions(CMS_SECTIONS.CODE_COUNTRY, SYSTEMS.CMS),
     [getSectionPermissions]
@@ -32,6 +36,13 @@ export default function DutyStationDetailsPage() {
 
   const canUpdate = permissions.canUpdate
   const canManageLanguages = permissions.canCreate || permissions.canUpdate || permissions.canDelete
+  
+  // Find duty station type name
+  const dutyStationTypeName = useMemo(() => {
+    if (!dutyStation?.statusId || !dutyStationTypes.length) return null
+    const type = dutyStationTypes.find(t => t.value === dutyStation.statusId)
+    return type?.label || null
+  }, [dutyStation?.statusId, dutyStationTypes])
 
   // Fetch duty station details and dropdown data
   useEffect(() => {
@@ -60,20 +71,25 @@ export default function DutyStationDetailsPage() {
       const userLanguage = localStorage.getItem('userLanguage') || 'en'
       
       const [orgRes, opRes, branchRes, countryRes, locRes] = await Promise.all([
-        api.post('/access/api/code-organization-languages/filter', {
-          criteria: [{ field: 'languageCode', operator: 'EQUAL', value: userLanguage }]
+        // Fetch real Organizations (not code table)
+        api.post('/access/api/organizations/filter', {
+          criteria: []
         }, { params: { page: 0, size: 1000 } }),
-        api.post('/access/api/operation-languages/filter', {
-          criteria: [{ field: 'language', operator: 'EQUAL', value: userLanguage }]
+        // Fetch real Operations
+        api.post('/access/api/operations/filter', {
+          criteria: []
         }, { params: { page: 0, size: 1000 } }),
-        api.post('/access/api/organization-branch-languages/filter', {
-          criteria: [{ field: 'language', operator: 'EQUAL', value: userLanguage }]
+        // Fetch real Organization Branches
+        api.post('/access/api/organization-branches/filter', {
+          criteria: []
         }, { params: { page: 0, size: 1000 } }),
-        api.post('/access/api/code-country-languages/filter', {
-          criteria: [{ field: 'language', operator: 'EQUAL', value: userLanguage }]
+        // Fetch real Countries (not code table)
+        api.post('/access/api/code-countries/filter', {
+          criteria: []
         }, { params: { page: 0, size: 1000 } }),
-        api.post('/access/api/location-languages/filter', {
-          criteria: [{ field: 'language', operator: 'EQUAL', value: userLanguage }]
+        // Fetch real Locations
+        api.post('/access/api/locations/filter', {
+          criteria: []
         }, { params: { page: 0, size: 1000 } })
       ])
 
@@ -144,7 +160,7 @@ export default function DutyStationDetailsPage() {
     { type: 'textarea', name: 'description', label: 'Description', rows: 3 },
   ]
 
-  if (loading || permissionsLoading) {
+  if (loading || permissionsLoading || typesLoading) {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
@@ -376,6 +392,25 @@ export default function DutyStationDetailsPage() {
                     <p className="text-gray-900">
                       {dropdownData.locations.find(l => l.locationId === dutyStation.locationId)?.name || '-'}
                     </p>
+                  )}
+                </div>
+
+                {/* Status Type */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Status Type</label>
+                  {editing ? (
+                    <select
+                      value={formData.statusId || ''}
+                      onChange={(e) => setFormData({ ...formData, statusId: e.target.value || null })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">Select Status Type...</option>
+                      {dutyStationTypes.map(type => (
+                        <option key={type.value} value={type.value}>{type.label}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <p className="text-gray-900">{dutyStationTypeName || '-'}</p>
                   )}
                 </div>
 

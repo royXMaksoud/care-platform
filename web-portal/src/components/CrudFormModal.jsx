@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import ReactDOM from 'react-dom'
 import { api } from '@/lib/axios'
 import SearchableSelect from '@/components/SearchableSelect'
+import MapPickerModal from '@/components/MapPickerModal'
 
 export default function CrudFormModal({
   open,
@@ -26,6 +27,8 @@ export default function CrudFormModal({
   const [form, setForm] = useState(initialState)
   const [selectOptions, setSelectOptions] = useState({}) // Store options for each select field
   const [loadingFields, setLoadingFields] = useState({}) // Track loading state per field
+  const [mapOpen, setMapOpen] = useState(false)
+  const [mapConfig, setMapConfig] = useState(null) // { latName, lngName }
   const firstFocusRef = useRef(null)
 
   useEffect(() => {
@@ -36,60 +39,71 @@ export default function CrudFormModal({
   // Fetch options for select fields with apiUrl
   useEffect(() => {
     if (!open) return
-    
-    const fetchSelectOptions = async () => {
-      const selectFields = fields.filter(f => f.type === 'select' && f.apiUrl && !f.options)
-      
-      if (selectFields.length === 0) return
-      
-      // Set loading state for all select fields
-      const loadingState = {}
-      selectFields.forEach(f => { loadingState[f.name] = true })
-      setLoadingFields(loadingState)
-      
-      // Fetch all options in parallel
-      const promises = selectFields.map(async (field) => {
-        try {
-          console.log(`🔍 Fetching options for ${field.name} from ${field.apiUrl}`)
-          
-          const { data } = await api.get(field.apiUrl, {
-            params: field.apiParams || {}
-          })
-          
-          // Handle different response formats
-          const items = data?.content || data || []
-          
-          console.log(`✅ Received ${items.length} options for ${field.name}`)
-          
-          // Map to options format
-          const options = items.map(item => ({
-            value: item[field.valueKey || 'id'] || item.id,
-            label: item[field.labelKey || 'name'] || item.name
-          }))
-          
-          return { field: field.name, options }
-        } catch (err) {
-          console.error(`❌ Failed to fetch options for ${field.name}:`, err.response?.data?.message || err.message)
-          return { field: field.name, options: [] }
+
+    const fetchFieldOptions = async (field) => {
+      try {
+        if (typeof field.skipFetchWhen === 'function' && field.skipFetchWhen(form)) {
+          setSelectOptions(prev => ({ ...prev, [field.name]: [] }))
+          return
         }
-      })
-      
-      const results = await Promise.all(promises)
-      
-      // Update options state
-      const optionsState = {}
-      results.forEach(result => {
-        optionsState[result.field] = result.options
-      })
-      setSelectOptions(optionsState)
-      
-      // Clear loading state
-      setLoadingFields({})
+        const method = (field.apiMethod || 'get').toLowerCase()
+        const params = typeof field.apiParams === 'function' ? field.apiParams(form) : (field.apiParams || {})
+        const body = typeof field.apiBody === 'function' ? field.apiBody(form) : (field.apiBody || {})
+        let response
+        if (method === 'post') {
+          response = await api.post(field.apiUrl, body, { params })
+        } else {
+          response = await api.get(field.apiUrl, { params })
+        }
+        const data = response.data
+        const items = data?.content || data || []
+        const options = (field.optionMapper
+          ? items.map(field.optionMapper)
+          : items.map(item => ({
+              value: item[field.valueKey || 'id'] || item.id,
+              label: item[field.labelKey || 'name'] || item.name
+            }))
+        )
+        setSelectOptions(prev => ({ ...prev, [field.name]: options }))
+      } catch (err) {
+        console.error(`❌ Failed to fetch options for ${field.name}:`, err.response?.data?.message || err.message)
+        setSelectOptions(prev => ({ ...prev, [field.name]: [] }))
+      } finally {
+        setLoadingFields(prev => ({ ...prev, [field.name]: false }))
+      }
     }
-    
-    fetchSelectOptions()
+
+    const selectFields = fields.filter(f => f.type === 'select' && f.apiUrl && !f.options)
+    if (selectFields.length === 0) return
+
+    // Initial load for all
+    const loadingState = {}
+    selectFields.forEach(f => { loadingState[f.name] = true })
+    setLoadingFields(loadingState)
+    selectFields.forEach(f => fetchFieldOptions(f))
+
+    // Set up dependency-based reloads
+    const reloadDependencies = selectFields.filter(f => Array.isArray(f.reloadOn) && f.reloadOn.length > 0)
+    if (reloadDependencies.length > 0) {
+      // Watch form state; on any dependency change, refetch that field
+      const unsubs = reloadDependencies.map(f => {
+        let prev = {}
+        f.reloadOn.forEach(dep => { prev[dep] = form[dep] })
+        return setInterval(() => {
+          const changed = f.reloadOn.some(dep => prev[dep] !== form[dep])
+          if (changed) {
+            f.reloadOn.forEach(dep => { prev[dep] = form[dep] })
+            setLoadingFields(prevL => ({ ...prevL, [f.name]: true }))
+            fetchFieldOptions(f)
+            // reset value if current selection no longer valid
+            setForm(cur => ({ ...cur, [f.name]: '' }))
+          }
+        }, 300)
+      })
+      return () => unsubs.forEach(id => clearInterval(id))
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]) // Only depend on 'open' to prevent multiple calls
+  }, [open, form])
 
   useEffect(() => {
     if (!open) return
@@ -198,10 +212,16 @@ export default function CrudFormModal({
                     onChange={(value) => update(f.name, value)}
                     placeholder={loadingFields[f.name] ? 'Loading...' : (f.placeholder || 'Select…')}
                     isLoading={loadingFields[f.name]}
-                    isDisabled={f.disabled || loadingFields[f.name]}
+                    isDisabled={(typeof f.disabledWhen === 'function' ? f.disabledWhen(form) : f.disabled) || loadingFields[f.name]}
                     isClearable={!f.required}
                     isSearchable={true}
                   />
+                )}
+                {f.type === 'button' && (
+                  <button type="button" className="rounded-xl border px-3 py-2 hover:bg-gray-50"
+                          onClick={() => f.onClick?.({ form, setForm: update })}>
+                    {f.label}
+                  </button>
                 )}
               </div>
             )
@@ -214,7 +234,33 @@ export default function CrudFormModal({
             </button>
           </div>
         </form>
+        {/* Map Picker field: rendered as a dedicated control when present */}
+        {fields.some(f => f.type === 'map') && (
+          <div className="px-4 pb-4">
+            <button
+              type="button"
+              className="rounded-xl border px-3 py-2 hover:bg-gray-50"
+              onClick={() => {
+                const f = fields.find(x => x.type === 'map')
+                setMapConfig({ latName: f.latName, lngName: f.lngName })
+                setMapOpen(true)
+              }}
+            >
+              Pick on map
+            </button>
+          </div>
+        )}
       </div>
+      <MapPickerModal
+        open={mapOpen}
+        onClose={() => setMapOpen(false)}
+        initialLat={form[mapConfig?.latName]}
+        initialLng={form[mapConfig?.lngName]}
+        onPick={({ latitude, longitude }) => {
+          if (!mapConfig) return
+          setForm((f) => ({ ...f, [mapConfig.latName]: latitude, [mapConfig.lngName]: longitude }))
+        }}
+      />
     </>,
     document.body
   )

@@ -1,5 +1,7 @@
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../core/theme/app_colors.dart';
 import '../../routes/app_routes.dart';
 
 class WelcomeController extends GetxController {
@@ -43,14 +45,21 @@ class WelcomeController extends GetxController {
       print('🔊 Audio playing...');
     } catch (e) {
       print('❌ Audio Play Error: $e');
-      Get.snackbar(
-        'خطأ',
-        'تعذر تشغيل الصوت. تأكد من وجود ملف الصوت.',
-        snackPosition: SnackPosition.BOTTOM,
-        duration: const Duration(seconds: 3),
-      );
+      // Show friendly message instead of error
       isSpeaking.value = false;
       isBirdAnimating.value = false;
+      
+      // Show voice instructions as text
+      Get.snackbar(
+        'مرحباً بك!',
+        'اهلاً بك في تطبيق رعاية. انقر على ابدأ الآن للدخول.',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: AppColors.primary.withOpacity(0.1),
+        duration: const Duration(seconds: 4),
+        icon: Icon(Icons.volume_up, color: AppColors.primary),
+        borderRadius: 12,
+        margin: EdgeInsets.all(16),
+      );
     }
   }
 
