@@ -3,9 +3,11 @@
 export type UiCriterion = {
   field?: string
   key?: string      // Support both 'field' and 'key'
+  fieldName?: string // Also support fieldName for scopes
   op?: string
   operator?: string // Support both 'op' and 'operator'
   value?: any
+  allowedValues?: any[]  // Support allowedValues for scopes
   value2?: any    // for BETWEEN
   dataType?: string // For type conversion (UUID, STRING, NUMBER, etc.)
   type?: string     // 'criteria' or 'scope' - indicates if this is a search criterion or permission scope
@@ -27,10 +29,11 @@ export function buildFilterRequest(filters: UiCriterion[] | undefined): FilterRe
     // Check if this is a scope filter
     if (f.type === 'scope') {
       const scopeObj: any = {
-        fieldName: f.field || f.key,
-        allowedValues: f.value || f.allowedValues || [],
+        fieldName: f.fieldName || f.field || f.key,
+        allowedValues: f.allowedValues || f.value || [],
       }
       if (f.dataType) scopeObj.dataType = f.dataType
+      console.log('📤 DEBUG buildFilterRequest - Building scope:', scopeObj)
       scopes.push(scopeObj)
     } else {
       // Regular search criterion
@@ -47,8 +50,10 @@ export function buildFilterRequest(filters: UiCriterion[] | undefined): FilterRe
     }
   })
 
-  return {
+  const result = {
     criteria: criteria.length > 0 ? criteria : undefined,
     scopes: scopes.length > 0 ? scopes : undefined,
   }
+  console.log('📤 DEBUG buildFilterRequest - Final result:', result)
+  return result
 }

@@ -68,17 +68,20 @@ export default function ScheduleList() {
 
           // Convert to array for passing to backend as scope filter
           const branchIdArray = Array.from(authorizedBranchIds)
+          console.log('✅ DEBUG ScheduleList - Authorized branch IDs:', branchIdArray)
 
           // Build fixed filter with scope (sent in POST body to backend)
           if (branchIdArray.length > 0) {
-            setFixedFilters([
-              {
-                type: 'scope',
-                fieldName: 'organizationBranchId',
-                allowedValues: branchIdArray,
-                dataType: 'UUID'
-              }
-            ])
+            const scopeFilter = {
+              type: 'scope',
+              fieldName: 'organizationBranchId',
+              allowedValues: branchIdArray,
+              dataType: 'UUID'
+            }
+            console.log('✅ DEBUG ScheduleList - Setting fixedFilters with scope:', scopeFilter)
+            setFixedFilters([scopeFilter])
+          } else {
+            console.log('⚠️ DEBUG ScheduleList - No authorized branch IDs found!')
           }
         } catch (err) {
           console.error('Failed to load permissions:', err)
