@@ -3,6 +3,7 @@ import { api } from '@/lib/axios'
 import { toast } from 'sonner'
 import SearchableSelect from '@/components/SearchableSelect'
 import Select from 'react-select'
+import { usePermissionCheck } from '@/contexts/PermissionsContext'
 
 const DAY_OPTIONS = [
   { value: 0, label: 'Sunday (الأحد)' },
@@ -51,54 +52,111 @@ export default function ScheduleFormModal({
   const [loadingBranches, setLoadingBranches] = useState(false)
 
   const uiLang = (typeof navigator !== 'undefined' && (navigator.language || '').startsWith('ar')) ? 'ar' : 'en'
+  const { getSectionPermissions, permissionsData } = usePermissionCheck()
 
-  // Load organizations from dropdown API
+  // Load organizations based on user permissions
   useEffect(() => {
     if (!open) return
-    
+
     const loadOrganizations = async () => {
       try {
         setLoadingOrganizations(true)
-        const res = await api.get('/access/api/dropdowns/organizations', {
+
+        // Get user's authorized branch IDs from permissions
+        const sectionPerms = getSectionPermissions('Appointment Schedule Mangement', 'Appointments')
+        const authorizedBranchIds = new Set()
+
+        sectionPerms.actions?.forEach(action => {
+          action.scopes?.forEach(scope => {
+            if (scope.effect === 'ALLOW' && scope.scopeValueId) {
+              authorizedBranchIds.add(scope.scopeValueId)
+            }
+          })
+        })
+
+        // Load all branches to determine which organizations user has access to
+        const branchesRes = await api.get('/access/api/organization-branches/filter', {
+          params: { page: 0, size: 10000, lang: uiLang }
+        })
+        const allBranchesData = branchesRes?.data?.content || []
+
+        // Filter branches by authorized IDs
+        const authorizedBranches = authorizedBranchIds.size > 0
+          ? allBranchesData.filter(b => authorizedBranchIds.has(b.id))
+          : allBranchesData
+
+        // Get unique organization IDs from authorized branches
+        const orgIds = new Set(authorizedBranches.map(b => b.organizationId).filter(Boolean))
+
+        // Load all organizations
+        const orgRes = await api.get('/access/api/dropdowns/organizations', {
           params: { lang: uiLang }
         })
-        const options = (res?.data || []).map((item) => ({
+
+        // Filter organizations to only show those with authorized branches
+        const filteredOrgs = (orgRes?.data || []).filter(org => orgIds.has(org.id || org.value))
+
+        const options = filteredOrgs.map((item) => ({
           value: item.id || item.value,
           label: item.name || item.label || 'Unknown',
         }))
+
         setOrganizations(options)
       } catch (err) {
         console.error('Failed to load organizations:', err)
         toast.error('Failed to load organizations')
+        setOrganizations([])
       } finally {
         setLoadingOrganizations(false)
       }
     }
-    
-    loadOrganizations()
-  }, [open, uiLang])
 
-  // Load branches when organization changes (cascade dropdown)
+    loadOrganizations()
+  }, [open, uiLang, permissionsData])
+
+  // Load branches when organization changes (cascade dropdown) - filtered by permissions
   useEffect(() => {
     if (!form.organizationId) {
       setOrgBranches([])
       setForm(prev => ({ ...prev, organizationBranchId: '' }))
       return
     }
-    
+
     const loadBranches = async () => {
       try {
         setLoadingBranches(true)
+
+        // Get user's authorized branch IDs from permissions
+        const sectionPerms = getSectionPermissions('Appointment Schedule Mangement', 'Appointments')
+        const authorizedBranchIds = new Set()
+
+        sectionPerms.actions?.forEach(action => {
+          action.scopes?.forEach(scope => {
+            if (scope.effect === 'ALLOW' && scope.scopeValueId) {
+              authorizedBranchIds.add(scope.scopeValueId)
+            }
+          })
+        })
+
+        // Load branches for the selected organization
         const res = await api.get('/access/api/cascade-dropdowns/access.organization-branches-by-organization', {
           params: {
             organizationId: form.organizationId,
             lang: uiLang
           }
         })
-        const options = (res?.data || []).map((item) => ({
+
+        // Filter branches by authorized IDs
+        const allBranchesForOrg = res?.data || []
+        const filteredBranches = authorizedBranchIds.size > 0
+          ? allBranchesForOrg.filter(b => authorizedBranchIds.has(b.id || b.value))
+          : allBranchesForOrg
+
+        const options = filteredBranches.map((item) => ({
           value: item.id || item.value,
           label: item.name || item.label || 'Unknown',
         }))
+
         setOrgBranches(options)
         // Reset branch selection when organization changes
         setForm(prev => ({ ...prev, organizationBranchId: '' }))
@@ -110,9 +168,9 @@ export default function ScheduleFormModal({
         setLoadingBranches(false)
       }
     }
-    
+
     loadBranches()
-  }, [form.organizationId, uiLang])
+  }, [form.organizationId, uiLang, permissionsData])
 
   useEffect(() => {
     if (!open) return
