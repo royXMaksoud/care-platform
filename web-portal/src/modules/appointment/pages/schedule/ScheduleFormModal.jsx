@@ -127,21 +127,66 @@ export default function ScheduleFormModal({
         const orgIds = new Set(authorizedBranches.map(b => b.organizationId).filter(Boolean))
         console.log('✅ Organizations to show:', Array.from(orgIds))
 
-        // Load all organizations
-        const orgRes = await api.get('/access/api/dropdowns/organizations', {
-          params: { lang: uiLang }
-        })
-        console.log('✅ All organizations loaded:', orgRes?.data?.length || 0)
-        console.log('🔍 DEBUG: Organizations from API:', orgRes?.data?.map(o => ({ id: o.organizationId || o.id, name: o.name })))
+        // Load all organizations - but try to get only organizations that have authorized branches
+        // TODO: Backend should provide a new endpoint: /access/api/dropdowns/organizations-by-branches
+        // that returns only organizations containing the user's authorized branches.
+        // This would eliminate the need for manual filtering on the frontend.
+        let orgRes = null
+        let filteredOrgs = []
 
-        // Filter organizations to only show those with authorized branches
-        const filteredOrgs = (orgRes?.data || []).filter(org => {
-          const orgId = org.organizationId || org.id || org.value
-          const hasMatch = orgIds.has(orgId)
-          console.log(`🔍 DEBUG: Checking org "${org.name}" (id: ${orgId}): ${hasMatch ? '✅ MATCH' : '❌ NO MATCH'}`)
-          return hasMatch
-        })
-        console.log('✅ Filtered organizations:', filteredOrgs.length, filteredOrgs.map(o => ({ id: o.organizationId || o.id, name: o.name })))
+        try {
+          // Try the new endpoint first (if it exists)
+          const newEndpointRes = await api.get('/access/api/dropdowns/organizations-by-branches', {
+            params: { lang: uiLang }
+          })
+          orgRes = newEndpointRes
+          console.log('✅ Organizations from new endpoint:', newEndpointRes?.data?.length || 0)
+        } catch (err) {
+          console.log('⚠️ New endpoint not available, falling back to manual filtering...')
+          // Fallback: load all organizations and filter manually
+          try {
+            const allOrgsRes = await api.get('/access/api/dropdowns/organizations', {
+              params: { lang: uiLang }
+            })
+            orgRes = allOrgsRes
+
+            console.log('✅ All organizations loaded:', allOrgsRes?.data?.length || 0)
+            console.log('🔍 DEBUG: Organizations from API:', allOrgsRes?.data?.map(o => ({ id: o.organizationId || o.id, name: o.name })))
+
+            // Filter organizations to only show those with authorized branches
+            filteredOrgs = (allOrgsRes?.data || []).filter(org => {
+              const orgId = org.organizationId || org.id || org.value
+              const hasMatch = orgIds.has(orgId)
+              console.log(`🔍 DEBUG: Checking org "${org.name}" (id: ${orgId}): ${hasMatch ? '✅ MATCH' : '❌ NO MATCH'}`)
+              return hasMatch
+            })
+          } catch (innerErr) {
+            console.error('Failed to load organizations:', innerErr)
+            // If even this fails, create virtual orgs from authorized branches
+            const orgMap = new Map()
+            authorizedBranches.forEach(branch => {
+              if (!orgMap.has(branch.organizationId)) {
+                orgMap.set(branch.organizationId, {
+                  id: branch.organizationId,
+                  organizationId: branch.organizationId,
+                  name: `Organization ${branch.organizationId.substring(0, 8)}`
+                })
+              }
+            })
+            filteredOrgs = Array.from(orgMap.values())
+            console.log('✅ Virtual organizations created from branches:', filteredOrgs)
+          }
+        }
+
+        if (filteredOrgs.length === 0 && orgRes?.data) {
+          // If we didn't filter from new endpoint, filter from old one
+          filteredOrgs = (orgRes?.data || []).filter(org => {
+            const orgId = org.organizationId || org.id || org.value
+            return orgIds.has(orgId)
+          })
+        }
+
+        console.log('✅ Final filtered organizations:', filteredOrgs.length, filteredOrgs.map(o => ({ id: o.organizationId || o.id, name: o.name })))
 
         const options = filteredOrgs.map((item) => ({
           value: item.organizationId || item.id || item.value,
