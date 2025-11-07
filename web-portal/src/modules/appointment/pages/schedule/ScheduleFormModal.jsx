@@ -75,8 +75,12 @@ export default function ScheduleFormModal({
         })
 
         // Load all branches to determine which organizations user has access to
-        const branchesRes = await api.get('/access/api/organization-branches/filter', {
-          params: { page: 0, size: 10000, lang: uiLang }
+        const branchesRes = await api.post('/access/api/organization-branches/filter', {
+          criteria: [],
+          groups: [],
+          scopes: []
+        }, {
+          params: { page: 0, size: 10000, language: uiLang }
         })
         const allBranchesData = branchesRes?.data?.content || []
 
