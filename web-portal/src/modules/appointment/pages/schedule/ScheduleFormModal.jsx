@@ -92,7 +92,15 @@ export default function ScheduleFormModal({
         })
         const allBranchesData = branchesRes?.data?.content || []
         console.log('✅ All branches loaded:', allBranchesData.length, 'branches')
-        console.log('🔍 DEBUG: Sample branch structure:', allBranchesData[0])
+        console.log('🔍 DEBUG: ALL BRANCHES DATA:')
+        allBranchesData.forEach((b, idx) => {
+          console.log(`  Branch[${idx}]:`, {
+            organizationBranchId: b.organizationBranchId,
+            name: b.name,
+            organizationId: b.organizationId,
+            allKeys: Object.keys(b)
+          })
+        })
         console.log('✅ Authorized branch IDs:', Array.from(authorizedBranchIds))
 
         // Filter branches by authorized IDs
