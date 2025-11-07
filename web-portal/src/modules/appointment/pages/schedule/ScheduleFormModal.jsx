@@ -83,25 +83,31 @@ export default function ScheduleFormModal({
           params: { page: 0, size: 10000, language: uiLang }
         })
         const allBranchesData = branchesRes?.data?.content || []
+        console.log('✅ All branches loaded:', allBranchesData.length, 'branches')
+        console.log('✅ Authorized branch IDs:', Array.from(authorizedBranchIds))
 
         // Filter branches by authorized IDs
         const authorizedBranches = authorizedBranchIds.size > 0
-          ? allBranchesData.filter(b => authorizedBranchIds.has(b.id))
+          ? allBranchesData.filter(b => authorizedBranchIds.has(b.organizationBranchId))
           : allBranchesData
+        console.log('✅ Authorized branches:', authorizedBranches.length, 'branches')
 
         // Get unique organization IDs from authorized branches
         const orgIds = new Set(authorizedBranches.map(b => b.organizationId).filter(Boolean))
+        console.log('✅ Organizations to show:', Array.from(orgIds))
 
         // Load all organizations
         const orgRes = await api.get('/access/api/dropdowns/organizations', {
           params: { lang: uiLang }
         })
+        console.log('✅ All organizations loaded:', orgRes?.data?.length || 0)
 
         // Filter organizations to only show those with authorized branches
-        const filteredOrgs = (orgRes?.data || []).filter(org => orgIds.has(org.id || org.value))
+        const filteredOrgs = (orgRes?.data || []).filter(org => orgIds.has(org.organizationId || org.id || org.value))
+        console.log('✅ Filtered organizations:', filteredOrgs.length, filteredOrgs.map(o => ({ id: o.organizationId || o.id, name: o.name })))
 
         const options = filteredOrgs.map((item) => ({
-          value: item.id || item.value,
+          value: item.organizationId || item.id || item.value,
           label: item.name || item.label || 'Unknown',
         }))
 
@@ -153,12 +159,12 @@ export default function ScheduleFormModal({
         // Filter branches by authorized IDs
         const allBranchesForOrg = res?.data || []
         const filteredBranches = authorizedBranchIds.size > 0
-          ? allBranchesForOrg.filter(b => authorizedBranchIds.has(b.id || b.value))
+          ? allBranchesForOrg.filter(b => authorizedBranchIds.has(b.organizationBranchId || b.id || b.value))
           : allBranchesForOrg
 
         const options = filteredBranches.map((item) => ({
-          value: item.id || item.value,
-          label: item.name || item.label || 'Unknown',
+          value: item.organizationBranchId || item.id || item.value,
+          label: item.name || item.label || item.branchName || 'Unknown',
         }))
 
         setOrgBranches(options)
