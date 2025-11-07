@@ -64,15 +64,23 @@ export default function ScheduleFormModal({
 
         // Get user's authorized branch IDs from permissions
         const sectionPerms = getSectionPermissions('Appointment Schedule Mangement', 'Appointments')
+        console.log('🔍 DEBUG: sectionPerms structure:', sectionPerms)
+        console.log('🔍 DEBUG: sectionPerms.actions:', sectionPerms.actions)
+
         const authorizedBranchIds = new Set()
 
-        sectionPerms.actions?.forEach(action => {
-          action.scopes?.forEach(scope => {
+        sectionPerms.actions?.forEach((action, idx) => {
+          console.log(`🔍 DEBUG: action[${idx}]:`, action)
+          console.log(`🔍 DEBUG: action[${idx}].scopes:`, action.scopes)
+          action.scopes?.forEach((scope, sidx) => {
+            console.log(`🔍 DEBUG: action[${idx}].scopes[${sidx}]:`, scope)
             if (scope.effect === 'ALLOW' && scope.scopeValueId) {
+              console.log(`✅ DEBUG: Adding authorized branch ID:`, scope.scopeValueId)
               authorizedBranchIds.add(scope.scopeValueId)
             }
           })
         })
+        console.log('🔍 DEBUG: Final authorizedBranchIds:', Array.from(authorizedBranchIds))
 
         // Load all branches to determine which organizations user has access to
         const branchesRes = await api.post('/access/api/organization-branches/filter', {
@@ -84,13 +92,19 @@ export default function ScheduleFormModal({
         })
         const allBranchesData = branchesRes?.data?.content || []
         console.log('✅ All branches loaded:', allBranchesData.length, 'branches')
+        console.log('🔍 DEBUG: Sample branch structure:', allBranchesData[0])
         console.log('✅ Authorized branch IDs:', Array.from(authorizedBranchIds))
 
         // Filter branches by authorized IDs
         const authorizedBranches = authorizedBranchIds.size > 0
-          ? allBranchesData.filter(b => authorizedBranchIds.has(b.organizationBranchId))
+          ? allBranchesData.filter(b => {
+              const hasMatch = authorizedBranchIds.has(b.organizationBranchId)
+              if (hasMatch) console.log('✅ DEBUG: Branch matched:', { id: b.organizationBranchId, name: b.name, orgId: b.organizationId })
+              return hasMatch
+            })
           : allBranchesData
         console.log('✅ Authorized branches:', authorizedBranches.length, 'branches')
+        console.log('🔍 DEBUG: Authorized branches list:', authorizedBranches.map(b => ({ id: b.organizationBranchId, name: b.name, orgId: b.organizationId })))
 
         // Get unique organization IDs from authorized branches
         const orgIds = new Set(authorizedBranches.map(b => b.organizationId).filter(Boolean))
@@ -101,9 +115,15 @@ export default function ScheduleFormModal({
           params: { lang: uiLang }
         })
         console.log('✅ All organizations loaded:', orgRes?.data?.length || 0)
+        console.log('🔍 DEBUG: Organizations from API:', orgRes?.data?.map(o => ({ id: o.organizationId || o.id, name: o.name })))
 
         // Filter organizations to only show those with authorized branches
-        const filteredOrgs = (orgRes?.data || []).filter(org => orgIds.has(org.organizationId || org.id || org.value))
+        const filteredOrgs = (orgRes?.data || []).filter(org => {
+          const orgId = org.organizationId || org.id || org.value
+          const hasMatch = orgIds.has(orgId)
+          console.log(`🔍 DEBUG: Checking org "${org.name}" (id: ${orgId}): ${hasMatch ? '✅ MATCH' : '❌ NO MATCH'}`)
+          return hasMatch
+        })
         console.log('✅ Filtered organizations:', filteredOrgs.length, filteredOrgs.map(o => ({ id: o.organizationId || o.id, name: o.name })))
 
         const options = filteredOrgs.map((item) => ({
