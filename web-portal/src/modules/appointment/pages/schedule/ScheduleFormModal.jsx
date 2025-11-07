@@ -63,9 +63,18 @@ export default function ScheduleFormModal({
         setLoadingOrganizations(true)
 
         // Get user's authorized branch IDs from permissions
-        const sectionPerms = getSectionPermissions('Appointment Schedule Mangement', 'Appointments')
-        console.log('🔍 DEBUG: sectionPerms structure:', sectionPerms)
-        console.log('🔍 DEBUG: sectionPerms.actions:', sectionPerms.actions)
+        // Try both with and without system name since getSectionPermissions might work differently
+        let sectionPerms = getSectionPermissions('Appointment Schedule Mangement', 'Appointments')
+        console.log('🔍 DEBUG: sectionPerms (with system):', sectionPerms)
+
+        // If no actions found, try without system name
+        if (!sectionPerms.actions || sectionPerms.actions.length === 0) {
+          console.log('🔍 DEBUG: No actions with system name, trying without...')
+          sectionPerms = getSectionPermissions('Appointment Schedule Mangement')
+          console.log('🔍 DEBUG: sectionPerms (without system):', sectionPerms)
+        }
+
+        console.log('🔍 DEBUG: Final sectionPerms.actions:', sectionPerms.actions)
 
         const authorizedBranchIds = new Set()
 
@@ -165,7 +174,13 @@ export default function ScheduleFormModal({
         setLoadingBranches(true)
 
         // Get user's authorized branch IDs from permissions
-        const sectionPerms = getSectionPermissions('Appointment Schedule Mangement', 'Appointments')
+        let sectionPerms = getSectionPermissions('Appointment Schedule Mangement', 'Appointments')
+
+        // If no actions found, try without system name
+        if (!sectionPerms.actions || sectionPerms.actions.length === 0) {
+          sectionPerms = getSectionPermissions('Appointment Schedule Mangement')
+        }
+
         const authorizedBranchIds = new Set()
 
         sectionPerms.actions?.forEach(action => {
