@@ -12,25 +12,26 @@ export default function ScheduleList() {
   // Use state-only tabs (no navigation) to prevent unmount/remount issues
   const [activeTab, setActiveTab] = useState('list')
   const [branchesMap, setBranchesMap] = useState({})
+  const [fixedFilters, setFixedFilters] = useState([])
 
   // Current UI language; fallback to 'en'
   const uiLang = (typeof navigator !== 'undefined' && (navigator.language || '').startsWith('ar')) ? 'ar' : 'en'
 
-  // Load branches map for display in table
+  // Load branches map for display in table AND extract authorized branch IDs from permissions
   useEffect(() => {
-    const loadBranchesMap = async () => {
+    const loadBranchesMapAndPermissions = async () => {
       try {
         // Load all organization branches to populate the map
         const res = await api.post('/access/api/organization-branches/filter', {
           criteria: []
-        }, { 
-          params: { 
-            page: 0, 
+        }, {
+          params: {
+            page: 0,
             size: 10000,
             lang: uiLang
-          } 
+          }
         })
-        
+
         const branches = res?.data?.content || []
         const map = {}
         branches.forEach(branch => {
@@ -39,12 +40,56 @@ export default function ScheduleList() {
           }
         })
         setBranchesMap(map)
+
+        // Extract authorized branch IDs from user permissions
+        try {
+          const permRes = await api.get('/auth/me/permissions')
+          const permissionsData = permRes?.data || {}
+          const authorizedBranchIds = new Set()
+
+          // Traverse permissions structure: systems -> sections -> actions -> scopes
+          if (permissionsData?.systems) {
+            permissionsData.systems.forEach(system => {
+              system.sections?.forEach(section => {
+                // Look for "Schedule" section (case-insensitive)
+                if (section.name?.toLowerCase().includes('schedule')) {
+                  section.actions?.forEach(action => {
+                    action.scopes?.forEach(scope => {
+                      // Only include ALLOW scopes with valid scopeValueId
+                      if (scope.effect === 'ALLOW' && scope.scopeValueId) {
+                        authorizedBranchIds.add(scope.scopeValueId)
+                      }
+                    })
+                  })
+                }
+              })
+            })
+          }
+
+          // Convert to array for passing to backend as scope filter
+          const branchIdArray = Array.from(authorizedBranchIds)
+
+          // Build fixed filter with scope (sent in POST body to backend)
+          if (branchIdArray.length > 0) {
+            setFixedFilters([
+              {
+                type: 'scope',
+                fieldName: 'organizationBranchId',
+                allowedValues: branchIdArray,
+                dataType: 'UUID'
+              }
+            ])
+          }
+        } catch (err) {
+          console.error('Failed to load permissions:', err)
+          // Continue without scope filters - user may not have permission-based access
+        }
       } catch (err) {
         console.error('Failed to load branches map:', err)
       }
     }
-    
-    loadBranchesMap()
+
+    loadBranchesMapAndPermissions()
   }, [uiLang])
 
   const scheduleColumns = [
@@ -245,6 +290,7 @@ export default function ScheduleList() {
               enableEdit={true}
               enableDelete={true}
               tableId="schedules-list"
+              fixedFilters={fixedFilters}
               renderCreate={({ open, onClose, onSuccess }) => (
                 <ScheduleFormModal
                   open={open}
