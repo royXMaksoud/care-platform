@@ -4,7 +4,7 @@ import { api } from '@/lib/axios'
 import CrudPage from '@/features/crud/CrudPage'
 import { usePermissionCheck } from '@/contexts/PermissionsContext'
 import { SYSTEMS, CMS_SECTIONS } from '@/config/permissions-constants'
-import CMSBreadcrumb from '../../../components/CMSBreadcrumb'
+import CMSBreadcrumb from '../../components/CMSBreadcrumb'
 import { useTranslation } from 'react-i18next'
 import SystemRoleFormModal from './SystemRoleFormModal'
 
