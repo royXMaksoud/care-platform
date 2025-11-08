@@ -12,7 +12,9 @@
       "Bash(git commit:*)",
       "Bash(mkdir:*)",
       "Bash(cp:*)",
-      "Bash(tree:*)"
+      "Bash(tree:*)",
+      "Bash(rm:*)",
+      "Bash(mvn clean install:*)"
     ],
     "deny": [],
     "ask": []

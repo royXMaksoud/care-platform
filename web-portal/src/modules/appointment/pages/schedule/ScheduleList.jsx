@@ -12,7 +12,7 @@ export default function ScheduleList() {
   // Use state-only tabs (no navigation) to prevent unmount/remount issues
   const [activeTab, setActiveTab] = useState('list')
   const [branchesMap, setBranchesMap] = useState({})
-  const [queryParams, setQueryParams] = useState(null)
+  const [fixedFilters, setFixedFilters] = useState([])  // Branch filter for POST body
   const [isReady, setIsReady] = useState(false)
 
   // Current UI language; fallback to 'en'
@@ -71,18 +71,26 @@ export default function ScheduleList() {
           console.log('✅ DEBUG ScheduleList - Authorized branch IDs:', branchIdArray)
 
           if (branchIdArray.length > 0) {
-            setQueryParams({ organizationBranchIds: branchIdArray.join(',') })
+            // Send branch IDs as fixed filter in POST body (will be merged with user filters)
+            setFixedFilters([
+              {
+                key: 'organizationBranchId',
+                operator: 'IN',
+                value: branchIdArray,
+                dataType: 'UUID'
+              }
+            ])
           } else {
-            setQueryParams({ skipBranchFilter: true })
-            console.log('⚠️ DEBUG ScheduleList - No authorized branch IDs found, skipping branch filter.')
+            setFixedFilters([])
+            console.log('⚠️ DEBUG ScheduleList - No authorized branch IDs found, no branch filter applied.')
           }
         } catch (err) {
           console.error('Failed to load permissions:', err)
-          setQueryParams({ skipBranchFilter: true })
+          setFixedFilters([])
         }
       } catch (err) {
         console.error('Failed to load branches map:', err)
-        setQueryParams({ skipBranchFilter: true })
+        setFixedFilters([])
       } finally {
         setIsReady(true)
       }
@@ -290,7 +298,7 @@ export default function ScheduleList() {
                 enableEdit={true}
                 enableDelete={true}
                 tableId="schedules-list"
-                queryParams={queryParams || {}}
+                fixedFilters={fixedFilters}
                 renderCreate={({ open, onClose, onSuccess }) => (
                   <ScheduleFormModal
                     open={open}
