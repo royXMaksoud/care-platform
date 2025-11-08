@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '@/lib/axios'
 import UserPermissionsTab from './UserPermissionsTab'
-import UserRolesTab from '../roles/UserRolesTab'
+import UserRolesTab from './UserRolesTab'
 
 export default function UserDetail() {
   const { userId } = useParams()
@@ -12,7 +12,7 @@ export default function UserDetail() {
   const [u, setU] = useState(null)
   const [form, setForm] = useState({
     firstName: '', fatherName: '', surName: '', fullName: '',
-    emailAddress: '', language: 'en', accountKind: 'GENERAL', type: 'USER', 
+    emailAddress: '', language: 'en', accountKind: 'GENERAL', type: 'USER',
     enabled: true, profileImageUrl: '', authMethod: '', isEmailVerified: false
   })
 
@@ -68,76 +68,152 @@ export default function UserDetail() {
 
   if (!u) {
     return (
-      <div className="h-screen flex items-center justify-center">
-        <div className="animate-pulse space-y-2">
-          <div className="h-3 bg-muted rounded w-32"></div>
-          <div className="h-3 bg-muted rounded w-48"></div>
+      <div className="h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50">
+        <div className="animate-pulse space-y-3">
+          <div className="h-4 bg-slate-200 rounded w-40"></div>
+          <div className="h-4 bg-slate-200 rounded w-60"></div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden bg-slate-50">
-      {/* Clean Header */}
-      <div className="flex-none bg-white border-b border-slate-200">
-        <div className="flex items-center gap-3 px-6 py-3">
-          <button 
-            className="p-1.5 hover:bg-slate-100 rounded-md transition-colors"
-            onClick={() => navigate(-1)}
-          >
-            <svg className="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-sm font-semibold text-slate-800 truncate">
-              {u.fullName || u.emailAddress}
-            </h1>
-            <p className="text-xs text-slate-500 truncate">{u.emailAddress}</p>
+    <div className="h-screen flex flex-col overflow-hidden bg-gradient-to-br from-slate-50 via-white to-blue-50">
+      {/* Modern Header with Organization Info */}
+      <div className="flex-none bg-white border-b border-slate-200 shadow-sm">
+        {/* Top Navigation Bar */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+          <div className="flex items-center gap-4">
+            <button
+              className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+              onClick={() => navigate(-1)}
+            >
+              <svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <div>
+              <h1 className="text-lg font-bold text-slate-900">
+                {u.fullName || u.emailAddress}
+              </h1>
+              <p className="text-sm text-slate-500">{u.emailAddress}</p>
+            </div>
+          </div>
+
+          {/* Account Status Badge */}
+          <div className="flex items-center gap-2">
+            {u.enabled ? (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
+                <div className="w-2 h-2 rounded-full bg-green-600"></div>
+                Active
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-100 text-red-800 rounded-full text-xs font-semibold">
+                <div className="w-2 h-2 rounded-full bg-red-600"></div>
+                Inactive
+              </span>
+            )}
           </div>
         </div>
 
-        {/* Clean Tabs */}
-        <div className="flex gap-4 px-6 border-t border-slate-100">
+        {/* Organization Info Cards - Modern Grid */}
+        {(u.organization || u.tenant || u.organizationBranch) && (
+          <div className="px-6 py-4 bg-gradient-to-r from-slate-50 to-blue-50 border-b border-slate-100">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {u.organization && (
+                <div className="bg-white rounded-lg border border-slate-200 p-4 hover:border-blue-400 hover:shadow-md transition-all">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                      <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Organization</p>
+                      <p className="text-sm font-bold text-slate-900 truncate">{u.organization.name || u.organization.id}</p>
+                      {u.organization.code && <p className="text-xs text-slate-400 mt-0.5">{u.organization.code}</p>}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {u.tenant && (
+                <div className="bg-white rounded-lg border border-slate-200 p-4 hover:border-purple-400 hover:shadow-md transition-all">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
+                      <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Tenant</p>
+                      <p className="text-sm font-bold text-slate-900 truncate">{u.tenant.name || u.tenant.id}</p>
+                      {u.tenant.email && <p className="text-xs text-slate-400 mt-0.5">{u.tenant.email}</p>}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {u.organizationBranch && (
+                <div className="bg-white rounded-lg border border-slate-200 p-4 hover:border-amber-400 hover:shadow-md transition-all">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+                      <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Branch</p>
+                      <p className="text-sm font-bold text-slate-900 truncate">{u.organizationBranch.name || u.organizationBranch.id}</p>
+                      {u.organizationBranch.code && <p className="text-xs text-slate-400 mt-0.5">{u.organizationBranch.code}</p>}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Modern Tabs with Icons */}
+        <div className="flex gap-0 px-6 border-t border-slate-100 bg-white">
           <button
-            className={`px-3 py-2 text-xs font-medium transition-all relative ${
+            className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-all border-b-2 ${
               tab==='info'
-                ? 'text-blue-600'
-                : 'text-slate-600 hover:text-slate-800'
+                ? 'text-blue-600 border-blue-600'
+                : 'text-slate-600 border-transparent hover:text-slate-900 hover:bg-slate-50'
             }`}
             onClick={() => setTab('info')}
           >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
             User Info
-            {tab==='info' && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>
-            )}
           </button>
           <button
-            className={`px-3 py-2 text-xs font-medium transition-all relative ${
+            className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-all border-b-2 ${
               tab==='roles'
-                ? 'text-blue-600'
-                : 'text-slate-600 hover:text-slate-800'
+                ? 'text-blue-600 border-blue-600'
+                : 'text-slate-600 border-transparent hover:text-slate-900 hover:bg-slate-50'
             }`}
             onClick={() => setTab('roles')}
           >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-2a6 6 0 0112 0v2zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
             Roles
-            {tab==='roles' && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>
-            )}
           </button>
           <button
-            className={`px-3 py-2 text-xs font-medium transition-all relative ${
+            className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-all border-b-2 ${
               tab==='permissions'
-                ? 'text-blue-600'
-                : 'text-slate-600 hover:text-slate-800'
+                ? 'text-blue-600 border-blue-600'
+                : 'text-slate-600 border-transparent hover:text-slate-900 hover:bg-slate-50'
             }`}
             onClick={() => setTab('permissions')}
           >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
             Permissions
-            {tab==='permissions' && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>
-            )}
           </button>
         </div>
       </div>
@@ -145,163 +221,193 @@ export default function UserDetail() {
       {/* Tab Content */}
       <div className="flex-1 overflow-y-auto">
         {tab === 'info' && (
-          <form onSubmit={save} className="p-6 space-y-4 max-w-5xl">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-foreground mb-1">
-                  First name
-                </label>
-                <input 
-                  className="w-full px-2 py-1.5 text-sm border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-ring bg-background"
-                  value={form.firstName}
-                  onChange={(e)=>setForm(f=>({...f, firstName:e.target.value}))}
-                />
+          <form onSubmit={save} className="p-8 space-y-6 max-w-5xl">
+            {/* Form Section with Card Style */}
+            <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6">
+              <h2 className="text-base font-semibold text-slate-900 mb-6">Personal Information</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-2">
+                    First name
+                  </label>
+                  <input
+                    className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    value={form.firstName}
+                    onChange={(e)=>setForm(f=>({...f, firstName:e.target.value}))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-2">
+                    Father name
+                  </label>
+                  <input
+                    className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    value={form.fatherName}
+                    onChange={(e)=>setForm(f=>({...f, fatherName:e.target.value}))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-2">
+                    Surname
+                  </label>
+                  <input
+                    className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    value={form.surName}
+                    onChange={(e)=>setForm(f=>({...f, surName:e.target.value}))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-2">
+                    Full name
+                  </label>
+                  <input
+                    className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    value={form.fullName}
+                    onChange={(e)=>setForm(f=>({...f, fullName:e.target.value}))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-2">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    value={form.emailAddress}
+                    onChange={(e)=>setForm(f=>({...f, emailAddress:e.target.value}))}
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-foreground mb-1">
-                  Father name
-                </label>
-                <input 
-                  className="w-full px-2 py-1.5 text-sm border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-ring bg-background"
-                  value={form.fatherName}
-                  onChange={(e)=>setForm(f=>({...f, fatherName:e.target.value}))}
-                />
+            </div>
+
+            {/* Settings Section */}
+            <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6">
+              <h2 className="text-base font-semibold text-slate-900 mb-6">Account Settings</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-2">
+                    Language
+                  </label>
+                  <select
+                    className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    value={form.language}
+                    onChange={(e)=>setForm(f=>({...f, language:e.target.value}))}
+                  >
+                    <option value="en">English</option>
+                    <option value="ar">العربية</option>
+                    <option value="fr">Français</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-2">
+                    Account Kind
+                  </label>
+                  <select
+                    className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    value={form.accountKind}
+                    onChange={(e)=>setForm(f=>({...f, accountKind:e.target.value}))}
+                  >
+                    <option value="GENERAL">General User</option>
+                    <option value="OPERATOR">Operator</option>
+                    <option value="ADMIN">Administrator</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-2">
+                    Login Method
+                  </label>
+                  <input
+                    className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-lg bg-slate-100 text-slate-600 cursor-not-allowed"
+                    value={form.authMethod || 'LOCAL'}
+                    readOnly
+                    disabled
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-foreground mb-1">
-                  Surname
+
+              {/* Checkboxes */}
+              <div className="mt-6 pt-6 border-t border-slate-200 space-y-3">
+                <label className="flex items-center gap-3 cursor-pointer hover:bg-slate-50 p-3 rounded-lg transition-colors">
+                  <input
+                    id="enabled"
+                    type="checkbox"
+                    className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-2 focus:ring-blue-500"
+                    checked={!!form.enabled}
+                    onChange={(e)=>setForm(f=>({...f, enabled:e.target.checked}))}
+                  />
+                  <span className="text-sm font-medium text-slate-700">
+                    Account Enabled
+                  </span>
                 </label>
-                <input 
-                  className="w-full px-2 py-1.5 text-sm border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-ring bg-background"
-                  value={form.surName}
-                  onChange={(e)=>setForm(f=>({...f, surName:e.target.value}))}
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-foreground mb-1">
-                  Full name
-                </label>
-                <input 
-                  className="w-full px-2 py-1.5 text-sm border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-ring bg-background"
-                  value={form.fullName}
-                  onChange={(e)=>setForm(f=>({...f, fullName:e.target.value}))}
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-foreground mb-1">
-                  Email
-                </label>
-                <input 
-                  type="email"
-                  className="w-full px-2 py-1.5 text-sm border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-ring bg-background"
-                  value={form.emailAddress}
-                  onChange={(e)=>setForm(f=>({...f, emailAddress:e.target.value}))}
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-foreground mb-1">
-                  Language
-                </label>
-                <select 
-                  className="w-full px-2 py-1.5 text-sm border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-ring bg-background"
-                  value={form.language}
-                  onChange={(e)=>setForm(f=>({...f, language:e.target.value}))}
-                >
-                  <option value="en">English</option>
-                  <option value="ar">العربية</option>
-                  <option value="fr">Français</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-foreground mb-1">
-                  Account Kind
-                </label>
-                <select 
-                  className="w-full px-2 py-1.5 text-sm border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-ring bg-background"
-                  value={form.accountKind}
-                  onChange={(e)=>setForm(f=>({...f, accountKind:e.target.value}))}
-                >
-                  <option value="GENERAL">General User</option>
-                  <option value="OPERATOR">Operator</option>
-                  <option value="ADMIN">Administrator</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-foreground mb-1">
-                  Login Method
-                </label>
-                <input 
-                  className="w-full px-2 py-1.5 text-sm border border-input rounded-md bg-gray-50"
-                  value={form.authMethod || 'LOCAL'}
-                  readOnly
-                  disabled
-                />
-              </div>
-              <div className="flex items-center gap-2 pt-5">
-                <input 
-                  id="enabled" 
-                  type="checkbox" 
-                  className="w-3.5 h-3.5 text-primary border-input rounded focus:ring-ring"
-                  checked={!!form.enabled}
-                  onChange={(e)=>setForm(f=>({...f, enabled:e.target.checked}))}
-                />
-                <label htmlFor="enabled" className="text-xs font-medium text-foreground">
-                  Enabled
-                </label>
-              </div>
-              <div className="flex items-center gap-2 pt-5">
-                <input 
-                  id="isEmailVerified" 
-                  type="checkbox" 
-                  className="w-3.5 h-3.5 text-primary border-input rounded focus:ring-ring"
-                  checked={!!form.isEmailVerified}
-                  onChange={(e)=>setForm(f=>({...f, isEmailVerified:e.target.checked}))}
-                />
-                <label htmlFor="isEmailVerified" className="text-xs font-medium text-foreground">
-                  Email Verified
+                <label className="flex items-center gap-3 cursor-pointer hover:bg-slate-50 p-3 rounded-lg transition-colors">
+                  <input
+                    id="isEmailVerified"
+                    type="checkbox"
+                    className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-2 focus:ring-blue-500"
+                    checked={!!form.isEmailVerified}
+                    onChange={(e)=>setForm(f=>({...f, isEmailVerified:e.target.checked}))}
+                  />
+                  <span className="text-sm font-medium text-slate-700">
+                    Email Verified
+                  </span>
                 </label>
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-medium text-foreground mb-1">
-                Profile image URL
-              </label>
-              <input 
-                className="w-full px-2 py-1.5 text-sm border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-ring bg-background"
-                value={form.profileImageUrl}
-                onChange={(e)=>setForm(f=>({...f, profileImageUrl:e.target.value}))}
-              />
+            {/* Profile Image Section */}
+            <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6">
+              <h2 className="text-base font-semibold text-slate-900 mb-4">Profile Image</h2>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-2">
+                  Profile Image URL
+                </label>
+                <input
+                  className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  value={form.profileImageUrl}
+                  onChange={(e)=>setForm(f=>({...f, profileImageUrl:e.target.value}))}
+                  placeholder="https://example.com/image.jpg"
+                />
+                {form.profileImageUrl && (
+                  <div className="mt-3">
+                    <img
+                      src={form.profileImageUrl}
+                      alt="Preview"
+                      className="w-20 h-20 rounded-lg border border-slate-200 object-cover"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-3 border-t border-border">
-              <button 
-                type="button" 
-                className="px-3 py-1.5 text-xs font-medium border border-border rounded-md hover:bg-muted transition-colors"
+            {/* Action Buttons */}
+            <div className="flex justify-end gap-3 pt-4">
+              <button
+                type="button"
+                className="px-4 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
                 onClick={() => navigate(-1)}
               >
                 Cancel
               </button>
-              <button 
-                type="submit" 
-                className="px-3 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50"
+              <button
+                type="submit"
+                className="px-4 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-wait"
                 disabled={busy}
               >
-                {busy ? 'Saving...' : 'Save'}
+                {busy ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
           </form>
         )}
 
-        {tab === 'roles' && (
-          <div className="h-full">
-            <UserRolesTab userId={userId} />
-          </div>
-        )}
-
         {tab === 'permissions' && (
           <div className="h-full">
             <UserPermissionsTab userId={userId} />
+          </div>
+        )}
+
+        {tab === 'roles' && (
+          <div className="p-6">
+            <UserRolesTab userId={userId} />
           </div>
         )}
       </div>
