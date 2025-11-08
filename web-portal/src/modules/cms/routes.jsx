@@ -26,6 +26,8 @@ import OperationDetails from './pages/operation/OperationDetails'
 import LocationList from './pages/location/LocationList'
 import LocationDetails from './pages/location/LocationDetails'
 import AuditLogList from './pages/auditlog/AuditLogList'
+import SystemRolesList from './pages/roles/SystemRolesList'
+import SystemRoleDetails from './pages/roles/SystemRoleDetails'
 
 // 👇 lazy load
 const UserDetail = lazy(() => import('./pages/users/UserDetail'))
@@ -48,6 +50,10 @@ export default function CMSRoutes() {
         {/* Users Routes */}
         <Route path="users" element={<UsersList />} />
         <Route path="users/:userId" element={<UserDetail />} />
+
+        {/* Roles Routes */}
+        <Route path="roles" element={<SystemRolesList />} />
+        <Route path="roles/:roleId" element={<SystemRoleDetails />} />
 
         {/* Code Tables Routes */}
         <Route path="codeTable" element={<CodeTablesList />} />
