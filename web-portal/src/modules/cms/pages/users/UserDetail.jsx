@@ -12,7 +12,7 @@ export default function UserDetail() {
   const [u, setU] = useState(null)
   const [form, setForm] = useState({
     firstName: '', fatherName: '', surName: '', fullName: '',
-    emailAddress: '', language: 'en', accountKind: 'GENERAL', type: 'USER',
+    emailAddress: '', language: 'en', accountKind: 'GENERAL', type: 'USER', 
     enabled: true, profileImageUrl: '', authMethod: '', isEmailVerified: false
   })
 
@@ -131,7 +131,6 @@ export default function UserDetail() {
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Organization</p>
                       <p className="text-sm font-bold text-slate-900 truncate">{u.organization.name || u.organization.id}</p>
-                      {u.organization.code && <p className="text-xs text-slate-400 mt-0.5">{u.organization.code}</p>}
                     </div>
                   </div>
                 </div>
@@ -148,7 +147,6 @@ export default function UserDetail() {
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Tenant</p>
                       <p className="text-sm font-bold text-slate-900 truncate">{u.tenant.name || u.tenant.id}</p>
-                      {u.tenant.email && <p className="text-xs text-slate-400 mt-0.5">{u.tenant.email}</p>}
                     </div>
                   </div>
                 </div>
@@ -165,7 +163,6 @@ export default function UserDetail() {
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Branch</p>
                       <p className="text-sm font-bold text-slate-900 truncate">{u.organizationBranch.name || u.organizationBranch.id}</p>
-                      {u.organizationBranch.code && <p className="text-xs text-slate-400 mt-0.5">{u.organizationBranch.code}</p>}
                     </div>
                   </div>
                 </div>
@@ -227,173 +224,146 @@ export default function UserDetail() {
               <h2 className="text-base font-semibold text-slate-900 mb-6">Personal Information</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-2">
-                    First name
-                  </label>
-                  <input
-                    className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                    value={form.firstName}
-                    onChange={(e)=>setForm(f=>({...f, firstName:e.target.value}))}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-2">
-                    Father name
-                  </label>
-                  <input
-                    className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                    value={form.fatherName}
-                    onChange={(e)=>setForm(f=>({...f, fatherName:e.target.value}))}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-2">
-                    Surname
-                  </label>
-                  <input
-                    className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                    value={form.surName}
-                    onChange={(e)=>setForm(f=>({...f, surName:e.target.value}))}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-2">
-                    Full name
-                  </label>
-                  <input
-                    className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                    value={form.fullName}
-                    onChange={(e)=>setForm(f=>({...f, fullName:e.target.value}))}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-2">
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                    value={form.emailAddress}
-                    onChange={(e)=>setForm(f=>({...f, emailAddress:e.target.value}))}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Settings Section */}
-            <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6">
-              <h2 className="text-base font-semibold text-slate-900 mb-6">Account Settings</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-2">
-                    Language
-                  </label>
-                  <select
-                    className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                    value={form.language}
-                    onChange={(e)=>setForm(f=>({...f, language:e.target.value}))}
-                  >
-                    <option value="en">English</option>
-                    <option value="ar">العربية</option>
-                    <option value="fr">Français</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-2">
-                    Account Kind
-                  </label>
-                  <select
-                    className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                    value={form.accountKind}
-                    onChange={(e)=>setForm(f=>({...f, accountKind:e.target.value}))}
-                  >
-                    <option value="GENERAL">General User</option>
-                    <option value="OPERATOR">Operator</option>
-                    <option value="ADMIN">Administrator</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-2">
-                    Login Method
-                  </label>
-                  <input
-                    className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-lg bg-slate-100 text-slate-600 cursor-not-allowed"
-                    value={form.authMethod || 'LOCAL'}
-                    readOnly
-                    disabled
-                  />
-                </div>
-              </div>
-
-              {/* Checkboxes */}
-              <div className="mt-6 pt-6 border-t border-slate-200 space-y-3">
-                <label className="flex items-center gap-3 cursor-pointer hover:bg-slate-50 p-3 rounded-lg transition-colors">
-                  <input
-                    id="enabled"
-                    type="checkbox"
-                    className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-2 focus:ring-blue-500"
-                    checked={!!form.enabled}
-                    onChange={(e)=>setForm(f=>({...f, enabled:e.target.checked}))}
-                  />
-                  <span className="text-sm font-medium text-slate-700">
-                    Account Enabled
-                  </span>
+                <label className="block text-xs font-medium text-foreground mb-1">
+                  First name
                 </label>
-                <label className="flex items-center gap-3 cursor-pointer hover:bg-slate-50 p-3 rounded-lg transition-colors">
-                  <input
-                    id="isEmailVerified"
-                    type="checkbox"
-                    className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-2 focus:ring-blue-500"
-                    checked={!!form.isEmailVerified}
-                    onChange={(e)=>setForm(f=>({...f, isEmailVerified:e.target.checked}))}
-                  />
-                  <span className="text-sm font-medium text-slate-700">
-                    Email Verified
-                  </span>
-                </label>
-              </div>
-            </div>
-
-            {/* Profile Image Section */}
-            <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6">
-              <h2 className="text-base font-semibold text-slate-900 mb-4">Profile Image</h2>
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-2">
-                  Profile Image URL
-                </label>
-                <input
-                  className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  value={form.profileImageUrl}
-                  onChange={(e)=>setForm(f=>({...f, profileImageUrl:e.target.value}))}
-                  placeholder="https://example.com/image.jpg"
+                <input 
+                  className="w-full px-2 py-1.5 text-sm border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-ring bg-background"
+                  value={form.firstName}
+                  onChange={(e)=>setForm(f=>({...f, firstName:e.target.value}))}
                 />
-                {form.profileImageUrl && (
-                  <div className="mt-3">
-                    <img
-                      src={form.profileImageUrl}
-                      alt="Preview"
-                      className="w-20 h-20 rounded-lg border border-slate-200 object-cover"
-                    />
-                  </div>
-                )}
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-foreground mb-1">
+                  Father name
+                </label>
+                <input 
+                  className="w-full px-2 py-1.5 text-sm border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-ring bg-background"
+                  value={form.fatherName}
+                  onChange={(e)=>setForm(f=>({...f, fatherName:e.target.value}))}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-foreground mb-1">
+                  Surname
+                </label>
+                <input 
+                  className="w-full px-2 py-1.5 text-sm border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-ring bg-background"
+                  value={form.surName}
+                  onChange={(e)=>setForm(f=>({...f, surName:e.target.value}))}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-foreground mb-1">
+                  Full name
+                </label>
+                <input 
+                  className="w-full px-2 py-1.5 text-sm border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-ring bg-background"
+                  value={form.fullName}
+                  onChange={(e)=>setForm(f=>({...f, fullName:e.target.value}))}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-foreground mb-1">
+                  Email
+                </label>
+                <input 
+                  type="email"
+                  className="w-full px-2 py-1.5 text-sm border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-ring bg-background"
+                  value={form.emailAddress}
+                  onChange={(e)=>setForm(f=>({...f, emailAddress:e.target.value}))}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-foreground mb-1">
+                  Language
+                </label>
+                <select 
+                  className="w-full px-2 py-1.5 text-sm border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-ring bg-background"
+                  value={form.language}
+                  onChange={(e)=>setForm(f=>({...f, language:e.target.value}))}
+                >
+                  <option value="en">English</option>
+                  <option value="ar">العربية</option>
+                  <option value="fr">Français</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-foreground mb-1">
+                  Account Kind
+                </label>
+                <select 
+                  className="w-full px-2 py-1.5 text-sm border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-ring bg-background"
+                  value={form.accountKind}
+                  onChange={(e)=>setForm(f=>({...f, accountKind:e.target.value}))}
+                >
+                  <option value="GENERAL">General User</option>
+                  <option value="OPERATOR">Operator</option>
+                  <option value="ADMIN">Administrator</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-foreground mb-1">
+                  Login Method
+                </label>
+                <input 
+                  className="w-full px-2 py-1.5 text-sm border border-input rounded-md bg-gray-50"
+                  value={form.authMethod || 'LOCAL'}
+                  readOnly
+                  disabled
+                />
+              </div>
+              <div className="flex items-center gap-2 pt-5">
+                <input 
+                  id="enabled" 
+                  type="checkbox" 
+                  className="w-3.5 h-3.5 text-primary border-input rounded focus:ring-ring"
+                  checked={!!form.enabled}
+                  onChange={(e)=>setForm(f=>({...f, enabled:e.target.checked}))}
+                />
+                <label htmlFor="enabled" className="text-xs font-medium text-foreground">
+                  Enabled
+                </label>
+              </div>
+              <div className="flex items-center gap-2 pt-5">
+                <input 
+                  id="isEmailVerified" 
+                  type="checkbox" 
+                  className="w-3.5 h-3.5 text-primary border-input rounded focus:ring-ring"
+                  checked={!!form.isEmailVerified}
+                  onChange={(e)=>setForm(f=>({...f, isEmailVerified:e.target.checked}))}
+                />
+                <label htmlFor="isEmailVerified" className="text-xs font-medium text-foreground">
+                  Email Verified
+                </label>
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex justify-end gap-3 pt-4">
-              <button
-                type="button"
-                className="px-4 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+            <div>
+              <label className="block text-xs font-medium text-foreground mb-1">
+                Profile image URL
+              </label>
+              <input 
+                className="w-full px-2 py-1.5 text-sm border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-ring bg-background"
+                value={form.profileImageUrl}
+                onChange={(e)=>setForm(f=>({...f, profileImageUrl:e.target.value}))}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-border">
+              <button 
+                type="button" 
+                className="px-3 py-1.5 text-xs font-medium border border-border rounded-md hover:bg-muted transition-colors"
                 onClick={() => navigate(-1)}
               >
                 Cancel
               </button>
-              <button
-                type="submit"
-                className="px-4 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-wait"
+              <button 
+                type="submit" 
+                className="px-3 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50"
                 disabled={busy}
               >
-                {busy ? 'Saving...' : 'Save Changes'}
+                {busy ? 'Saving...' : 'Save'}
               </button>
             </div>
           </form>
