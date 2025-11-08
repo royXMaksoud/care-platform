@@ -1,19 +1,37 @@
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { api } from '@/lib/axios'
 import { CODE_TABLE_IDS } from '@/config/codeTableIds'
+import {
+  Modal,
+  Stepper,
+  Button,
+  Group,
+  Stack,
+  TextInput,
+  Select,
+  Textarea,
+  Loader,
+  Paper,
+  Title,
+  Text,
+  Divider,
+  Badge,
+  Box,
+} from '@mantine/core'
 
 const STEPS = [
-  { id: 1, label: 'Basic Info', description: 'Name and email' },
-  { id: 2, label: 'Billing', description: 'Country, plan, currency' },
-  { id: 3, label: 'Contact', description: 'Focal point details' },
-  { id: 4, label: 'Review', description: 'Confirm and submit' },
+  { id: 0, label: 'Basic Info', description: 'Name and email' },
+  { id: 1, label: 'Billing', description: 'Country, plan, currency' },
+  { id: 2, label: 'Contact', description: 'Focal point details' },
+  { id: 3, label: 'Review', description: 'Confirm and submit' },
 ]
 
 export default function TenantFormWizard({ open, onClose, onSuccess, initialData = null }) {
   const isEditMode = !!initialData
-  const [currentStep, setCurrentStep] = useState(1)
+  const [activeStep, setActiveStep] = useState(0)
   const [loading, setLoading] = useState(false)
+  const [optionsLoading, setOptionsLoading] = useState(false)
   const [options, setOptions] = useState({
     countries: [],
     industries: [],
@@ -36,12 +54,14 @@ export default function TenantFormWizard({ open, onClose, onSuccess, initialData
     comment: initialData?.comment || '',
   })
 
-  // Fetch dropdown options
   useEffect(() => {
+    if (!open) return
+    setActiveStep(0)
     fetchOptions()
-  }, [])
+  }, [open])
 
   const fetchOptions = async () => {
+    setOptionsLoading(true)
     try {
       const [countriesRes, industriesRes, plansRes, currenciesRes, cyclesRes] = await Promise.all([
         api.get('/access/api/cascade-dropdowns/access.code-table-values-by-table', {
@@ -71,16 +91,18 @@ export default function TenantFormWizard({ open, onClose, onSuccess, initialData
     } catch (err) {
       console.error('Failed to fetch dropdown options:', err)
       toast.error('Failed to load form options')
+    } finally {
+      setOptionsLoading(false)
     }
   }
 
   const handleInputChange = (field, value) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
+    setFormData((prev) => ({ ...prev, [field]: value ?? '' }))
   }
 
-  const validateStep = (step) => {
-    switch (step) {
-      case 1:
+  const validateStep = (stepIndex) => {
+    switch (stepIndex) {
+      case 0:
         if (!formData.name?.trim()) {
           toast.error('Tenant name is required')
           return false
@@ -94,7 +116,7 @@ export default function TenantFormWizard({ open, onClose, onSuccess, initialData
           return false
         }
         return true
-      case 2:
+      case 1:
         if (!formData.countryId) {
           toast.error('Please select a country')
           return false
@@ -104,29 +126,44 @@ export default function TenantFormWizard({ open, onClose, onSuccess, initialData
           return false
         }
         return true
+      case 2:
       case 3:
-        // Contact step is optional
-        return true
-      case 4:
-        // Review step
-        return true
       default:
         return true
     }
   }
 
   const handleNext = () => {
-    if (validateStep(currentStep)) {
-      setCurrentStep((prev) => Math.min(prev + 1, STEPS.length))
+    if (loading) return
+    if (!validateStep(activeStep)) return
+    if (activeStep === STEPS.length - 1) {
+      handleSubmit()
+    } else {
+      setActiveStep((prev) => Math.min(prev + 1, STEPS.length - 1))
     }
   }
 
   const handlePrevious = () => {
-    setCurrentStep((prev) => Math.max(prev - 1, 1))
+    if (loading) return
+    setActiveStep((prev) => Math.max(prev - 1, 0))
+  }
+
+  const handleStepClick = (stepIndex) => {
+    if (loading) return
+    if (stepIndex <= activeStep) {
+      setActiveStep(stepIndex)
+      return
+    }
+
+    const canAdvance = Array.from({ length: stepIndex - activeStep }, (_, idx) => activeStep + idx).every((step) =>
+      validateStep(step)
+    )
+
+    if (canAdvance) setActiveStep(stepIndex)
   }
 
   const handleSubmit = async () => {
-    if (!validateStep(4)) return
+    if (!validateStep(STEPS.length - 1)) return
 
     setLoading(true)
     try {
@@ -173,343 +210,300 @@ export default function TenantFormWizard({ open, onClose, onSuccess, initialData
   const getCurrencyName = (id) => options.currencies.find((c) => c.id === id)?.name || '-'
   const getCycleName = (id) => options.cycles.find((c) => c.id === id)?.name || '-'
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="w-full max-w-2xl rounded-xl bg-white shadow-2xl overflow-hidden">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-6">
-          <h2 className="text-2xl font-bold text-white mb-1">
-            {isEditMode ? 'Edit Tenant' : 'Create New Tenant'}
-          </h2>
-          <p className="text-blue-100 text-sm">Step {currentStep} of {STEPS.length}</p>
-        </div>
+  const selectData = useMemo(
+    () => ({
+      countries: options.countries.map((option) => ({ value: option.id, label: option.name })),
+      industries: options.industries.map((option) => ({ value: option.id, label: option.name })),
+      plans: options.plans.map((option) => ({ value: option.id, label: option.name })),
+      currencies: options.currencies.map((option) => ({ value: option.id, label: option.name })),
+      cycles: options.cycles.map((option) => ({ value: option.id, label: option.name })),
+    }),
+    [options]
+  )
 
-        {/* Steps Indicator */}
-        <div className="px-8 py-6 border-b border-gray-200 bg-gray-50">
-          <div className="flex items-center justify-between">
-            {STEPS.map((step, idx) => (
-              <div key={step.id} className="flex items-center">
-                <div className="flex flex-col items-center">
-                  <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm transition-all ${
-                      currentStep >= step.id
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-200 text-gray-600'
-                    }`}
-                  >
-                    {currentStep > step.id ? '✓' : step.id}
-                  </div>
-                  <p className={`mt-2 text-xs font-medium text-center ${
-                    currentStep >= step.id ? 'text-gray-900' : 'text-gray-500'
-                  }`}>
-                    {step.label}
-                  </p>
-                </div>
+  const summaryItems = useMemo(
+    () => [
+      { label: 'Tenant Name', value: formData.name },
+      { label: 'Email', value: formData.email },
+      { label: 'Country', value: getCountryName(formData.countryId) },
+      { label: 'Industry', value: getIndustryName(formData.industryTypeId) },
+      { label: 'Subscription Plan', value: getPlanName(formData.subscriptionPlanId) },
+      { label: 'Billing Currency', value: getCurrencyName(formData.billingCurrencyId) },
+      { label: 'Billing Cycle', value: getCycleName(formData.billingCycleId) },
+      { label: 'Focal Point', value: formData.focalPointName },
+      { label: 'Phone', value: formData.focalPointPhone },
+      { label: 'Address', value: formData.address },
+      { label: 'Comments', value: formData.comment },
+    ],
+    [formData, options]
+  )
 
-                {idx < STEPS.length - 1 && (
-                  <div className={`w-12 h-1 mx-2 transition-all ${
-                    currentStep > step.id ? 'bg-blue-600' : 'bg-gray-200'
-                  }`} />
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
+  const renderStepContent = (stepIndex) => {
+    if (optionsLoading) {
+      return (
+        <Group position="center" mt="lg" mb="xl">
+          <Loader />
+          <Text size="sm" color="dimmed">
+            Loading tenant options…
+          </Text>
+        </Group>
+      )
+    }
 
-        {/* Form Content */}
-        <div className="px-8 py-8 max-h-96 overflow-y-auto">
-          {/* Step 1: Basic Info */}
-          {currentStep === 1 && (
-            <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-gray-900 mb-6">Basic Information</h3>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Tenant Name *
-                </label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => handleInputChange('name', e.target.value)}
-                  placeholder="Enter tenant name"
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email Address *
-                </label>
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  placeholder="Enter email address"
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
+    switch (stepIndex) {
+      case 0:
+        return (
+          <Stack spacing="lg" mt="md">
+            <div>
+              <Title order={4}>Basic information</Title>
+              <Text size="sm" color="dimmed">
+                Start with who the tenant is and how to reach them.
+              </Text>
             </div>
-          )}
-
-          {/* Step 2: Billing */}
-          {currentStep === 2 && (
-            <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-gray-900 mb-6">Billing Information</h3>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Country *
-                </label>
-                <select
-                  value={formData.countryId}
-                  onChange={(e) => handleInputChange('countryId', e.target.value)}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">-- Select Country --</option>
-                  {options.countries.map((country) => (
-                    <option key={country.id} value={country.id}>
-                      {country.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Industry Type
-                </label>
-                <select
-                  value={formData.industryTypeId}
-                  onChange={(e) => handleInputChange('industryTypeId', e.target.value)}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">-- Select Industry --</option>
-                  {options.industries.map((industry) => (
-                    <option key={industry.id} value={industry.id}>
-                      {industry.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Subscription Plan *
-                </label>
-                <select
-                  value={formData.subscriptionPlanId}
-                  onChange={(e) => handleInputChange('subscriptionPlanId', e.target.value)}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">-- Select Plan --</option>
-                  {options.plans.map((plan) => (
-                    <option key={plan.id} value={plan.id}>
-                      {plan.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Billing Currency
-                  </label>
-                  <select
-                    value={formData.billingCurrencyId}
-                    onChange={(e) => handleInputChange('billingCurrencyId', e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="">-- Select Currency --</option>
-                    {options.currencies.map((currency) => (
-                      <option key={currency.id} value={currency.id}>
-                        {currency.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Billing Cycle
-                  </label>
-                  <select
-                    value={formData.billingCycleId}
-                    onChange={(e) => handleInputChange('billingCycleId', e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="">-- Select Cycle --</option>
-                    {options.cycles.map((cycle) => (
-                      <option key={cycle.id} value={cycle.id}>
-                        {cycle.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
+            <Stack spacing="md">
+              <TextInput
+                label="Tenant name"
+                placeholder="Acme Corporation"
+                required
+                value={formData.name}
+                onChange={(event) => handleInputChange('name', event.currentTarget.value)}
+              />
+              <TextInput
+                label="Contact email"
+                placeholder="tenant@company.com"
+                type="email"
+                required
+                value={formData.email}
+                onChange={(event) => handleInputChange('email', event.currentTarget.value)}
+              />
+            </Stack>
+          </Stack>
+        )
+      case 1:
+        return (
+          <Stack spacing="lg" mt="md">
+            <div>
+              <Title order={4}>Billing preferences</Title>
+              <Text size="sm" color="dimmed">
+                Configure how we bill this tenant each cycle.
+              </Text>
             </div>
-          )}
-
-          {/* Step 3: Contact */}
-          {currentStep === 3 && (
-            <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-gray-900 mb-6">Contact Information</h3>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Focal Point Name
-                </label>
-                <input
-                  type="text"
+            <Stack spacing="md">
+              <Select
+                label="Country"
+                placeholder="Select country"
+                searchable
+                nothingFound="No results"
+                data={selectData.countries}
+                value={formData.countryId}
+                onChange={(value) => handleInputChange('countryId', value)}
+                required
+                disabled={optionsLoading}
+              />
+              <Select
+                label="Industry"
+                placeholder="Select industry"
+                searchable
+                clearable
+                nothingFound="No results"
+                data={selectData.industries}
+                value={formData.industryTypeId}
+                onChange={(value) => handleInputChange('industryTypeId', value)}
+                disabled={optionsLoading}
+              />
+              <Select
+                label="Subscription plan"
+                placeholder="Select plan"
+                searchable
+                nothingFound="No results"
+                data={selectData.plans}
+                value={formData.subscriptionPlanId}
+                onChange={(value) => handleInputChange('subscriptionPlanId', value)}
+                required
+                disabled={optionsLoading}
+              />
+              <Group grow>
+                <Select
+                  label="Billing currency"
+                  placeholder="Select currency"
+                  searchable
+                  clearable
+                  data={selectData.currencies}
+                  value={formData.billingCurrencyId}
+                  onChange={(value) => handleInputChange('billingCurrencyId', value)}
+                  disabled={optionsLoading}
+                />
+                <Select
+                  label="Billing cycle"
+                  placeholder="Select cycle"
+                  searchable
+                  clearable
+                  data={selectData.cycles}
+                  value={formData.billingCycleId}
+                  onChange={(value) => handleInputChange('billingCycleId', value)}
+                  disabled={optionsLoading}
+                />
+              </Group>
+            </Stack>
+          </Stack>
+        )
+      case 2:
+        return (
+          <Stack spacing="lg" mt="md">
+            <div>
+              <Title order={4}>Contact & logistics</Title>
+              <Text size="sm" color="dimmed">
+                Optional details so the account and billing owners can stay in touch.
+              </Text>
+            </div>
+            <Stack spacing="md">
+              <Group grow align="flex-start">
+                <TextInput
+                  label="Focal point name"
+                  placeholder="Primary contact person"
                   value={formData.focalPointName}
-                  onChange={(e) => handleInputChange('focalPointName', e.target.value)}
-                  placeholder="Enter contact person name"
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  onChange={(event) => handleInputChange('focalPointName', event.currentTarget.value)}
                 />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Focal Point Phone
-                </label>
-                <input
-                  type="tel"
+                <TextInput
+                  label="Focal point phone"
+                  placeholder="+966 5 0000 0000"
                   value={formData.focalPointPhone}
-                  onChange={(e) => handleInputChange('focalPointPhone', e.target.value)}
-                  placeholder="Enter phone number"
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  onChange={(event) => handleInputChange('focalPointPhone', event.currentTarget.value)}
                 />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Address
-                </label>
-                <textarea
-                  value={formData.address}
-                  onChange={(e) => handleInputChange('address', e.target.value)}
-                  placeholder="Enter address"
-                  rows={3}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Comments
-                </label>
-                <textarea
-                  value={formData.comment}
-                  onChange={(e) => handleInputChange('comment', e.target.value)}
-                  placeholder="Add any additional comments"
-                  rows={3}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
+              </Group>
+              <Textarea
+                label="Head office address"
+                placeholder="Street, city, country"
+                minRows={3}
+                autosize
+                value={formData.address}
+                onChange={(event) => handleInputChange('address', event.currentTarget.value)}
+              />
+              <Textarea
+                label="Internal notes"
+                placeholder="Any additional context for the onboarding team"
+                minRows={3}
+                autosize
+                value={formData.comment}
+                onChange={(event) => handleInputChange('comment', event.currentTarget.value)}
+              />
+            </Stack>
+          </Stack>
+        )
+      case 3:
+        return (
+          <Stack spacing="lg" mt="md">
+            <div>
+              <Title order={4}>Review summary</Title>
+              <Text size="sm" color="dimmed">
+                Confirm the tenant details before provisioning their dedicated workspace.
+              </Text>
             </div>
-          )}
+            <Paper withBorder radius="lg" p="xl">
+              <Stack spacing="sm">
+                <Group position="apart">
+                  <Text fw={600}>Core profile</Text>
+                  <Badge color="blue" variant="light">
+                    cms_{formData.name ? formData.name.replace(/\s+/g, '_').toLowerCase() : 'tenant'}
+                  </Badge>
+                </Group>
+                <Divider my="sm" />
+                <Group align="flex-start" spacing="xl">
+                  <Box sx={{ flex: 1 }}>
+                    <Stack spacing="xs">
+                      {summaryItems.slice(0, 6).map(({ label, value }) => (
+                        <div key={label}>
+                          <Text size="xs" color="dimmed" tt="uppercase">
+                            {label}
+                          </Text>
+                          <Text size="sm" fw={600}>
+                            {value || '—'}
+                          </Text>
+                        </div>
+                      ))}
+                    </Stack>
+                  </Box>
+                  <Box sx={{ flex: 1 }}>
+                    <Stack spacing="xs">
+                      {summaryItems.slice(6).map(({ label, value }) => (
+                        <div key={label}>
+                          <Text size="xs" color="dimmed" tt="uppercase">
+                            {label}
+                          </Text>
+                          <Text size="sm" fw={600}>
+                            {value || '—'}
+                          </Text>
+                        </div>
+                      ))}
+                    </Stack>
+                  </Box>
+                </Group>
+              </Stack>
+            </Paper>
+            <Paper shadow="xs" radius="lg" p="md" withBorder>
+              <Text size="sm" color="dimmed">
+                Submitting will provision the tenant workspace, create their dedicated schema and queue optional data seeding. Use the notes field to leave instructions for the onboarding team if needed.
+              </Text>
+            </Paper>
+          </Stack>
+        )
+      default:
+        return null
+    }
+  }
 
-          {/* Step 4: Review */}
-          {currentStep === 4 && (
-            <div className="space-y-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-6">Review Information</h3>
-
-              <div className="bg-gray-50 rounded-lg p-6 space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 mb-1">Tenant Name</p>
-                    <p className="text-sm font-semibold text-gray-900">{formData.name || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 mb-1">Email</p>
-                    <p className="text-sm font-semibold text-gray-900">{formData.email || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 mb-1">Country</p>
-                    <p className="text-sm font-semibold text-gray-900">{getCountryName(formData.countryId)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 mb-1">Industry</p>
-                    <p className="text-sm font-semibold text-gray-900">{getIndustryName(formData.industryTypeId) || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 mb-1">Subscription Plan</p>
-                    <p className="text-sm font-semibold text-gray-900">{getPlanName(formData.subscriptionPlanId)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 mb-1">Currency</p>
-                    <p className="text-sm font-semibold text-gray-900">{getCurrencyName(formData.billingCurrencyId) || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 mb-1">Billing Cycle</p>
-                    <p className="text-sm font-semibold text-gray-900">{getCycleName(formData.billingCycleId) || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 mb-1">Focal Point</p>
-                    <p className="text-sm font-semibold text-gray-900">{formData.focalPointName || '-'}</p>
-                  </div>
-                  {formData.address && (
-                    <div className="col-span-2">
-                      <p className="text-xs font-medium text-gray-500 mb-1">Address</p>
-                      <p className="text-sm font-semibold text-gray-900">{formData.address}</p>
-                    </div>
-                  )}
-                  {formData.comment && (
-                    <div className="col-span-2">
-                      <p className="text-xs font-medium text-gray-500 mb-1">Comments</p>
-                      <p className="text-sm font-semibold text-gray-900">{formData.comment}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm text-blue-800">
-                  ✓ Please review the information above before submitting. You can go back to edit any field if needed.
-                </p>
-              </div>
-            </div>
-          )}
+  return (
+    <Modal
+      opened={open}
+      onClose={onClose}
+      size="xl"
+      radius="lg"
+      padding="lg"
+      overlayBlur={4}
+      overlayOpacity={0.4}
+      title={
+        <div>
+          <Title order={3}>{isEditMode ? 'Update tenant' : 'New tenant onboarding'}</Title>
+          <Text size="sm" color="dimmed">
+            A guided flow to provision an isolated CMS environment with billing preferences and onboarding notes.
+          </Text>
         </div>
-
-        {/* Footer */}
-        <div className="px-8 py-6 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+      }
+    >
+      <Stepper
+        active={activeStep}
+        onStepClick={handleStepClick}
+        color="blue"
+        allowNextStepsSelect
+        breakpoint="sm"
+        iconSize={30}
+      >
+        {STEPS.map((step) => (
+          <Stepper.Step
+            key={step.id}
+            label={step.label}
+            description={step.description}
           >
-            Cancel
-          </button>
+            {renderStepContent(step.id)}
+          </Stepper.Step>
+        ))}
+      </Stepper>
 
-          <div className="flex gap-3">
-            {currentStep > 1 && (
-              <button
-                onClick={handlePrevious}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                ← Back
-              </button>
-            )}
-
-            {currentStep < STEPS.length ? (
-              <button
-                onClick={handleNext}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Next →
-              </button>
-            ) : (
-              <button
-                onClick={handleSubmit}
-                disabled={loading}
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-wait"
-              >
-                {loading ? 'Submitting...' : isEditMode ? 'Update Tenant' : 'Create Tenant'}
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
+      <Group position="apart" mt="xl">
+        <Button variant="default" onClick={onClose} disabled={loading}>
+          Cancel
+        </Button>
+        <Group spacing="sm">
+          {activeStep > 0 && (
+            <Button variant="default" onClick={handlePrevious} disabled={loading}>
+              Back
+            </Button>
+          )}
+          <Button onClick={handleNext} loading={loading && activeStep === STEPS.length - 1}>
+            {activeStep === STEPS.length - 1 ? (isEditMode ? 'Update tenant' : 'Create tenant') : 'Continue'}
+          </Button>
+        </Group>
+      </Group>
+    </Modal>
   )
 }

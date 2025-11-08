@@ -14,6 +14,7 @@ export default function SystemSectionFormModal({
   initial,         // entity when editing
   onClose,
   onSuccess,
+  initialSystemId, // Pre-selected system ID when creating from system details page
 }) {
   // 1) Hooks MUST be declared at the top level, never behind a conditional return.
   const [busy, setBusy] = useState(false)
@@ -49,11 +50,11 @@ export default function SystemSectionFormModal({
         name: '',
         description: '',
         isActive: true,
-        systemId: '',
+        systemId: initialSystemId || '', // Use initialSystemId if provided
         rowVersion: undefined,
       })
     }
-  }, [open, initial])
+  }, [open, initial, initialSystemId])
 
   // 3) Fetch systems when the modal opens (effect is always declared; logic is conditional).
   useEffect(() => {
@@ -169,7 +170,7 @@ export default function SystemSectionFormModal({
                 className="w-full border rounded px-3 py-2"
                 value={values.systemId}
                 onChange={(e) => change('systemId', e.target.value)}
-                disabled={loadingSystems}
+                disabled={loadingSystems || (mode === 'create' && initialSystemId)}
               >
                 <option value="">Select...</option>
                 {systems.map(s => (

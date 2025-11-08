@@ -24,23 +24,23 @@ export default function SystemDetailsPage() {
   const { getSectionPermissions, isLoading: permissionsLoading } = usePermissionCheck()
   
   const systemPermissions = useMemo(() => 
-    getSectionPermissions(CMS_SECTIONS.SYSTEMS, SYSTEMS.CMS),
+    getSectionPermissions(CMS_SECTIONS.SYSTEMS, SYSTEMS.CMS) ?? {},
     [getSectionPermissions]
   )
 
   const sectionPermissions = useMemo(() => 
-    getSectionPermissions(CMS_SECTIONS.SECTIONS, SYSTEMS.CMS),
+    getSectionPermissions(CMS_SECTIONS.SECTIONS, SYSTEMS.CMS) ?? {},
     [getSectionPermissions]
   )
 
   const actionPermissions = useMemo(() => 
-    getSectionPermissions(CMS_SECTIONS.ACTIONS, SYSTEMS.CMS),
+    getSectionPermissions(CMS_SECTIONS.ACTIONS, SYSTEMS.CMS) ?? {},
     [getSectionPermissions]
   )
 
-  const canUpdate = systemPermissions.canUpdate
-  const canManageSections = sectionPermissions.canCreate || sectionPermissions.canUpdate || sectionPermissions.canDelete
-  const canManageActions = actionPermissions.canCreate || actionPermissions.canUpdate || actionPermissions.canDelete
+  const canUpdate = systemPermissions.canUpdate ?? false
+  const canManageSections = (sectionPermissions.canCreate || sectionPermissions.canUpdate || sectionPermissions.canDelete) ?? false
+  const canManageActions = (actionPermissions.canCreate || actionPermissions.canUpdate || actionPermissions.canDelete) ?? false
 
   // Section columns - without system column since it's fixed
   const sectionColumns = useMemo(() => [

@@ -11,6 +11,7 @@ export default function SystemSectionActionFormModal({
   initial,         // entity when editing
   onClose,
   onSuccess,
+  initialSystemId, // Pre-selected system ID when creating from system details page
 }) {
   const [busy, setBusy] = useState(false)
 
@@ -101,7 +102,7 @@ export default function SystemSectionActionFormModal({
       }))
     } else {
       setValues({
-        systemId: '',
+        systemId: initialSystemId || '', // Use initialSystemId if provided
         systemSectionId: '',
         code: '',
         name: '',
@@ -111,7 +112,7 @@ export default function SystemSectionActionFormModal({
       setSelectedLevels([])
     }
     setLevelToAdd('')
-  }, [open, initial])
+  }, [open, initial, initialSystemId])
 
   // Resolve systemId from section when editing if needed
   useEffect(() => {
@@ -341,7 +342,7 @@ export default function SystemSectionActionFormModal({
                 className="w-full border rounded px-3 py-2"
                 value={values.systemId}
                 onChange={onSystemChange}
-                disabled={loadingSystems}
+                disabled={loadingSystems || (mode === 'create' && initialSystemId)}
               >
                 <option value="">Select...</option>
                 {needGhostSystemOption && (

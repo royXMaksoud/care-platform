@@ -4,6 +4,7 @@ import React, { Suspense, lazy } from 'react'
 
 import CMSHome from './pages/Home'
 import SystemsList from './pages/systems/SystemList'
+import SystemDetails from './pages/systems/SystemDetails'
 import SectionsList from './pages/sections/SectionsList'
 import ActionsList from './pages/actions/SectionActionList'
 import TenantsList from './pages/tenants/TenantList'
@@ -26,8 +27,9 @@ import OperationDetails from './pages/operation/OperationDetails'
 import LocationList from './pages/location/LocationList'
 import LocationDetails from './pages/location/LocationDetails'
 import AuditLogList from './pages/auditlog/AuditLogList'
-import SystemRolesList from './pages/roles/SystemRolesList'
-import SystemRoleDetails from './pages/roles/SystemRoleDetails'
+import SystemRolesList from './pages/users/SystemRolesList'
+import SystemRoleDetails from './pages/users/SystemRoleDetails'
+import TenantWizard from '../../pages/TenantWizard'
 
 // 👇 lazy load
 const UserDetail = lazy(() => import('./pages/users/UserDetail'))
@@ -40,11 +42,13 @@ export default function CMSRoutes() {
       <Routes>
         <Route index element={<CMSHome />} />
         <Route path="systems" element={<SystemsList />} />
+        <Route path="systems/:systemId" element={<SystemDetails />} />
         <Route path="sections" element={<SectionsList />} />
         <Route path="actions" element={<ActionsList />} />
         
         {/* Tenants Routes */}
         <Route path="tenants" element={<TenantsList />} />
+        <Route path="tenants/wizard" element={<TenantWizard />} />
         <Route path="tenants/:tenantId" element={<TenantDetails />} />
 
         {/* Users Routes */}
@@ -52,8 +56,8 @@ export default function CMSRoutes() {
         <Route path="users/:userId" element={<UserDetail />} />
 
         {/* Roles Routes */}
-        <Route path="roles" element={<SystemRolesList />} />
-        <Route path="roles/:roleId" element={<SystemRoleDetails />} />
+        <Route path="system-roles" element={<SystemRolesList />} />
+        <Route path="system-roles/:systemRoleId" element={<SystemRoleDetails />} />
 
         {/* Code Tables Routes */}
         <Route path="codeTable" element={<CodeTablesList />} />

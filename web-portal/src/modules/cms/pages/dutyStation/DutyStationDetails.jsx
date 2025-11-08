@@ -6,10 +6,13 @@ import CrudPage from '@/features/crud/CrudPage'
 import { usePermissionCheck } from '@/contexts/PermissionsContext'
 import { SYSTEMS, CMS_SECTIONS } from '@/config/permissions-constants'
 import { useDutyStationTypes } from '@/hooks/useDutyStationTypes'
+import CMSBreadcrumb from '../../components/CMSBreadcrumb'
+import { useTranslation } from 'react-i18next'
 
 export default function DutyStationDetailsPage() {
   const { dutyStationId } = useParams()
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState('info')
   const [dutyStation, setDutyStation] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -22,6 +25,11 @@ export default function DutyStationDetailsPage() {
     countries: [],
     locations: []
   })
+
+  const sortedCountries = useMemo(
+    () => [...dropdownData.countries].sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' })),
+    [dropdownData.countries]
+  )
 
   // Get permissions (using CODE_COUNTRY permissions)
   const { getSectionPermissions, isLoading: permissionsLoading } = usePermissionCheck()
@@ -177,6 +185,9 @@ export default function DutyStationDetailsPage() {
 
   return (
     <div className="flex flex-col h-screen bg-gray-50">
+      <div className="px-6 pt-4">
+        <CMSBreadcrumb currentPageLabel={dutyStation?.name || t('cms.duty-stations')} />
+      </div>
       {/* Header */}
       <div className="bg-white border-b px-6 py-4 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-4">
@@ -363,13 +374,13 @@ export default function DutyStationDetailsPage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <option value="">Select Country...</option>
-                      {dropdownData.countries.map(c => (
+                      {sortedCountries.map(c => (
                         <option key={c.countryId} value={c.countryId}>{c.name}</option>
                       ))}
                     </select>
                   ) : (
                     <p className="text-gray-900">
-                      {dropdownData.countries.find(c => c.countryId === dutyStation.countryId)?.name || '-'}
+                      {sortedCountries.find(c => c.countryId === dutyStation.countryId)?.name || '-'}
                     </p>
                   )}
                 </div>

@@ -1,11 +1,16 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import CrudPage from '@/features/crud/CrudPage'
 import UserFormModal from './UserFormModal'
 import { usePermissionCheck } from '@/contexts/PermissionsContext'
 import { SYSTEMS, CMS_SECTIONS } from '@/config/permissions-constants'
+import CMSBreadcrumb from '../../components/CMSBreadcrumb'
+import { api } from '@/lib/axios'
+import { toast } from 'sonner'
+import { useTranslation } from 'react-i18next'
 
 export default function UsersList() {
+  const { t } = useTranslation()
   // Get permissions for User Management
   const { getSectionPermissions, isLoading: permissionsLoading } = usePermissionCheck()
   
@@ -19,6 +24,13 @@ export default function UsersList() {
   const canUpdate = permissions.canUpdate
   const canDelete = permissions.canDelete
   const canList = permissions.canList
+
+  const [refreshKey, setRefreshKey] = useState(0)
+  const [importModalOpen, setImportModalOpen] = useState(false)
+  const [importFile, setImportFile] = useState(null)
+  const [importing, setImporting] = useState(false)
+  const [importStats, setImportStats] = useState(null)
+
   const columns = useMemo(() => [
     {
       id: 'fullName',
@@ -203,10 +215,6 @@ export default function UsersList() {
           return <span className="text-gray-400">No roles</span>
         }
 
-        const roleNames = Array.isArray(roles)
-          ? roles.map(r => r.name || r.roleName || r.id).join(', ')
-          : roles.name || roles.roleName || '-'
-
         return (
           <div className="flex flex-wrap gap-1">
             {Array.isArray(roles) ? (
@@ -250,6 +258,91 @@ export default function UsersList() {
     },
   ], [])
 
+  const downloadTemplate = useCallback(async () => {
+    try {
+      const { data } = await api.get('/auth/api/users/bulk/template', {
+        responseType: 'blob',
+        headers: {
+          Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        },
+      })
+
+      const blob = new Blob([data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      })
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'users-template.xlsx'
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+      toast.success('Template downloaded successfully')
+    } catch (error) {
+      console.error('Failed to download template:', error)
+      toast.error('Failed to download template. Please try again.')
+    }
+  }, [])
+
+  const handleImport = useCallback(async () => {
+    if (!importFile) {
+      toast.warning('Please choose an Excel file first')
+      return
+    }
+
+    setImporting(true)
+    setImportStats(null)
+
+    try {
+      const formData = new FormData()
+      formData.append('file', importFile)
+
+      const { data } = await api.post('/auth/api/users/bulk/import', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+
+      setImportStats(data)
+      setImportFile(null)
+      setImporting(false)
+      setRefreshKey((key) => key + 1)
+
+      const created = data?.created ?? 0
+      const failed = data?.failed ?? 0
+      toast.success(`Import finished. Created: ${created}, Failed: ${failed}`)
+    } catch (error) {
+      console.error('Failed to import users:', error)
+      const msg = error?.response?.data?.error || error?.response?.data?.message || error.message || 'Unknown error'
+      toast.error(`Import failed: ${msg}`)
+      setImporting(false)
+    }
+  }, [importFile])
+
+  const handleFileChange = useCallback((event) => {
+    const file = event.target.files?.[0]
+    if (!file) {
+      setImportFile(null)
+      return
+    }
+
+    const allowed = ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel']
+    if (!allowed.includes(file.type)) {
+      toast.warning('Please select a valid Excel file (.xlsx or .xls)')
+      event.target.value = ''
+      setImportFile(null)
+      return
+    }
+
+    setImportFile(file)
+  }, [])
+
+  const closeImportModal = useCallback(() => {
+    if (importing) return
+    setImportModalOpen(false)
+    setImportFile(null)
+    setImportStats(null)
+  }, [importing])
+
   // Show loading state while fetching permissions
   if (permissionsLoading) {
     return (
@@ -278,8 +371,12 @@ export default function UsersList() {
   return (
     <div className="p-6">
       <div className="rounded-lg border border-border bg-card p-6">
+        <div className="mb-4">
+          <CMSBreadcrumb />
+        </div>
         <CrudPage
-          title="Users"
+          key={refreshKey}
+          title={t('cms.users') || 'Users'}
           service="auth"
           resourceBase="/api/users"
           idKey="id"
@@ -289,6 +386,30 @@ export default function UsersList() {
           enableEdit={canUpdate}
           enableDelete={canDelete}
           tableId="users-list" // Unique ID for table preferences storage
+          renderHeaderRight={() => (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={downloadTemplate}
+                className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M12 4v12m0 0l-4-4m4 4l4-4" />
+                </svg>
+                <span>Download Template</span>
+              </button>
+              {canCreate && (
+                <button
+                  onClick={() => setImportModalOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                  </svg>
+                  <span>Import Users</span>
+                </button>
+              )}
+            </div>
+          )}
           renderCreate={({ open, onClose, onSuccess }) => (
             <UserFormModal open={open} mode="create" onClose={onClose} onSuccess={onSuccess} />
           )}
@@ -300,33 +421,183 @@ export default function UsersList() {
               ? { criteria: [{ field: 'q', operator: 'CONTAINS', value: text.trim() }] }
               : { criteria: [] }
           }
-          toCreatePayload={(f) => ({
-            firstName: f.firstName?.trim() || null,
-            fatherName: f.fatherName?.trim() || null,
-            surName: f.surName?.trim() || null,
-            fullName: f.fullName?.trim() || null,
-            emailAddress: f.emailAddress?.trim() || null,
-            password: f.password || null,
-            language: f.language || 'en',
-            type: f.type || 'USER',
-            enabled: !!f.enabled,
-            profileImageUrl: f.profileImageUrl || null,
-          })}
-          toUpdatePayload={(f) => ({
-            firstName: f.firstName?.trim() || null,
-            fatherName: f.fatherName?.trim() || null,
-            surName: f.surName?.trim() || null,
-            fullName: f.fullName?.trim() || null,
-            emailAddress: f.emailAddress?.trim() || null,
-            password: f.password || null,
-            language: f.language || null,
-            type: f.type || null,
-            enabled: typeof f.enabled === 'boolean' ? f.enabled : null,
-            deleted: typeof f.deleted === 'boolean' ? f.deleted : null,
-            profileImageUrl: f.profileImageUrl || null,
-          })}
+          toCreatePayload={(f) => {
+            const toISOInstant = (datetimeLocal) => {
+              if (!datetimeLocal) return null
+              try {
+                return new Date(datetimeLocal).toISOString()
+              } catch {
+                return null
+              }
+            }
+
+            const toISODate = (dateLocal) => {
+              if (!dateLocal) return null
+              try {
+                return dateLocal
+              } catch {
+                return null
+              }
+            }
+
+            return {
+              firstName: f.firstName?.trim() || null,
+              fatherName: f.fatherName?.trim() || null,
+              surName: f.surName?.trim() || null,
+              fullName: f.fullName?.trim() || null,
+              emailAddress: f.emailAddress?.trim() || null,
+              authMethod: f.authMethod || 'LOCAL',
+              tenantId: f.tenantId || null,
+              organizationId: f.organizationId || null,
+              organizationBranchId: f.organizationBranchId || null,
+              accountKind: f.accountKind || 'GENERAL',
+              enabled: !!f.enabled,
+              validFrom: toISOInstant(f.validFrom),
+              validTo: toISOInstant(f.validTo),
+              mustRenewAt: toISOInstant(f.mustRenewAt),
+              employmentStartDate: toISODate(f.employmentStartDate),
+              employmentEndDate: toISODate(f.employmentEndDate),
+              passwordExpiresAt: toISOInstant(f.passwordExpiresAt),
+              mustChangePassword: !!f.mustChangePassword,
+              language: f.language || 'en',
+              type: f.type || 'USER',
+              profileImageUrl: f.profileImageUrl?.trim() || null,
+              password: f.password?.trim() || null,
+            }
+          }}
+          toUpdatePayload={(f) => {
+            const toISOInstant = (datetimeLocal) => {
+              if (!datetimeLocal) return null
+              try {
+                return new Date(datetimeLocal).toISOString()
+              } catch {
+                return null
+              }
+            }
+
+            const toISODate = (dateLocal) => {
+              if (!dateLocal) return null
+              try {
+                return dateLocal
+              } catch {
+                return null
+              }
+            }
+
+            const payload = {
+              firstName: f.firstName?.trim() || null,
+              fatherName: f.fatherName?.trim() || null,
+              surName: f.surName?.trim() || null,
+              fullName: f.fullName?.trim() || null,
+              emailAddress: f.emailAddress?.trim() || null,
+              authMethod: f.authMethod || null,
+              tenantId: f.tenantId || null,
+              organizationId: f.organizationId || null,
+              organizationBranchId: f.organizationBranchId || null,
+              accountKind: f.accountKind || null,
+              enabled: typeof f.enabled === 'boolean' ? f.enabled : null,
+              validFrom: f.validFrom ? toISOInstant(f.validFrom) : null,
+              validTo: f.validTo ? toISOInstant(f.validTo) : null,
+              mustRenewAt: f.mustRenewAt ? toISOInstant(f.mustRenewAt) : null,
+              employmentStartDate: f.employmentStartDate ? toISODate(f.employmentStartDate) : null,
+              employmentEndDate: f.employmentEndDate ? toISODate(f.employmentEndDate) : null,
+              passwordExpiresAt: f.passwordExpiresAt ? toISOInstant(f.passwordExpiresAt) : null,
+              mustChangePassword: typeof f.mustChangePassword === 'boolean' ? f.mustChangePassword : null,
+              language: f.language || null,
+              type: f.type || null,
+              profileImageUrl: f.profileImageUrl?.trim() || null,
+              deleted: typeof f.deleted === 'boolean' ? f.deleted : null,
+            }
+
+            if (f.password?.trim()) {
+              payload.password = f.password.trim()
+            }
+
+            if (f.rowVersion != null) {
+              payload.rowVersion = f.rowVersion
+            }
+
+            return payload
+          }}
         />
       </div>
+
+      {importModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-lg bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+              <h3 className="text-lg font-semibold text-gray-800">Bulk Import Users</h3>
+              <button
+                className="text-gray-500 hover:text-gray-700"
+                onClick={closeImportModal}
+                disabled={importing}
+              >
+                <span className="sr-only">Close</span>
+                X
+              </button>
+            </div>
+            <div className="px-6 py-4 space-y-4">
+              <div className="text-sm text-gray-600 space-y-1">
+                <p>1. Download the template and fill in user details.</p>
+                <p>2. Select a role for each system using the dropdown lists.</p>
+                <p>3. Upload the completed file to create users in bulk.</p>
+              </div>
+              <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4 text-center">
+                <input
+                  id="users-import-file"
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={handleFileChange}
+                  disabled={importing}
+                  className="mx-auto block w-full cursor-pointer text-sm text-gray-600 file:mr-4 file:rounded-md file:border-0 file:bg-blue-600 file:px-4 file:py-2 file:text-white hover:file:bg-blue-700"
+                />
+                <p className="mt-2 text-xs text-gray-500">Supported formats: .xlsx, .xls</p>
+                {importFile && (
+                  <p className="mt-2 text-sm font-medium text-gray-700">Selected file: {importFile.name}</p>
+                )}
+              </div>
+              {importStats && (
+                <div className="rounded-md border border-green-200 bg-green-50 p-4 text-sm text-green-800">
+                  <p className="font-semibold">Import summary</p>
+                  <ul className="mt-2 space-y-1">
+                    <li>Created: {importStats.created ?? 0}</li>
+                    <li>Failed: {importStats.failed ?? 0}</li>
+                    <li>Roles assigned: {importStats.rolesAssigned ?? 0}</li>
+                  </ul>
+                  {Array.isArray(importStats.errors) && importStats.errors.length > 0 && (
+                    <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-amber-800">
+                      <p className="font-semibold">Errors (showing up to 10):</p>
+                      <ul className="list-disc pl-5 text-xs">
+                        {importStats.errors.slice(0, 10).map((err, idx) => (
+                          <li key={idx}>{err}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="flex items-center justify-end gap-2 border-t border-gray-200 px-6 py-4">
+              <button
+                className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+                onClick={closeImportModal}
+                disabled={importing}
+              >
+                Cancel
+              </button>
+              <button
+                className={`rounded-md px-4 py-2 text-sm font-semibold text-white ${
+                  importing ? 'bg-blue-300 cursor-wait' : 'bg-blue-600 hover:bg-blue-700'
+                }`}
+                onClick={handleImport}
+                disabled={importing}
+              >
+                {importing ? 'Importing...' : 'Import Users'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

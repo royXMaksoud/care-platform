@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import CrudPage from '@/features/crud/CrudPage'
 import { usePermissionCheck } from '@/contexts/PermissionsContext'
 import { SYSTEMS, CMS_SECTIONS } from '@/config/permissions-constants'
@@ -33,6 +34,7 @@ const systemFields = [
 ]
 
 export default function SystemsListPage() {
+  const navigate = useNavigate()
   // Get permissions for System section
   const { getSectionPermissions, isLoading } = usePermissionCheck()
   const { t } = useTranslation()
@@ -101,6 +103,7 @@ export default function SystemsListPage() {
           isActive: !!f.isActive,
           systemIcon: f.systemIcon?.trim() || null,
         })}
+        onRowClick={(system) => navigate(`/cms/systems/${system.systemId}`)}
       />
     </div>
   )

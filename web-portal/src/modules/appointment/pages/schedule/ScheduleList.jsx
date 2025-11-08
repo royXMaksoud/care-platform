@@ -12,7 +12,8 @@ export default function ScheduleList() {
   // Use state-only tabs (no navigation) to prevent unmount/remount issues
   const [activeTab, setActiveTab] = useState('list')
   const [branchesMap, setBranchesMap] = useState({})
-  const [fixedFilters, setFixedFilters] = useState([])
+  const [queryParams, setQueryParams] = useState(null)
+  const [isReady, setIsReady] = useState(false)
 
   // Current UI language; fallback to 'en'
   const uiLang = (typeof navigator !== 'undefined' && (navigator.language || '').startsWith('ar')) ? 'ar' : 'en'
@@ -66,29 +67,24 @@ export default function ScheduleList() {
             })
           }
 
-          // Convert to array for passing to backend as scope filter
           const branchIdArray = Array.from(authorizedBranchIds)
           console.log('✅ DEBUG ScheduleList - Authorized branch IDs:', branchIdArray)
 
-          // Build fixed filter with scope (sent in POST body to backend)
           if (branchIdArray.length > 0) {
-            const scopeFilter = {
-              type: 'scope',
-              fieldName: 'organizationBranchId',
-              allowedValues: branchIdArray,
-              dataType: 'UUID'
-            }
-            console.log('✅ DEBUG ScheduleList - Setting fixedFilters with scope:', scopeFilter)
-            setFixedFilters([scopeFilter])
+            setQueryParams({ organizationBranchIds: branchIdArray.join(',') })
           } else {
-            console.log('⚠️ DEBUG ScheduleList - No authorized branch IDs found!')
+            setQueryParams({ skipBranchFilter: true })
+            console.log('⚠️ DEBUG ScheduleList - No authorized branch IDs found, skipping branch filter.')
           }
         } catch (err) {
           console.error('Failed to load permissions:', err)
-          // Continue without scope filters - user may not have permission-based access
+          setQueryParams({ skipBranchFilter: true })
         }
       } catch (err) {
         console.error('Failed to load branches map:', err)
+        setQueryParams({ skipBranchFilter: true })
+      } finally {
+        setIsReady(true)
       }
     }
 
@@ -282,36 +278,42 @@ export default function ScheduleList() {
         {/* Tab Content */}
         {activeTab === 'list' ? (
           <div className="h-screen flex flex-col overflow-hidden">
-            <CrudPage
-              title="Weekly Schedules"
-              service="appointment"
-              resourceBase="/api/admin/schedules"
-              idKey="scheduleId"
-              columns={scheduleColumns}
-              pageSize={20}
-              enableCreate={true}
-              enableEdit={true}
-              enableDelete={true}
-              tableId="schedules-list"
-              fixedFilters={fixedFilters}
-              renderCreate={({ open, onClose, onSuccess }) => (
-                <ScheduleFormModal
-                  open={open}
-                  mode="create"
-                  onClose={onClose}
-                  onSuccess={onSuccess}
-                />
-              )}
-              renderEdit={({ open, initial, onClose, onSuccess }) => (
-                <ScheduleFormModal
-                  open={open}
-                  mode="edit"
-                  initial={initial}
-                  onClose={onClose}
-                  onSuccess={onSuccess}
-                />
-              )}
-            />
+            {isReady ? (
+              <CrudPage
+                title="Weekly Schedules"
+                service="appointment"
+                resourceBase="/api/admin/schedules"
+                idKey="scheduleId"
+                columns={scheduleColumns}
+                pageSize={20}
+                enableCreate={true}
+                enableEdit={true}
+                enableDelete={true}
+                tableId="schedules-list"
+                queryParams={queryParams || {}}
+                renderCreate={({ open, onClose, onSuccess }) => (
+                  <ScheduleFormModal
+                    open={open}
+                    mode="create"
+                    onClose={onClose}
+                    onSuccess={onSuccess}
+                  />
+                )}
+                renderEdit={({ open, initial, onClose, onSuccess }) => (
+                  <ScheduleFormModal
+                    open={open}
+                    mode="edit"
+                    initial={initial}
+                    onClose={onClose}
+                    onSuccess={onSuccess}
+                  />
+                )}
+              />
+            ) : (
+              <div className="flex-1 flex items-center justify-center text-gray-500">
+                Loading permissions...
+              </div>
+            )}
           </div>
         ) : (
           <div key="schedule-calendar-wrapper" className="schedule-calendar-container">

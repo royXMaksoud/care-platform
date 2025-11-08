@@ -4,6 +4,8 @@ import CrudPage from '@/features/crud/CrudPage'
 import { usePermissionCheck } from '@/contexts/PermissionsContext'
 import { SYSTEMS, CMS_SECTIONS } from '@/config/permissions-constants'
 import { api } from '@/lib/axios'
+import CMSBreadcrumb from '../../components/CMSBreadcrumb'
+import { useTranslation } from 'react-i18next'
 
 const operationColumns = [
   { 
@@ -69,18 +71,23 @@ const operationColumns = [
 
 export default function OperationListPage() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   
   // Dropdown data
   const [organizations, setOrganizations] = useState([])
   const [countries, setCountries] = useState([])
   const [locations, setLocations] = useState([])
   
+  const sortedCountries = useMemo(
+    () => [...countries].sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' })),
+    [countries]
+  )
+
   // Get permissions for Code Country section (using same permissions)
   const { getSectionPermissions, isLoading } = usePermissionCheck()
   
   const permissions = useMemo(() => {
     const perms = getSectionPermissions(CMS_SECTIONS.CODE_COUNTRY, SYSTEMS.CMS)
-    console.log('🔍 Operations Page - Permissions:', perms)
     return perms
   }, [getSectionPermissions])
 
@@ -100,8 +107,8 @@ export default function OperationListPage() {
         
         // ✅ Use Promise.all to fetch all data in parallel (faster!)
         const [orgResponse, countryResponse, locationResponse] = await Promise.all([
-          api.post('/access/api/code-organization-languages/filter', {
-            criteria: [{ field: 'languageCode', operator: 'EQUAL', value: userLanguage }]
+          api.post('/access/api/organization-languages/filter', {
+            criteria: [{ field: 'language', operator: 'EQUAL', value: userLanguage }]
           }, { params: { page: 0, size: 1000 } }),
           
           api.post('/access/api/code-country-languages/filter', {
@@ -158,7 +165,7 @@ export default function OperationListPage() {
       label: 'Country',
       options: [
         { value: '', label: '-- Select Country --' },
-        ...countries.map(country => ({ value: country.countryId, label: country.name }))
+        ...sortedCountries.map(country => ({ value: country.countryId, label: country.name }))
       ]
     },
     { 
@@ -174,7 +181,7 @@ export default function OperationListPage() {
     { type: 'date', name: 'startDate', label: 'Start Date' },
     { type: 'date', name: 'endDate', label: 'End Date' },
     // ✅ isActive removed - always TRUE by default
-  ], [organizations, countries, locations])
+  ], [organizations, sortedCountries, locations])
 
   // Show loading state while fetching permissions
   if (isLoading) {
@@ -229,8 +236,11 @@ export default function OperationListPage() {
 
   return (
     <div className="h-full">
+      <div className="px-4 pt-4">
+        <CMSBreadcrumb />
+      </div>
       <CrudPage
-        title="Operations"
+        title={t('cms.operations') || 'Operations'}
         entityName="Operation"
         entityIdField="operationId"
         apiEndpoint="/access/api/operations"

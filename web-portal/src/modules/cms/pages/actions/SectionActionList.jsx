@@ -9,6 +9,8 @@ import CrudPage from '@/features/crud/CrudPage'
 import SystemSectionActionFormModal from './SystemSectionActionFormModal'
 import { usePermissionCheck } from '@/contexts/PermissionsContext'
 import { SYSTEMS, CMS_SECTIONS } from '@/config/permissions-constants'
+import CMSBreadcrumb from '../../components/CMSBreadcrumb'
+import { useTranslation } from 'react-i18next'
 
 const columns = [
   { id: 'code', accessorKey: 'code', header: 'Code', cell: (i) => i.getValue() },
@@ -33,6 +35,7 @@ const columns = [
 ]
 
 export default function SectionActionList() {
+  const { t } = useTranslation()
   // Get permissions for System Section Action
   const { getSectionPermissions, isLoading } = usePermissionCheck()
   
@@ -72,8 +75,11 @@ export default function SectionActionList() {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden min-h-0">
+      <div className="px-4 pt-4">
+        <CMSBreadcrumb />
+      </div>
       <CrudPage
-        title="System Section Actions"
+        title={t('cms.actions') || 'System Section Actions'}
         service="access"
         resourceBase="/api/system-section-actions"
         idKey="systemSectionActionId"

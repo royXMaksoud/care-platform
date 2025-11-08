@@ -7,10 +7,13 @@ import CodeTableFormModal from './CodeTableFormModal'// <- this file must exist
 import { usePermissionCheck } from '@/contexts/PermissionsContext'
 import { SYSTEMS, CMS_SECTIONS } from '@/config/permissions-constants'
 import { api } from '@/lib/axios'
+import CMSBreadcrumb from '../../components/CMSBreadcrumb'
+import { useTranslation } from 'react-i18next'
 
 export default function CodeTableList() {
   const navigate = useNavigate()
   const location = useLocation()
+  const { t } = useTranslation()
   const [listKey, setListKey] = useState(0)
   const [codeTablesMap, setCodeTablesMap] = useState({})
 
@@ -18,7 +21,7 @@ export default function CodeTableList() {
   const { getSectionPermissions, isLoading } = usePermissionCheck()
   
   const permissions = useMemo(() => 
-    getSectionPermissions(CMS_SECTIONS.CODE_TABLE, SYSTEMS.CMS),
+    getSectionPermissions(CMS_SECTIONS.SYSTEMS, SYSTEMS.CMS),
     [getSectionPermissions]
   )
 
@@ -171,40 +174,45 @@ export default function CodeTableList() {
   }
 
   return (
-    <CrudPage
-      key={listKey}
-      title="Code Tables"
-      service="access"
-      resourceBase="/api/code-tables"
-      idKey="codeTableId"
-      columns={columns}
-      pageSize={10}
-      formFields={formFields}
-      enableCreate={canCreate}
-      enableEdit={canUpdate}
-      enableDelete={canDelete}
-      showAddButton={canCreate}
-      tableId="code-tables-list" // Unique ID for table preferences storage
-      toCreatePayload={(f) => ({
-        name: f.name?.trim(),
-        description: f.description?.trim() || null,
-        parentId: f.parentId || null,
-        isActive: !!f.isActive,
-      })}
-      toUpdatePayload={(f, row) => ({
-        codeTableId: row.codeTableId ?? row.id,
-        name: f.name?.trim(),
-        description: f.description?.trim() || null,
-        parentId: f.parentId || null,
-        isActive: !!f.isActive,
-        ...(row.rowVersion != null ? { rowVersion: row.rowVersion } : {}),
-      })}
-      renderCreate={({ open, onClose, onSuccess }) => (
-        <CodeTableFormModal open={open} mode="create" onClose={onClose} onSuccess={onSuccess} />
-      )}
-      renderEdit={({ open, initial, onClose, onSuccess }) => (
-        <CodeTableFormModal open={open} mode="edit" initial={initial} onClose={onClose} onSuccess={onSuccess} />
-      )}
-    />
+    <div>
+      <div className="px-4 pt-4">
+        <CMSBreadcrumb />
+      </div>
+      <CrudPage
+        key={listKey}
+        title={t('cms.codeTable') || 'Code Tables'}
+        service="access"
+        resourceBase="/api/code-tables"
+        idKey="codeTableId"
+        columns={columns}
+        pageSize={10}
+        formFields={formFields}
+        enableCreate={canCreate}
+        enableEdit={canUpdate}
+        enableDelete={canDelete}
+        showAddButton={canCreate}
+        tableId="code-tables-list" // Unique ID for table preferences storage
+        toCreatePayload={(f) => ({
+          name: f.name?.trim(),
+          description: f.description?.trim() || null,
+          parentId: f.parentId || null,
+          isActive: !!f.isActive,
+        })}
+        toUpdatePayload={(f, row) => ({
+          codeTableId: row.codeTableId ?? row.id,
+          name: f.name?.trim(),
+          description: f.description?.trim() || null,
+          parentId: f.parentId || null,
+          isActive: !!f.isActive,
+          ...(row.rowVersion != null ? { rowVersion: row.rowVersion } : {}),
+        })}
+        renderCreate={({ open, onClose, onSuccess }) => (
+          <CodeTableFormModal open={open} mode="create" onClose={onClose} onSuccess={onSuccess} />
+        )}
+        renderEdit={({ open, initial, onClose, onSuccess }) => (
+          <CodeTableFormModal open={open} mode="edit" initial={initial} onClose={onClose} onSuccess={onSuccess} />
+        )}
+      />
+    </div>
   )
 }

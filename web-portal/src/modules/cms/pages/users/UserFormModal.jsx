@@ -135,6 +135,29 @@ export default function UserFormModal({ open, mode = 'create', initial, onClose,
       .catch(() => setBranches([]))
   }, [form.organizationId])
 
+  // Helper to format ISO instant to datetime-local input
+  const formatDatetimeLocal = (isoString) => {
+    if (!isoString) return ''
+    try {
+      const date = new Date(isoString)
+      const offset = date.getTimezoneOffset()
+      const localDate = new Date(date.getTime() - offset * 60 * 1000)
+      return localDate.toISOString().slice(0, 16)
+    } catch {
+      return ''
+    }
+  }
+
+  // Helper to format ISO date to date input
+  const formatDateLocal = (isoDate) => {
+    if (!isoDate) return ''
+    try {
+      return isoDate.split('T')[0]
+    } catch {
+      return ''
+    }
+  }
+
   useEffect(() => {
     if (!open) return
     if (isEdit && initial) {
@@ -195,29 +218,6 @@ export default function UserFormModal({ open, mode = 'create', initial, onClose,
   }, [open, isEdit, initial])
 
   if (!open) return null
-
-  // Helper to format ISO instant to datetime-local input
-  const formatDatetimeLocal = (isoString) => {
-    if (!isoString) return ''
-    try {
-      const date = new Date(isoString)
-      const offset = date.getTimezoneOffset()
-      const localDate = new Date(date.getTime() - offset * 60 * 1000)
-      return localDate.toISOString().slice(0, 16)
-    } catch {
-      return ''
-    }
-  }
-
-  // Helper to format ISO date to date input
-  const formatDateLocal = (isoDate) => {
-    if (!isoDate) return ''
-    try {
-      return isoDate.split('T')[0]
-    } catch {
-      return ''
-    }
-  }
 
   // Helper to convert datetime-local to ISO instant
   const toISOInstant = (datetimeLocal) => {

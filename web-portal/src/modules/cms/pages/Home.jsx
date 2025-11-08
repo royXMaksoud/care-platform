@@ -37,6 +37,12 @@ const SECTION_ICONS = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5.5 21a6.5 6.5 0 0113 0" />
     </svg>
   ),
+  'system-roles': (
+    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+      <circle cx="12" cy="7" r="2" fill="currentColor" />
+    </svg>
+  ),
   'subscriptions': (
     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -60,12 +66,12 @@ const SECTION_ICONS = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
     </svg>
   ),
-  'organizationBranches': (
+  'organization-branches': (
     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
     </svg>
   ),
-  'dutyStations': (
+  'duty-stations': (
     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 15h2m4 0h2" />
@@ -87,11 +93,6 @@ const SECTION_ICONS = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
     </svg>
   ),
-  'roles': (
-    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 20h5v-2a3 3 0 00-5.856-1.487M15 10a3 3 0 11-6 0 3 3 0 016 0zM4.318 20H3a2 2 0 01-2-2v-2a6 6 0 0112 0v2a2 2 0 01-2 2h-8.682zM19 10a4 4 0 11-8 0 4 4 0 018 0z" />
-    </svg>
-  ),
 }
 
 // Soft Pastel Colors - Very Light
@@ -101,16 +102,16 @@ const SECTION_GRADIENTS = {
   'actions': 'from-slate-400 to-slate-500',
   'tenants': 'from-slate-400 to-slate-500',
   'users': 'from-blue-300 to-blue-400',
+  'system-roles': 'from-purple-300 to-purple-400',
   'subscriptions': 'from-slate-400 to-slate-500',
   'codeTable': 'from-slate-400 to-slate-500',
   'codeCountry': 'from-blue-300 to-blue-400',
   'organizations': 'from-slate-400 to-slate-500',
-  'organizationBranches': 'from-blue-300 to-blue-400',
-  'dutyStations': 'from-blue-300 to-blue-400',
+  'organization-branches': 'from-blue-300 to-blue-400',
+  'duty-stations': 'from-blue-300 to-blue-400',
   'operations': 'from-blue-300 to-blue-400',
   'location': 'from-slate-400 to-slate-500',
   'auditLog': 'from-blue-300 to-blue-400',
-  'roles': 'from-purple-400 to-purple-500',
 }
 
 // Calm Professional Category Configuration
@@ -143,7 +144,7 @@ const CATEGORIES = {
     bgGradient: 'from-blue-50/20 to-blue-100/15 dark:from-blue-900/15 dark:to-blue-800/8',
     borderColor: 'border-blue-200 dark:border-blue-800',
     accentColor: 'text-blue-500 dark:text-blue-400',
-    items: ['codeTable', 'codeCountry', 'location', 'organizations', 'organizationBranches', 'dutyStations', 'operations']
+    items: ['codeTable', 'codeCountry', 'location', 'organizations', 'organization-branches', 'duty-stations', 'operations']
   },
   'userManagement': {
     title: 'User Management',
@@ -156,7 +157,7 @@ const CATEGORIES = {
     bgGradient: 'from-blue-50/20 to-blue-100/15 dark:from-blue-900/15 dark:to-blue-800/8',
     borderColor: 'border-blue-200 dark:border-blue-800',
     accentColor: 'text-blue-500 dark:text-blue-400',
-    items: ['users', 'roles', 'auditLog']
+    items: ['users', 'system-roles', 'auditLog']
   },
   'tenant': {
     title: 'Tenant',
@@ -178,22 +179,17 @@ export default function CMSHome() {
   const [searchTerm, setSearchTerm] = useState('')
   const { t } = useTranslation()
 
-  // 🔍 DEBUG: Log permissions data
-  console.log('🔍 HOME DEBUG - Full permissionsData:', permissionsData)
-  console.log('🔍 HOME DEBUG - Systems array:', permissionsData?.systems)
-  console.log('🔍 HOME DEBUG - Systems length:', permissionsData?.systems?.length)
-  console.log('🔍 HOME DEBUG - isLoading:', isLoading)
 
   const defaultItems = [
     { to: 'systems', label: 'Systems' },
     { to: 'sections', label: 'Sections' },
     { to: 'actions', label: 'Actions' },
     { to: 'organizations', label: 'Organizations' },
-    { to: 'organizationBranches', label: 'Organization Branches' },
-    { to: 'dutyStations', label: 'Duty Stations' },
+    { to: 'organization-branches', label: 'Organization Branches' },
+    { to: 'duty-stations', label: 'Duty Stations' },
     { to: 'tenants', label: 'Tenants' },
     { to: 'users', label: 'Users' },
-    { to: 'roles', label: 'Roles' },
+    { to: 'system-roles', label: 'System Roles' },
     { to: 'subscriptions', label: 'Tenant Subscriptions' },
     { to: 'codeTable', label: 'Code Table' },
     { to: 'codeCountry', label: 'Countries' },
@@ -203,31 +199,21 @@ export default function CMSHome() {
   ]
 
   let allItems = []
-  
+
   try {
     // ✅ FIX: Check if systems array exists AND has items
     if (permissionsData?.systems && permissionsData.systems.length > 0) {
-      console.log('✅ HOME DEBUG - Permissions found! Systems count:', permissionsData.systems.length)
-      console.log('🔍 HOME DEBUG - Filtering CMS_MENU_ITEMS...')
       allItems = CMS_MENU_ITEMS.filter(item => {
         try {
           const hasAccess = hasSectionAccess(item.sectionName, item.systemName)
-          console.log(`🔍 Checking ${item.label}:`, { hasAccess, sectionName: item.sectionName, systemName: item.systemName })
           if (!hasAccess) return false
           const permissions = getSectionPermissions(item.sectionName, item.systemName)
-          console.log(`🔍 Permissions for ${item.label}:`, permissions)
           return permissions.canList
         } catch (error) {
           console.error('Error checking permission for item:', item, error)
           return false
         }
       })
-      
-      console.log('🔍 HOME DEBUG - Filtered items:', allItems.length)
-      
-    
-      allItems.push({ to: 'auditLog', label: 'Audit Log' })
-      allItems.push({ to: 'roles', label: 'Roles' })
     } else {
       // ✅ TEMPORARY FIX: Always show defaultItems for testing
       allItems = defaultItems
@@ -236,11 +222,15 @@ export default function CMSHome() {
     console.error('❌ Error filtering menu items:', error)
     allItems = defaultItems
   }
-  
-  console.log('🔍 HOME DEBUG - Final allItems:', allItems.length)
-  console.log('🔍 HOME DEBUG - visibleItems will be:', allItems.filter(item => 
-    item.label.toLowerCase().includes(searchTerm.toLowerCase())
-  ).length)
+
+  // ✅ Ensure essential modules like Audit Log & System Roles are always visible
+  defaultItems.forEach(defaultItem => {
+    const exists = allItems.some(item => item.to === defaultItem.to)
+    if (!exists) {
+      allItems.push(defaultItem)
+    }
+  })
+
 
   // Filter items based on search term
   const visibleItems = allItems.filter(item => 
@@ -276,7 +266,6 @@ export default function CMSHome() {
 
   // Show loading state with skeleton
   if (isLoading) {
-    console.log('🔄 HOME - Showing loading state...')
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -297,9 +286,7 @@ export default function CMSHome() {
     )
   }
 
-  console.log('🔍 HOME - visibleItems.length:', visibleItems.length)
-  console.log('🔍 HOME - permissionsData?.systems:', permissionsData?.systems?.length || 0)
-
+  
   // Show message if no permissions (DISABLED FOR NOW - ALWAYS SHOW DEFAULT ITEMS)
   if (false && permissionsData?.systems && visibleItems.length === 0) {
     return (
@@ -325,8 +312,6 @@ export default function CMSHome() {
       </div>
     )
   }
-
-  console.log('✅ HOME - Rendering main view with', visibleItems.length, 'items')
 
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950">

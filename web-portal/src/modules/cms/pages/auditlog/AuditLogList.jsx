@@ -2,6 +2,9 @@ import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import DataTable from '@/packages/datatable/DataTable'
 import { format } from 'date-fns'
+import CMSBreadcrumb from '../../components/CMSBreadcrumb'
+import { usePermissionCheck } from '@/contexts/PermissionsContext'
+import { SYSTEMS, CMS_SECTIONS } from '@/config/permissions-constants'
 
 export default function AuditLogList() {
   const { t } = useTranslation()
@@ -10,6 +13,43 @@ export default function AuditLogList() {
     entityName: '',
     username: '',
   })
+  const { getSectionPermissions, isLoading } = usePermissionCheck()
+
+  const permissions = useMemo(() => 
+    getSectionPermissions(CMS_SECTIONS.SYSTEMS, SYSTEMS.CMS),
+    [getSectionPermissions]
+  )
+
+  const canList = permissions.canList
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mb-3"></div>
+          <p className="text-gray-600">Loading permissions...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!canList) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="max-w-md text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 mb-4">
+            <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h2>
+          <p className="text-gray-600">
+            You don't have permission to view the Audit Log.
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   // Build query params for server-side fetching
   const queryParams = useMemo(() => {
@@ -117,6 +157,9 @@ export default function AuditLogList() {
       <div className="gradient-mesh fixed inset-0 opacity-30 pointer-events-none"></div>
       
       <div className="relative max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-4">
+          <CMSBreadcrumb />
+        </div>
         {/* Header */}
         <div className="mb-6">
           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-500/10 text-red-600 rounded-full text-[11px] font-medium mb-2">

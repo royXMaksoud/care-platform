@@ -6,6 +6,7 @@ import CrudPage from '@/features/crud/CrudPage'
 import { usePermissionCheck } from '@/contexts/PermissionsContext'
 import { SYSTEMS, CMS_SECTIONS } from '@/config/permissions-constants'
 import { useOrganizationTypes } from '@/hooks/useOrganizationTypes'
+import { useBranchTypes } from '@/hooks/useBranchTypes'
 import CMSBreadcrumb from '../../components/CMSBreadcrumb'
 import { useTranslation } from 'react-i18next'
 
@@ -35,6 +36,185 @@ const languageFields = [
   { type: 'checkbox', name: 'isActive', label: 'Active', defaultValue: true },
 ]
 
+// Operation Columns - without organization column since it's fixed
+const createOperationColumns = (countries, locations) => [
+  { 
+    id: 'code', 
+    accessorKey: 'code', 
+    header: 'Code',
+    cell: (info) => info.getValue() || '-'
+  },
+  { 
+    id: 'name', 
+    accessorKey: 'name', 
+    header: 'Operation Name',
+    cell: (info) => (
+      <span className="text-blue-600 font-medium">
+        {info.getValue()}
+      </span>
+    )
+  },
+  { 
+    id: 'description', 
+    accessorKey: 'description', 
+    header: 'Description', 
+    cell: (info) => info.getValue() || '-' 
+  },
+  {
+    id: 'country',
+    accessorKey: 'countryId',
+    header: 'Country',
+    cell: (info) => {
+      const countryId = info.getValue()
+      const country = countries.find(c => c.countryId === countryId)
+      return (
+        <span className="text-gray-700">
+          {country?.name || '-'}
+        </span>
+      )
+    }
+  },
+  {
+    id: 'location',
+    accessorKey: 'locationId',
+    header: 'Location',
+    cell: (info) => {
+      const locationId = info.getValue()
+      const location = locations.find(l => l.locationId === locationId)
+      return (
+        <span className="text-gray-700">
+          {location?.name || '-'}
+        </span>
+      )
+    }
+  },
+  {
+    id: 'startDate',
+    accessorKey: 'startDate',
+    header: 'Start Date',
+    cell: (info) => info.getValue() ? new Date(info.getValue()).toLocaleDateString() : '-',
+  },
+  {
+    id: 'endDate',
+    accessorKey: 'endDate',
+    header: 'End Date',
+    cell: (info) => info.getValue() ? new Date(info.getValue()).toLocaleDateString() : '-',
+  },
+  {
+    id: 'isActive',
+    accessorKey: 'isActive',
+    header: 'Status',
+    cell: (info) => (
+      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+        info.getValue() 
+          ? 'bg-green-100 text-green-800' 
+          : 'bg-gray-100 text-gray-800'
+      }`}>
+        {info.getValue() ? 'Active' : 'Inactive'}
+      </span>
+    ),
+    meta: { type: 'boolean' },
+  },
+]
+
+// Organization Branch Columns - without organization column since it's fixed
+const createBranchColumns = (countries, locations, branchTypes) => [
+  { 
+    id: 'code', 
+    accessorKey: 'code', 
+    header: 'Code',
+    cell: (info) => info.getValue() || '-'
+  },
+  { 
+    id: 'name', 
+    accessorKey: 'name', 
+    header: 'Branch Name',
+    cell: (info) => (
+      <span className="text-blue-600 font-medium">
+        {info.getValue()}
+      </span>
+    )
+  },
+  {
+    id: 'country',
+    accessorKey: 'countryId',
+    header: 'Country',
+    cell: (info) => {
+      const countryId = info.getValue()
+      const country = countries.find(c => c.countryId === countryId)
+      return (
+        <span className="text-gray-700">
+          {country?.name || '-'}
+        </span>
+      )
+    }
+  },
+  {
+    id: 'location',
+    accessorKey: 'locationId',
+    header: 'Location',
+    cell: (info) => {
+      const locationId = info.getValue()
+      const location = locations.find(l => l.locationId === locationId)
+      return (
+        <span className="text-gray-700">
+          {location?.name || '-'}
+        </span>
+      )
+    }
+  },
+  {
+    id: 'branchType',
+    accessorKey: 'branchTypeId',
+    header: 'Branch Type',
+    cell: (info) => {
+      const branchTypeId = info.getValue()
+      const branchType = branchTypes.find(bt => bt.value === branchTypeId)
+      return (
+        <span className="text-gray-700">
+          {branchType?.label || '-'}
+        </span>
+      )
+    }
+  },
+  { 
+    id: 'address', 
+    accessorKey: 'address', 
+    header: 'Address', 
+    cell: (info) => info.getValue() || '-' 
+  },
+  {
+    id: 'isHeadquarter',
+    accessorKey: 'isHeadquarter',
+    header: 'Headquarter',
+    cell: (info) => (
+      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+        info.getValue() 
+          ? 'bg-blue-100 text-blue-800' 
+          : 'bg-gray-100 text-gray-800'
+      }`}>
+        {info.getValue() ? 'Yes' : 'No'}
+      </span>
+    ),
+    meta: { type: 'boolean' },
+  },
+  {
+    id: 'isActive',
+    accessorKey: 'isActive',
+    header: 'Status',
+    cell: (info) => (
+      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+        info.getValue() 
+          ? 'bg-green-100 text-green-800' 
+          : 'bg-gray-100 text-gray-800'
+      }`}>
+        {info.getValue() ? 'Active' : 'Inactive'}
+      </span>
+    ),
+    meta: { type: 'boolean' },
+  },
+]
+
 export default function OrganizationDetailsPage() {
   const { organizationId } = useParams()
   const navigate = useNavigate()
@@ -44,6 +224,26 @@ export default function OrganizationDetailsPage() {
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
   const [formData, setFormData] = useState({})
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [branchDropdownData, setBranchDropdownData] = useState({
+    countries: [],
+    locations: []
+  })
+  const [operationDropdownData, setOperationDropdownData] = useState({
+    countries: [],
+    locations: []
+  })
+
+  const sortedBranchCountries = useMemo(
+    () => [...branchDropdownData.countries].sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' })),
+    [branchDropdownData.countries]
+  )
+
+  const sortedOperationCountries = useMemo(
+    () => [...operationDropdownData.countries].sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' })),
+    [operationDropdownData.countries]
+  )
 
   // Get permissions
   const { getSectionPermissions, isLoading: permissionsLoading } = usePermissionCheck()
@@ -51,16 +251,48 @@ export default function OrganizationDetailsPage() {
   // Get organization types for dropdown
   const { organizationTypes, loading: typesLoading } = useOrganizationTypes('en')
   
+  // Get branch types for dropdown
+  const { branchTypes, loading: branchTypesLoading } = useBranchTypes('en')
+  
   const permissions = useMemo(() => 
     getSectionPermissions(CMS_SECTIONS.CODE_COUNTRY, SYSTEMS.CMS),
     [getSectionPermissions]
   )
 
   const canUpdate = permissions.canUpdate
+  const canDelete = permissions.canDelete
   const canManageLanguages = permissions.canCreate || permissions.canUpdate || permissions.canDelete
+  const canManageBranches = permissions.canCreate || permissions.canUpdate || permissions.canDelete
+  const canManageOperations = permissions.canCreate || permissions.canUpdate || permissions.canDelete
   
   // Fixed filters for organization languages - MUST be before any return statements
   const languageFixedFilters = useMemo(() => 
+    organizationId ? [
+      {
+        key: 'organizationId',
+        operator: 'EQUAL',
+        value: organizationId,
+        dataType: 'UUID',
+      },
+    ] : [],
+    [organizationId]
+  )
+
+  // Fixed filters for organization branches - MUST be before any return statements
+  const branchFixedFilters = useMemo(() => 
+    organizationId ? [
+      {
+        key: 'organizationId',
+        operator: 'EQUAL',
+        value: organizationId,
+        dataType: 'UUID',
+      },
+    ] : [],
+    [organizationId]
+  )
+
+  // Fixed filters for organization operations - MUST be before any return statements
+  const operationFixedFilters = useMemo(() => 
     organizationId ? [
       {
         key: 'organizationId',
@@ -79,10 +311,23 @@ export default function OrganizationDetailsPage() {
     return type?.label || null
   }, [organization?.organizationTypeId, organizationTypes])
 
-  // Fetch organization details
+  // Fetch organization details and dropdown data
   useEffect(() => {
     fetchOrganization()
+    fetchBranchDropdownData()
+    fetchOperationDropdownData()
   }, [organizationId])
+
+  // Close modal on ESC key
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape' && showDeleteModal) {
+        setShowDeleteModal(false)
+      }
+    }
+    window.addEventListener('keydown', handleEscape)
+    return () => window.removeEventListener('keydown', handleEscape)
+  }, [showDeleteModal])
 
   const fetchOrganization = async () => {
     setLoading(true)
@@ -95,6 +340,66 @@ export default function OrganizationDetailsPage() {
       navigate('/cms/organizations')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchBranchDropdownData = async () => {
+    let isMounted = true
+    
+    try {
+      const [countryResponse, locationResponse] = await Promise.all([
+        api.post('/access/api/code-countries/filter', {
+          criteria: []
+        }, { params: { page: 0, size: 1000 } }),
+        api.post('/access/api/locations/filter', {
+          criteria: []
+        }, { params: { page: 0, size: 1000 } })
+      ])
+      
+      if (isMounted) {
+        const activeCountries = (countryResponse.data.content || []).filter(item => item.isActive !== false)
+        const activeLocations = (locationResponse.data.content || []).filter(item => item.isActive !== false)
+        
+        setBranchDropdownData({
+          countries: activeCountries,
+          locations: activeLocations
+        })
+      }
+    } catch (error) {
+      if (isMounted) {
+        console.error('Failed to fetch branch dropdown data:', error)
+      }
+    }
+  }
+
+  const fetchOperationDropdownData = async () => {
+    let isMounted = true
+    
+    try {
+      const userLanguage = localStorage.getItem('userLanguage') || 'en'
+      
+      const [countryResponse, locationResponse] = await Promise.all([
+        api.post('/access/api/code-country-languages/filter', {
+          criteria: [{ field: 'language', operator: 'EQUAL', value: userLanguage }]
+        }, { params: { page: 0, size: 1000 } }),
+        api.post('/access/api/location-languages/filter', {
+          criteria: [{ field: 'language', operator: 'EQUAL', value: userLanguage }]
+        }, { params: { page: 0, size: 1000 } })
+      ])
+      
+      if (isMounted) {
+        const activeCountries = (countryResponse.data.content || []).filter(item => item.isActive !== false)
+        const activeLocations = (locationResponse.data.content || []).filter(item => item.isActive !== false)
+        
+        setOperationDropdownData({
+          countries: activeCountries,
+          locations: activeLocations
+        })
+      }
+    } catch (error) {
+      if (isMounted) {
+        console.error('Failed to fetch operation dropdown data:', error)
+      }
     }
   }
 
@@ -122,7 +427,165 @@ export default function OrganizationDetailsPage() {
     }
   }
 
-  if (loading || permissionsLoading || typesLoading) {
+  const handleDelete = () => {
+    setShowDeleteModal(true)
+  }
+
+  const handleConfirmDelete = async () => {
+    setDeleting(true)
+    try {
+      // First, check if there are any CodeTableValue related to this organization
+      // Check by organization code or organizationId if it's stored in CodeTableValue
+      try {
+        // Search for CodeTableValue that might reference this organization by code
+        const codeTableResponse = await api.post('/access/api/CodeTableValues/filter', {
+          criteria: [
+            { field: 'shortCode', operator: 'EQUAL', value: organization?.code }
+          ]
+        }, { params: { page: 0, size: 1000 } })
+        
+        const relatedValues = codeTableResponse.data?.content || []
+        
+        // Also search by name in case organization is stored as name
+        const nameResponse = await api.post('/access/api/CodeTableValues/filter', {
+          criteria: [
+            { field: 'name', operator: 'EQUAL', value: organization?.name }
+          ]
+        }, { params: { page: 0, size: 1000 } })
+        
+        const relatedByName = nameResponse.data?.content || []
+        
+        // Combine and deduplicate values
+        const allRelatedValues = [...relatedValues, ...relatedByName]
+        const uniqueValues = Array.from(
+          new Map(allRelatedValues.map(v => [v.codeTableValueId, v])).values()
+        )
+        
+        // Delete related CodeTableValues if found
+        if (uniqueValues.length > 0) {
+          for (const value of uniqueValues) {
+            try {
+              await api.delete(`/access/api/CodeTableValues/${value.codeTableValueId}`, {
+                params: { hardDelete: true }
+              })
+            } catch (deleteErr) {
+              console.warn(`Failed to delete CodeTableValue ${value.codeTableValueId}:`, deleteErr)
+            }
+          }
+        }
+      } catch (codeTableErr) {
+        // If we can't check CodeTableValues, continue with organization deletion
+        console.warn('Could not check CodeTableValues:', codeTableErr)
+      }
+
+      // Delete organization with hard delete (permanent deletion from database)
+      await api.delete(`/access/api/organizations/${organizationId}?hardDelete=true`)
+      
+      toast.success('Organization and related data deleted permanently')
+      navigate('/cms/organizations')
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete organization')
+      setDeleting(false)
+      setShowDeleteModal(false)
+    }
+  }
+
+  // Create branch columns with dropdown data
+  const branchColumns = useMemo(() => 
+    createBranchColumns(sortedBranchCountries, branchDropdownData.locations, branchTypes),
+    [sortedBranchCountries, branchDropdownData.locations, branchTypes]
+  )
+
+  // Create operation columns with dropdown data
+  const operationColumns = useMemo(() => 
+    createOperationColumns(sortedOperationCountries, operationDropdownData.locations),
+    [sortedOperationCountries, operationDropdownData.locations]
+  )
+
+  // Create operation fields with dropdown options
+  const operationFields = useMemo(() => [
+    { type: 'text', name: 'code', label: 'Operation Code', required: true },
+    { type: 'text', name: 'name', label: 'Operation Name', required: true },
+    { 
+      type: 'select', 
+      name: 'countryId', 
+      label: 'Country',
+      options: [
+        { value: '', label: '-- Select Country --' },
+        ...sortedOperationCountries.map(country => ({ value: country.countryId, label: country.name }))
+      ]
+    },
+    { 
+      type: 'select', 
+      name: 'locationId', 
+      label: 'Location',
+      options: [
+        { value: '', label: '-- Select Location --' },
+        ...operationDropdownData.locations.map(location => ({ value: location.locationId, label: location.name }))
+      ]
+    },
+    { type: 'textarea', name: 'description', label: 'Description' },
+    { type: 'date', name: 'startDate', label: 'Start Date' },
+    { type: 'date', name: 'endDate', label: 'End Date' },
+  ], [sortedOperationCountries, operationDropdownData.locations])
+
+  // Create branch fields with dropdown options
+  const branchFields = useMemo(() => [
+    { type: 'text', name: 'code', label: 'Branch Code', required: true },
+    { type: 'text', name: 'name', label: 'Branch Name', required: true },
+    { 
+      type: 'select', 
+      name: 'countryId', 
+      label: 'Country',
+      required: true,
+      options: [
+        { value: '', label: '-- Select Country --' },
+        ...sortedBranchCountries.map(country => ({ value: country.countryId, label: country.name }))
+      ]
+    },
+    { 
+      type: 'select', 
+      name: 'locationId', 
+      label: 'Location',
+      required: true,
+      options: [
+        { value: '', label: '-- Select Location --' },
+        ...branchDropdownData.locations.map(location => ({ value: location.locationId, label: location.name }))
+      ]
+    },
+    { 
+      type: 'select', 
+      name: 'branchTypeId', 
+      label: 'Branch Type',
+      options: [
+        { value: '', label: '-- Select Branch Type --' },
+        ...branchTypes.map(type => ({ value: type.value, label: type.label }))
+      ]
+    },
+    { type: 'textarea', name: 'address', label: 'Address' },
+    { 
+      type: 'number', 
+      name: 'latitude', 
+      label: 'Latitude', 
+      step: 'any',
+      placeholder: 'e.g., 33.513807'
+    },
+    { 
+      type: 'number', 
+      name: 'longitude', 
+      label: 'Longitude', 
+      step: 'any',
+      placeholder: 'e.g., 36.276528'
+    },
+    {
+      type: 'map',
+      latName: 'latitude',
+      lngName: 'longitude',
+    },
+    { type: 'checkbox', name: 'isHeadquarter', label: 'Is Headquarter', defaultValue: false },
+  ], [sortedBranchCountries, branchDropdownData.locations, branchTypes])
+
+  if (loading || permissionsLoading || typesLoading || branchTypesLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-gray-500">Loading...</div>
@@ -179,6 +642,40 @@ export default function OrganizationDetailsPage() {
                 <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 to-indigo-600"></div>
               )}
             </button>
+            {canManageBranches && (
+              <button
+                onClick={() => setActiveTab('branches')}
+                className={`px-8 py-4 font-bold transition-all relative ${
+                  activeTab === 'branches'
+                    ? 'text-blue-600 bg-white'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <span className="flex items-center gap-2">
+                  🏢 Branches
+                </span>
+                {activeTab === 'branches' && (
+                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 to-indigo-600"></div>
+                )}
+              </button>
+            )}
+            {canManageOperations && (
+              <button
+                onClick={() => setActiveTab('operations')}
+                className={`px-8 py-4 font-bold transition-all relative ${
+                  activeTab === 'operations'
+                    ? 'text-blue-600 bg-white'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <span className="flex items-center gap-2">
+                  ⚙️ Operations
+                </span>
+                {activeTab === 'operations' && (
+                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 to-indigo-600"></div>
+                )}
+              </button>
+            )}
             {canManageLanguages && (
               <button
                 onClick={() => setActiveTab('languages')}
@@ -381,18 +878,166 @@ export default function OrganizationDetailsPage() {
                       </div>
                     </div>
                     
-                    {canUpdate && (
-                      <div className="flex justify-end">
-                        <button
-                          onClick={() => setEditing(true)}
-                          className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-bold hover:from-blue-700 hover:to-indigo-700 shadow-lg transition-all transform hover:scale-105 flex items-center gap-2"
-                        >
-                          ✏️ Edit Organization
-                        </button>
+                    {(canUpdate || canDelete) && (
+                      <div className="flex justify-end gap-3">
+                        {canUpdate && (
+                          <button
+                            onClick={() => setEditing(true)}
+                            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-bold hover:from-blue-700 hover:to-indigo-700 shadow-lg transition-all transform hover:scale-105 flex items-center gap-2"
+                          >
+                            ✏️ Edit Organization
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button
+                            onClick={handleDelete}
+                            className="px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg font-bold hover:from-red-700 hover:to-red-800 shadow-lg transition-all transform hover:scale-105 flex items-center gap-2"
+                          >
+                            🗑️ Delete Organization
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
                 )}
+              </div>
+            )}
+
+            {activeTab === 'branches' && canManageBranches && organizationId && (
+              <div className="space-y-6">
+                {/* Header Section */}
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border-2 border-blue-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-2xl font-bold text-gray-800 mb-2 flex items-center gap-3">
+                        <span className="text-3xl">🏢</span>
+                        Organization Branches
+                      </h2>
+                      <p className="text-gray-600">
+                        Manage branches for <span className="font-bold text-blue-600">{organization.name}</span>
+                      </p>
+                    </div>
+                    <div className="bg-white px-4 py-2 rounded-lg shadow-sm border border-blue-200">
+                      <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Organization Code</div>
+                      <div className="text-lg font-bold text-blue-600">{organization.code}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Branches Table */}
+                <div className="bg-white rounded-xl border-2 border-gray-100 shadow-sm overflow-hidden">
+                  <CrudPage
+                  title=""
+                  service="access"
+                  resourceBase="/api/organization-branches"
+                  idKey="organizationBranchId"
+                  columns={branchColumns}
+                  formFields={branchFields}
+                  pageSize={10}
+                  fixedFilters={branchFixedFilters}
+                  queryParams={{ organizationId }}
+                  toCreatePayload={(f) => ({
+                    organizationId: organizationId, // Always set to current organization
+                    code: f.code,
+                    name: f.name,
+                    countryId: f.countryId || null,
+                    locationId: f.locationId || null,
+                    branchTypeId: f.branchTypeId || null,
+                    address: f.address,
+                    latitude: f.latitude ? parseFloat(f.latitude) : null,
+                    longitude: f.longitude ? parseFloat(f.longitude) : null,
+                    isHeadquarter: f.isHeadquarter || false,
+                    isActive: true,
+                  })}
+                  toUpdatePayload={(f) => ({
+                    organizationBranchId: f.organizationBranchId,
+                    organizationId: organizationId, // Always set to current organization
+                    code: f.code,
+                    name: f.name,
+                    countryId: f.countryId || null,
+                    locationId: f.locationId || null,
+                    branchTypeId: f.branchTypeId || null,
+                    address: f.address,
+                    latitude: f.latitude ? parseFloat(f.latitude) : null,
+                    longitude: f.longitude ? parseFloat(f.longitude) : null,
+                    isHeadquarter: f.isHeadquarter || false,
+                    isActive: true,
+                    rowVersion: f.rowVersion,
+                  })}
+                  enableCreate={permissions.canCreate}
+                  enableEdit={permissions.canUpdate}
+                  enableDelete={permissions.canDelete}
+                  onRowClick={(branch) => navigate(`/cms/organization-branches/${branch.organizationBranchId}`)}
+                  tableId={`organization-branches-${organizationId}`}
+                />
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'operations' && canManageOperations && organizationId && (
+              <div className="space-y-6">
+                {/* Header Section */}
+                <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-6 border-2 border-indigo-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-2xl font-bold text-gray-800 mb-2 flex items-center gap-3">
+                        <span className="text-3xl">⚙️</span>
+                        Operations
+                      </h2>
+                      <p className="text-gray-600">
+                        Manage operations for <span className="font-bold text-indigo-600">{organization.name}</span>
+                      </p>
+                    </div>
+                    <div className="bg-white px-4 py-2 rounded-lg shadow-sm border border-indigo-200">
+                      <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Organization Code</div>
+                      <div className="text-lg font-bold text-indigo-600">{organization.code}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Operations Table */}
+                <div className="bg-white rounded-xl border-2 border-gray-100 shadow-sm overflow-hidden">
+                  <CrudPage
+                  title=""
+                  service="access"
+                  resourceBase="/api/operations"
+                  idKey="operationId"
+                  columns={operationColumns}
+                  formFields={operationFields}
+                  pageSize={10}
+                  fixedFilters={operationFixedFilters}
+                  queryParams={{ organizationId }}
+                  toCreatePayload={(f) => ({
+                    organizationId: organizationId, // Always set to current organization
+                    code: f.code,
+                    name: f.name,
+                    description: f.description || null,
+                    countryId: f.countryId || null,
+                    locationId: f.locationId || null,
+                    startDate: f.startDate || null,
+                    endDate: f.endDate || null,
+                    isActive: true,
+                  })}
+                  toUpdatePayload={(f) => ({
+                    operationId: f.operationId,
+                    organizationId: organizationId, // Always set to current organization
+                    code: f.code,
+                    name: f.name,
+                    description: f.description || null,
+                    countryId: f.countryId || null,
+                    locationId: f.locationId || null,
+                    startDate: f.startDate || null,
+                    endDate: f.endDate || null,
+                    isActive: true,
+                    rowVersion: f.rowVersion,
+                  })}
+                  enableCreate={permissions.canCreate}
+                  enableEdit={permissions.canUpdate}
+                  enableDelete={permissions.canDelete}
+                  onRowClick={(operation) => navigate(`/cms/operations/${operation.operationId}`)}
+                  tableId={`organization-operations-${organizationId}`}
+                />
+                </div>
               </div>
             )}
 
@@ -432,6 +1077,84 @@ export default function OrganizationDetailsPage() {
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !deleting) {
+              setShowDeleteModal(false)
+            }
+          }}
+        >
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-red-600 to-red-700 px-6 py-4">
+              <div className="flex items-center gap-3">
+                <div className="text-3xl">⚠️</div>
+                <h3 className="text-xl font-bold text-white">Delete Organization</h3>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6">
+              <div className="mb-4">
+                <p className="text-gray-700 font-semibold mb-2">
+                  Are you sure you want to delete this organization?
+                </p>
+                <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded">
+                  <div className="flex items-start gap-3">
+                    <div className="text-red-600 text-xl">⚠️</div>
+                    <div>
+                      <p className="text-red-800 font-bold mb-1">This action cannot be undone!</p>
+                      <p className="text-red-700 text-sm">
+                        Organization: <span className="font-semibold">{organization?.name}</span>
+                      </p>
+                      <p className="text-red-700 text-sm">
+                        Code: <span className="font-semibold">{organization?.code}</span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-gray-600 text-sm mt-4">
+                  <strong>Permanent deletion:</strong> This will permanently delete the organization from the database (hard delete).
+                </p>
+                <p className="text-gray-600 text-sm mt-2">
+                  All associated data including branches, operations, languages, and any related CodeTableValues will be permanently deleted.
+                </p>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 border-t border-gray-200">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                disabled={deleting}
+                className="px-6 py-2.5 border-2 border-gray-300 rounded-lg font-semibold text-gray-700 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                disabled={deleting}
+                className="px-6 py-2.5 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg font-bold hover:from-red-700 hover:to-red-800 shadow-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2"
+              >
+                {deleting ? (
+                  <>
+                    <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    🗑️ Delete Organization
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

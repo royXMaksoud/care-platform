@@ -5,6 +5,8 @@ import { usePermissionCheck } from '@/contexts/PermissionsContext'
 import { SYSTEMS, CMS_SECTIONS } from '@/config/permissions-constants'
 import { api } from '@/lib/axios'
 import { useDutyStationTypes } from '@/hooks/useDutyStationTypes'
+import CMSBreadcrumb from '../../components/CMSBreadcrumb'
+import { useTranslation } from 'react-i18next'
 
 const dutyStationColumns = [
   { 
@@ -54,6 +56,7 @@ const dutyStationColumns = [
 
 export default function DutyStationListPage() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   
   // Dropdown data
   const [organizations, setOrganizations] = useState([])
@@ -62,6 +65,11 @@ export default function DutyStationListPage() {
   const [countries, setCountries] = useState([])
   const [locations, setLocations] = useState([])
   
+  const sortedCountries = useMemo(
+    () => [...countries].sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' })),
+    [countries]
+  )
+
   // Get duty station types from hook
   const { dutyStationTypes, loading: typesLoading } = useDutyStationTypes('en')
   
@@ -185,7 +193,7 @@ export default function DutyStationListPage() {
       required: true,
       options: [
         { value: '', label: '-- Select Country --' },
-        ...countries.map(country => ({ value: country.countryId, label: country.name }))
+        ...sortedCountries.map(country => ({ value: country.countryId, label: country.name }))
       ]
     },
     { 
@@ -210,7 +218,7 @@ export default function DutyStationListPage() {
     { type: 'number', name: 'latitude', label: 'Latitude' },
     { type: 'number', name: 'longitude', label: 'Longitude' },
     // ✅ isActive removed - always TRUE
-  ], [organizations, operations, organizationBranches, countries, locations, dutyStationTypes])
+  ], [organizations, operations, organizationBranches, sortedCountries, locations, dutyStationTypes])
 
   // Loading state
   if (isLoading || typesLoading || !canList) {
@@ -270,8 +278,11 @@ export default function DutyStationListPage() {
 
   return (
     <div className="h-full">
+      <div className="px-4 pt-4">
+        <CMSBreadcrumb />
+      </div>
       <CrudPage
-        title="Duty Stations"
+        title={t('cms.duty-stations') || 'Duty Stations'}
         entityName="Duty Station"
         entityIdField="dutyStationId"
         apiEndpoint="/access/api/duty-stations"

@@ -6,10 +6,13 @@ import CrudPage from '@/features/crud/CrudPage'
 import { usePermissionCheck } from '@/contexts/PermissionsContext'
 import { TENANTS, ACCESS_SECTIONS } from '@/config/permissions-constants'
 import { CODE_TABLE_IDS } from '@/config/codeTableIds'
+import CMSBreadcrumb from '../../components/CMSBreadcrumb'
+import { useTranslation } from 'react-i18next'
 
 export default function TenantDetailsPage() {
   const { tenantId } = useParams()
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState('info')
   const [tenant, setTenant] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -167,6 +170,9 @@ export default function TenantDetailsPage() {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-gradient-to-br from-slate-50 to-gray-100">
+      <div className="px-6 pt-4">
+        <CMSBreadcrumb currentPageLabel={tenant?.name || t('cms.tenants')} />
+      </div>
       {/* Header */}
       <div className="flex-none bg-white border-b shadow-sm">
         <div className="px-6 py-4">

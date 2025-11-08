@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import CrudPage from '@/features/crud/CrudPage'
 import { usePermissionCheck } from '@/contexts/PermissionsContext'
 import { SYSTEMS, CMS_SECTIONS } from '@/config/permissions-constants'
+import CMSBreadcrumb from '../../components/CMSBreadcrumb'
+import { useTranslation } from 'react-i18next'
 
 const countryColumns = [
   { 
@@ -76,16 +78,13 @@ const countryFields = [
 
 export default function CountryListPage() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   
   // Get permissions for Code Country section
   const { getSectionPermissions, isLoading, permissionsData } = usePermissionCheck()
   
   const permissions = useMemo(() => {
     const perms = getSectionPermissions(CMS_SECTIONS.CODE_COUNTRY, SYSTEMS.CMS)
-    
-    // Debug logging
-    console.log('🔍 Countries Page - Permissions:', perms)
-    
     return perms
   }, [getSectionPermissions])
 
@@ -93,6 +92,8 @@ export default function CountryListPage() {
   const canUpdate = permissions.canUpdate
   const canDelete = permissions.canDelete
   const canList = permissions.canList
+
+  const defaultSorting = useMemo(() => ([{ id: 'name', desc: false }]), [])
 
   // Show loading state while fetching permissions
   if (isLoading) {
@@ -127,8 +128,11 @@ export default function CountryListPage() {
 
   return (
     <div className="p-6">
+      <div className="mb-4">
+        <CMSBreadcrumb />
+      </div>
       <CrudPage
-        title="Countries"
+        title={t('cms.codeCountry') || 'Countries'}
         service="access"
         resourceBase="/api/code-countries"
         idKey="countryId"
@@ -140,6 +144,8 @@ export default function CountryListPage() {
         enableDelete={canDelete}
         showAddButton={canCreate}
         tableId="countries-list"
+        defaultSorting={defaultSorting}
+        quickSearch={{ fields: ['name'], operator: 'LIKE' }}
         toCreatePayload={(f) => ({
           iso2Code: f.iso2Code?.trim().toUpperCase(),
           name: f.name?.trim(),

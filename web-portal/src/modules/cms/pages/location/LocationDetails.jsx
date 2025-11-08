@@ -5,10 +5,13 @@ import { api } from '@/lib/axios'
 import CrudPage from '@/features/crud/CrudPage'
 import { usePermissionCheck } from '@/contexts/PermissionsContext'
 import { SYSTEMS, CMS_SECTIONS } from '@/config/permissions-constants'
+import CMSBreadcrumb from '../../components/CMSBreadcrumb'
+import { useTranslation } from 'react-i18next'
 
 export default function LocationDetailsPage() {
   const { locationId } = useParams()
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState('info')
   const [location, setLocation] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -18,6 +21,11 @@ export default function LocationDetailsPage() {
   const [loadingCountries, setLoadingCountries] = useState(true)
   const [parentOptions, setParentOptions] = useState([])
   const [loadingParents, setLoadingParents] = useState(false)
+
+  const sortedCountries = useMemo(
+    () => [...countries].sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' })),
+    [countries]
+  )
 
   const LEVEL_OPTIONS = [
     { value: 0, label: 'Governorate (root)' },
@@ -213,10 +221,13 @@ export default function LocationDetailsPage() {
     )
   }
 
-  const countryName = countries.find(c => c.countryId === location.countryId)?.name || location.countryId
+  const countryName = sortedCountries.find(c => c.countryId === location.countryId)?.name || location.countryId
 
   return (
     <div className="flex flex-col h-screen bg-gray-50">
+      <div className="px-6 pt-4">
+        <CMSBreadcrumb currentPageLabel={location?.name || t('cms.location')} />
+      </div>
       {/* Header */}
       <div className="bg-white border-b px-6 py-4 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-4">
@@ -311,7 +322,7 @@ export default function LocationDetailsPage() {
                       disabled={loadingCountries}
                     >
                       <option value="">Select Country...</option>
-                      {countries.map(c => (
+                      {sortedCountries.map(c => (
                         <option key={c.countryId} value={c.countryId}>{c.name}</option>
                       ))}
                     </select>

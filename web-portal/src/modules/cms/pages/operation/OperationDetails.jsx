@@ -4,10 +4,13 @@ import { toast } from 'sonner'
 import { api } from '@/lib/axios'
 import { usePermissionCheck } from '@/contexts/PermissionsContext'
 import { SYSTEMS, CMS_SECTIONS } from '@/config/permissions-constants'
+import CMSBreadcrumb from '../../components/CMSBreadcrumb'
+import { useTranslation } from 'react-i18next'
 
 export default function OperationDetailsPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const [operation, setOperation] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -18,6 +21,11 @@ export default function OperationDetailsPage() {
   const [locations, setLocations] = useState([])
   const [loadingDropdowns, setLoadingDropdowns] = useState(true)
   
+  const sortedCountries = useMemo(
+    () => [...countries].sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' })),
+    [countries]
+  )
+
   const { getSectionPermissions } = usePermissionCheck()
   const permissions = useMemo(() => 
     getSectionPermissions(CMS_SECTIONS.CODE_COUNTRY, SYSTEMS.CMS), 
@@ -54,8 +62,8 @@ export default function OperationDetailsPage() {
       
       // ✅ Use Promise.all to fetch all data in parallel (faster!)
       const [orgResponse, countryResponse, locationResponse] = await Promise.all([
-        api.post('/access/api/code-organization-languages/filter', {
-          criteria: [{ field: 'languageCode', operator: 'EQUAL', value: userLanguage }]
+        api.post('/access/api/organization-languages/filter', {
+          criteria: [{ field: 'language', operator: 'EQUAL', value: userLanguage }]
         }, { params: { page: 0, size: 1000 } }),
         
         api.post('/access/api/code-country-languages/filter', {
@@ -150,13 +158,8 @@ export default function OperationDetailsPage() {
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <div className="mb-6">
-        <button
-          onClick={() => navigate('/cms/operations')}
-          className="text-blue-600 hover:text-blue-800 flex items-center gap-2"
-        >
-          ← Back to Operations
-        </button>
+      <div className="mb-4">
+        <CMSBreadcrumb currentPageLabel={operation?.name || t('cms.operations')} />
       </div>
 
       <div className="bg-white rounded-lg shadow-md p-6">
@@ -227,7 +230,7 @@ export default function OperationDetailsPage() {
                 disabled={!canEdit || loadingDropdowns}
               >
                 <option value="">-- Select Country --</option>
-                {countries.map(country => (
+                {sortedCountries.map(country => (
                   <option key={country.countryId} value={country.countryId}>
                     {country.name}
                   </option>

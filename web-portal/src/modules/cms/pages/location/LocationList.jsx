@@ -8,6 +8,8 @@ import { toast } from 'sonner'
 import LocationImportModal from '../../components/LocationImportModal'
 import LocationCreateModal from '../../components/LocationCreateModal'
 import { FileSpreadsheet, Plus } from 'lucide-react'
+import CMSBreadcrumb from '../../components/CMSBreadcrumb'
+import { useTranslation } from 'react-i18next'
 
 const LEVEL_LABELS = {
   0: 'Governorate',
@@ -21,6 +23,7 @@ const LEVEL_LABELS = {
 
 export default function LocationListPage() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const [countries, setCountries] = useState([])
   const [loadingCountries, setLoadingCountries] = useState(true)
   const [importModalOpen, setImportModalOpen] = useState(false)
@@ -218,8 +221,11 @@ export default function LocationListPage() {
 
   return (
     <div className="p-6">
+      <div className="mb-4">
+        <CMSBreadcrumb />
+      </div>
       <CrudPage
-        title="Locations"
+        title={t('cms.location') || 'Locations'}
         service="access"
         resourceBase="/api/locations"
         idKey="locationId"

@@ -6,6 +6,8 @@ import CrudPage from '@/features/crud/CrudPage'
 import { usePermissionCheck } from '@/contexts/PermissionsContext'
 import { SYSTEMS, CMS_SECTIONS } from '@/config/permissions-constants'
 import { useBranchTypes } from '@/hooks/useBranchTypes'
+import CMSBreadcrumb from '../../components/CMSBreadcrumb'
+import { useTranslation } from 'react-i18next'
 
 // Static columns and fields - defined outside component
 const languageColumns = [
@@ -34,16 +36,25 @@ const languageFields = [
 export default function OrganizationBranchDetailsPage() {
   const { organizationBranchId } = useParams()
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState('info')
   const [branch, setBranch] = useState(null)
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
   const [formData, setFormData] = useState({})
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [dropdownData, setDropdownData] = useState({
     organizations: [],
     countries: [],
     locations: []
   })
+
+  const sortedCountries = useMemo(
+    () => [...dropdownData.countries].sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' })),
+    [dropdownData.countries]
+  )
+  const [showMapPicker, setShowMapPicker] = useState(false)
 
   // Get permissions (using CODE_COUNTRY permissions)
   const { getSectionPermissions, isLoading: permissionsLoading } = usePermissionCheck()
@@ -57,6 +68,7 @@ export default function OrganizationBranchDetailsPage() {
   )
 
   const canUpdate = permissions.canUpdate
+  const canDelete = permissions.canDelete
   const canManageLanguages = permissions.canCreate || permissions.canUpdate || permissions.canDelete
   
   // Fixed filters for organization branch languages - MUST be before any return statements
@@ -161,6 +173,100 @@ export default function OrganizationBranchDetailsPage() {
     }
   }
 
+  const handleDelete = () => {
+    setShowDeleteModal(true)
+  }
+
+  const handleConfirmDelete = async () => {
+    setDeleting(true)
+    try {
+      // Delete organization branch with hard delete (permanent deletion from database)
+      await api.delete(`/access/api/organization-branches/${organizationBranchId}?hardDelete=true`)
+      
+      toast.success('Organization branch deleted permanently')
+      navigate('/cms/organization-branches')
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete organization branch')
+      setDeleting(false)
+      setShowDeleteModal(false)
+    }
+  }
+
+  // Close modal on Escape key or click outside
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape' && showDeleteModal && !deleting) {
+        setShowDeleteModal(false)
+      }
+    }
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [showDeleteModal, deleting])
+
+  // Lazy-load Leaflet assets when opening the map picker
+  useEffect(() => {
+    if (!showMapPicker) return
+    const ensureLeaflet = async () => {
+      if (!document.getElementById('leaflet-css')) {
+        const link = document.createElement('link')
+        link.id = 'leaflet-css'
+        link.rel = 'stylesheet'
+        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
+        document.head.appendChild(link)
+      }
+      if (!window.L) {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script')
+          script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+          script.async = true
+          script.onload = resolve
+          script.onerror = reject
+          document.body.appendChild(script)
+        })
+      }
+      // Initialize map
+      setTimeout(() => {
+        try {
+          const L = window.L
+          if (!L) return
+          const containerId = 'branch-map-picker'
+          const existing = L && L.map && document.getElementById(containerId)
+          if (!existing) return
+          // If a map instance already exists on this node, clear it
+          if (existing._leaflet_id) {
+            existing._leaflet_id = null
+          }
+          const startLat = typeof formData.latitude === 'number' ? formData.latitude : (formData.latitude ? parseFloat(formData.latitude) : null)
+          const startLng = typeof formData.longitude === 'number' ? formData.longitude : (formData.longitude ? parseFloat(formData.longitude) : null)
+          const center = (startLat != null && !Number.isNaN(startLat) && startLng != null && !Number.isNaN(startLng))
+            ? [startLat, startLng]
+            : [25.276987, 55.296249] // Default: Dubai (neutral)
+          const zoom = (startLat != null && startLng != null) ? 10 : 3
+          const map = L.map(containerId).setView(center, zoom)
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+          }).addTo(map)
+          let marker = null
+          if (startLat != null && startLng != null) {
+            marker = L.marker(center).addTo(map)
+          }
+          map.on('click', (e) => {
+            const { lat, lng } = e.latlng
+            setFormData(prev => ({ ...prev, latitude: lat, longitude: lng }))
+            if (!marker) {
+              marker = L.marker([lat, lng]).addTo(map)
+            } else {
+              marker.setLatLng([lat, lng])
+            }
+          })
+        } catch (_) {
+          // noop
+        }
+      }, 0)
+    }
+    ensureLeaflet()
+  }, [showMapPicker, formData.latitude, formData.longitude])
+
   if (loading || permissionsLoading || typesLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -178,6 +284,9 @@ export default function OrganizationBranchDetailsPage() {
 
   return (
     <div className="flex flex-col h-screen bg-gray-50">
+      <div className="px-6 pt-4">
+        <CMSBreadcrumb currentPageLabel={branch?.name || t('cms.organization-branches')} />
+      </div>
       {/* Header */}
       <div className="bg-white border-b px-6 py-4 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-4">
@@ -195,15 +304,27 @@ export default function OrganizationBranchDetailsPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {activeTab === 'info' && canUpdate && (
+          {activeTab === 'info' && (canUpdate || canDelete) && (
             <>
               {!editing ? (
-                <button
-                  onClick={() => setEditing(true)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-                >
-                  Edit
-                </button>
+                <div className="flex items-center gap-3">
+                  {canUpdate && (
+                    <button
+                      onClick={() => setEditing(true)}
+                      className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-bold hover:from-blue-700 hover:to-indigo-700 shadow-lg transition-all transform hover:scale-105 flex items-center gap-2"
+                    >
+                      ✏️ Edit Branch
+                    </button>
+                  )}
+                  {canDelete && (
+                    <button
+                      onClick={handleDelete}
+                      className="px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg font-bold hover:from-red-700 hover:to-red-800 shadow-lg transition-all transform hover:scale-105 flex items-center gap-2"
+                    >
+                      🗑️ Delete Branch
+                    </button>
+                  )}
+                </div>
               ) : (
                 <>
                   <button
@@ -322,13 +443,13 @@ export default function OrganizationBranchDetailsPage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <option value="">Select Country...</option>
-                      {dropdownData.countries.map(c => (
+                      {sortedCountries.map(c => (
                         <option key={c.countryId} value={c.countryId}>{c.name}</option>
                       ))}
                     </select>
                   ) : (
                     <p className="text-gray-900">
-                      {dropdownData.countries.find(c => c.countryId === branch.countryId)?.name || '-'}
+                      {sortedCountries.find(c => c.countryId === branch.countryId)?.name || '-'}
                     </p>
                   )}
                 </div>
@@ -412,36 +533,97 @@ export default function OrganizationBranchDetailsPage() {
                   )}
                 </div>
 
-                {/* Latitude */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Latitude</label>
-                  {editing ? (
-                    <input
-                      type="number"
-                      step="any"
-                      value={formData.latitude ?? ''}
-                      onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  ) : (
-                    <p className="text-gray-900">{branch.latitude ?? '-'}</p>
-                  )}
-                </div>
+                {/* Location Coordinates Section */}
+                <div className="col-span-2">
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <label className="text-sm font-semibold text-gray-700">Location Coordinates</label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {editing && (
+                          <button
+                            type="button"
+                            onClick={() => setShowMapPicker(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 shadow-md transition-all transform hover:scale-105 font-medium"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                            </svg>
+                            Choose on Map
+                          </button>
+                        )}
+                        {((editing ? formData.latitude : branch.latitude) != null && 
+                          (editing ? formData.longitude : branch.longitude) != null) && (
+                          <button
+                            type="button"
+                            onClick={() => setShowMapPicker(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 shadow-md transition-all transform hover:scale-105 font-medium"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                            Show on Map
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Latitude */}
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Latitude</label>
+                        {editing ? (
+                          <input
+                            type="number"
+                            step="any"
+                            value={formData.latitude ?? ''}
+                            onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                            placeholder="e.g., 33.513807"
+                          />
+                        ) : (
+                          <p className="text-gray-900 bg-white px-3 py-2 rounded border border-gray-200 text-sm">
+                            {branch.latitude ?? '-'}
+                          </p>
+                        )}
+                      </div>
 
-                {/* Longitude */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Longitude</label>
-                  {editing ? (
-                    <input
-                      type="number"
-                      step="any"
-                      value={formData.longitude ?? ''}
-                      onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  ) : (
-                    <p className="text-gray-900">{branch.longitude ?? '-'}</p>
-                  )}
+                      {/* Longitude */}
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Longitude</label>
+                        {editing ? (
+                          <input
+                            type="number"
+                            step="any"
+                            value={formData.longitude ?? ''}
+                            onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                            placeholder="e.g., 36.276528"
+                          />
+                        ) : (
+                          <p className="text-gray-900 bg-white px-3 py-2 rounded border border-gray-200 text-sm">
+                            {branch.longitude ?? '-'}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Show selected coordinates */}
+                    {(formData.latitude != null && formData.longitude != null) && (
+                      <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800 flex items-center gap-2">
+                        <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>Coordinates set: {Number(formData.latitude).toFixed(6)}, {Number(formData.longitude).toFixed(6)}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Status - Always Active */}
@@ -510,6 +692,130 @@ export default function OrganizationBranchDetailsPage() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !deleting) {
+              setShowDeleteModal(false)
+            }
+          }}
+        >
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-red-600 to-red-700 px-6 py-4">
+              <div className="flex items-center gap-3">
+                <div className="text-3xl">⚠️</div>
+                <h3 className="text-xl font-bold text-white">Delete Organization Branch</h3>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6">
+              <div className="mb-4">
+                <p className="text-gray-700 font-semibold mb-2">
+                  Are you sure you want to delete this organization branch?
+                </p>
+                <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded">
+                  <div className="flex items-start gap-3">
+                    <div className="text-red-600 text-xl">⚠️</div>
+                    <div>
+                      <p className="text-red-800 font-bold mb-1">This action cannot be undone!</p>
+                      <p className="text-red-700 text-sm">
+                        Branch: <span className="font-semibold">{branch?.name}</span>
+                      </p>
+                      <p className="text-red-700 text-sm">
+                        Code: <span className="font-semibold">{branch?.code}</span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-gray-600 text-sm mt-4">
+                  <strong>Permanent deletion:</strong> This will permanently delete the organization branch from the database (hard delete).
+                </p>
+                <p className="text-gray-600 text-sm mt-2">
+                  All associated data including languages will be permanently deleted.
+                </p>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 border-t border-gray-200">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                disabled={deleting}
+                className="px-6 py-2.5 border-2 border-gray-300 rounded-lg font-semibold text-gray-700 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                disabled={deleting}
+                className="px-6 py-2.5 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg font-bold hover:from-red-700 hover:to-red-800 shadow-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2"
+              >
+                {deleting ? (
+                  <>
+                    <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    🗑️ Delete Branch
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Map Picker Modal */}
+      {showMapPicker && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowMapPicker(false)
+          }}
+        >
+          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full mx-4 overflow-hidden">
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold text-white">Pick Location</h3>
+                <button
+                  onClick={() => setShowMapPicker(false)}
+                  className="text-white/90 hover:text-white"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+            <div className="p-4">
+              <div className="h-[480px] w-full rounded-lg overflow-hidden border" id="branch-map-picker" />
+              <div className="mt-3 flex items-center justify-between text-sm text-gray-600">
+                <div>
+                  Click on the map to set latitude/longitude.
+                </div>
+                <div className="flex items-center gap-2">
+                  <span>
+                    {formData.latitude != null && formData.longitude != null
+                      ? `${Number(formData.latitude).toFixed(6)}, ${Number(formData.longitude).toFixed(6)}`
+                      : 'No location selected'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowMapPicker(false)}
+                    className="px-4 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  >
+                    Use This Location
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

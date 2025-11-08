@@ -5,7 +5,14 @@
       "Bash(nul)",
       "Bash(grep:*)",
       "Bash(ls:*)",
-      "Bash(awk:*)"
+      "Bash(awk:*)",
+      "Bash(git stash:*)",
+      "Bash(git log:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(mkdir:*)",
+      "Bash(cp:*)",
+      "Bash(tree:*)"
     ],
     "deny": [],
     "ask": []
