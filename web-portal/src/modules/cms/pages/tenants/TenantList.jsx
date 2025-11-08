@@ -1,9 +1,9 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import CrudPage from '@/features/crud/CrudPage'
+import TenantFormWizard from './TenantFormWizard'
 import { usePermissionCheck } from '@/contexts/PermissionsContext'
 import { TENANTS, ACCESS_SECTIONS } from '@/config/permissions-constants'
-import { TENANT_CASCADE_FIELDS } from '@/config/codeTableIds'
 
 const tenantColumns = [
   { 
@@ -67,21 +67,13 @@ const tenantColumns = [
   },
 ]
 
-const tenantFields = [
-  { type: 'text', name: 'name', label: 'Tenant Name', required: true },
-  { type: 'email', name: 'email', label: 'Email', required: true },
-  // Using pre-configured cascade dropdown fields from config
-  ...TENANT_CASCADE_FIELDS,
-  { type: 'text', name: 'focalPointName', label: 'Focal Point Name' },
-  { type: 'text', name: 'focalPointPhone', label: 'Focal Point Phone' },
-  { type: 'textarea', name: 'address', label: 'Address', rows: 2 },
-  { type: 'textarea', name: 'comment', label: 'Comments', rows: 2 },
-  { type: 'checkbox', name: 'isActive', label: 'Active' },
-]
-
 export default function TenantListPage() {
   const navigate = useNavigate()
-  
+  const [wizardOpen, setWizardOpen] = useState(false)
+  const [wizardMode, setWizardMode] = useState('create') // 'create' or 'edit'
+  const [wizardData, setWizardData] = useState(null)
+  const [refreshKey, setRefreshKey] = useState(0)
+
   // Get permissions for Tenant section
   // Section: "Tenants" under System: "Access Management"
   const { getSectionPermissions, isLoading, permissionsData } = usePermissionCheck()
@@ -160,58 +152,54 @@ export default function TenantListPage() {
     )
   }
 
+  const handleCreateClick = useCallback(() => {
+    setWizardMode('create')
+    setWizardData(null)
+    setWizardOpen(true)
+  }, [])
+
+  const handleWizardSuccess = useCallback(() => {
+    setRefreshKey((prev) => prev + 1)
+    setWizardOpen(false)
+  }, [])
+
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       <CrudPage
+        key={refreshKey}
         title="Tenants"
         service="access"
         resourceBase="/api/v1/tenants"
         idKey="tenantId"
         columns={tenantColumns}
         pageSize={25}
-        formFields={tenantFields}
         enableCreate={canCreate}
         enableEdit={canUpdate}
         enableDelete={canDelete}
-        tableId="tenants-list" // Unique ID for table preferences storage
+        tableId="tenants-list"
         onRowClick={(row) => {
-          // Navigate to tenant details page
           navigate(`/cms/tenants/${row.tenantId}`)
         }}
-        toCreatePayload={(f) => ({
-          name: f.name?.trim(),
-          email: f.email?.trim(),
-          // Reference-data fields (UUID IDs)
-          industryTypeId: f.industryTypeId || null,
-          subscriptionPlanId: f.subscriptionPlanId || null,
-          billingCurrencyId: f.billingCurrencyId || null,
-          billingCycleId: f.billingCycleId || null,
-          countryId: f.countryId || null,
-          // Free-text fields
-          focalPointName: f.focalPointName?.trim() || null,
-          focalPointPhone: f.focalPointPhone?.trim() || null,
-          address: f.address?.trim() || null,
-          comment: f.comment?.trim() || null,
-          isActive: true, // ✅ Always TRUE for new records
-        })}
-        toUpdatePayload={(f, row) => ({
-          tenantId: row.tenantId,
-          name: f.name?.trim(),
-          email: f.email?.trim(),
-          // Reference-data fields (UUID IDs)
-          industryTypeId: f.industryTypeId || null,
-          subscriptionPlanId: f.subscriptionPlanId || null,
-          billingCurrencyId: f.billingCurrencyId || null,
-          billingCycleId: f.billingCycleId || null,
-          countryId: f.countryId || null,
-          // Free-text fields
-          focalPointName: f.focalPointName?.trim() || null,
-          focalPointPhone: f.focalPointPhone?.trim() || null,
-          address: f.address?.trim() || null,
-          comment: f.comment?.trim() || null,
-          isActive: true, // ✅ Always TRUE - cannot be deactivated
-          rowVersion: row.rowVersion,
-        })}
+        renderHeaderRight={() => (
+          canCreate && (
+            <button
+              onClick={handleCreateClick}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              New Tenant
+            </button>
+          )
+        )}
+      />
+
+      <TenantFormWizard
+        open={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+        onSuccess={handleWizardSuccess}
+        initialData={wizardData}
       />
     </div>
   )
