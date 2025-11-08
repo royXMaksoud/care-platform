@@ -18,10 +18,13 @@ resources:
   - service-registry-deployment.yaml
   - config-server-deployment.yaml
   - gateway-deployment.yaml
+  - web-portal-deployment.yaml
 
 # Replicas
 replicas:
   - name: gateway
+    count: 2
+  - name: web-portal
     count: 2
 
 # Images
@@ -31,4 +34,6 @@ images:
   - name: docker.io/your-username/care-config-server
     newTag: latest
   - name: docker.io/your-username/care-gateway
+    newTag: latest
+  - name: docker.io/your-username/care-web-portal
     newTag: latest

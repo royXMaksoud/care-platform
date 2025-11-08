@@ -89,80 +89,76 @@ const SECTION_ICONS = {
   ),
 }
 
-// Soft Pastel Colors - Very Light
+// Official colors: Gray and Light Blue only
 const SECTION_GRADIENTS = {
-  'systems': 'from-slate-400 to-slate-500',
-  'sections': 'from-blue-300 to-blue-400',
-  'actions': 'from-slate-400 to-slate-500',
-  'tenants': 'from-slate-400 to-slate-500',
-  'users': 'from-blue-300 to-blue-400',
-  'subscriptions': 'from-slate-400 to-slate-500',
-  'codeTable': 'from-slate-400 to-slate-500',
-  'codeCountry': 'from-blue-300 to-blue-400',
-  'organizations': 'from-slate-400 to-slate-500',
-  'organizationBranches': 'from-blue-300 to-blue-400',
-  'dutyStations': 'from-blue-300 to-blue-400',
-  'operations': 'from-blue-300 to-blue-400',
-  'location': 'from-slate-400 to-slate-500',
-  'auditLog': 'from-blue-300 to-blue-400',
+  'systems': 'from-gray-500 to-gray-600',
+  'sections': 'from-sky-400 to-sky-500',
+  'actions': 'from-gray-400 to-gray-500',
+  'tenants': 'from-gray-500 to-gray-600',
+  'users': 'from-sky-400 to-sky-500',
+  'subscriptions': 'from-gray-400 to-gray-500',
+  'codeTable': 'from-gray-500 to-gray-600',
+  'codeCountry': 'from-sky-400 to-sky-500',
+  'organizations': 'from-gray-500 to-gray-600',
+  'organizationBranches': 'from-sky-400 to-sky-500',
+  'dutyStations': 'from-gray-400 to-gray-500',
+  'operations': 'from-sky-400 to-sky-500',
+  'location': 'from-gray-500 to-gray-600',
+  'auditLog': 'from-sky-400 to-sky-500',
 }
 
-// Calm Professional Category Configuration
+// Category configuration: Gray and Light Blue theme
 const CATEGORIES = {
   'systemManagement': {
     title: 'System Management',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
       </svg>
     ),
-    gradient: 'from-slate-500 to-slate-600',
-    bgGradient: 'from-slate-50/30 to-slate-100/20 dark:from-slate-800/20 dark:to-slate-700/10',
-    borderColor: 'border-slate-200 dark:border-slate-700',
-    accentColor: 'text-slate-600 dark:text-slate-400',
+    gradient: 'from-gray-400 via-gray-500 to-gray-600',
+    bgGradient: 'from-gray-50/50 to-gray-100/40 dark:from-gray-800/30 dark:to-gray-700/20',
+    borderColor: 'border-gray-200 dark:border-gray-600',
     items: ['systems', 'sections', 'actions']
   },
   'code': {
     title: 'Code',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7h16M4 12h16M4 17h16" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 7h16M4 12h16M4 17h16" />
         <circle cx="8" cy="7" r="1.5" fill="currentColor" />
         <circle cx="8" cy="12" r="1.5" fill="currentColor" />
         <circle cx="8" cy="17" r="1.5" fill="currentColor" />
       </svg>
     ),
-    gradient: 'from-blue-400 to-blue-500',
-    bgGradient: 'from-blue-50/20 to-blue-100/15 dark:from-blue-900/15 dark:to-blue-800/8',
-    borderColor: 'border-blue-200 dark:border-blue-800',
-    accentColor: 'text-blue-500 dark:text-blue-400',
+    gradient: 'from-sky-500 via-sky-600 to-sky-700',
+    bgGradient: 'from-sky-50/50 to-blue-50/40 dark:from-sky-950/40 dark:to-blue-950/30',
+    borderColor: 'border-sky-200 dark:border-sky-800',
     items: ['codeTable', 'codeCountry', 'location', 'organizations', 'organizationBranches', 'dutyStations', 'operations']
   },
   'userManagement': {
     title: 'User Management',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
       </svg>
     ),
-    gradient: 'from-blue-400 to-blue-500',
-    bgGradient: 'from-blue-50/20 to-blue-100/15 dark:from-blue-900/15 dark:to-blue-800/8',
-    borderColor: 'border-blue-200 dark:border-blue-800',
-    accentColor: 'text-blue-500 dark:text-blue-400',
+    gradient: 'from-sky-500 via-sky-600 to-sky-700',
+    bgGradient: 'from-sky-50/50 to-blue-50/40 dark:from-sky-950/40 dark:to-blue-950/30',
+    borderColor: 'border-sky-200 dark:border-sky-800',
     items: ['users', 'auditLog']
   },
   'tenant': {
     title: 'Tenant',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
       </svg>
     ),
-    gradient: 'from-slate-500 to-slate-600',
-    bgGradient: 'from-slate-50/30 to-slate-100/20 dark:from-slate-800/20 dark:to-slate-700/10',
-    borderColor: 'border-slate-200 dark:border-slate-700',
-    accentColor: 'text-slate-600 dark:text-slate-400',
+    gradient: 'from-gray-400 via-gray-500 to-gray-600',
+    bgGradient: 'from-gray-50/50 to-gray-100/40 dark:from-gray-800/30 dark:to-gray-700/20',
+    borderColor: 'border-gray-200 dark:border-gray-600',
     items: ['tenants']
   }
 }
@@ -321,31 +317,31 @@ export default function CMSHome() {
   console.log('✅ HOME - Rendering main view with', visibleItems.length, 'items')
 
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-950">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Clean Calm Header */}
+        {/* Modern Header */}
         <div className="mb-8">
           <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 mb-6">
             <div className="flex-1">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg text-xs font-normal mb-3">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-full text-xs font-medium mb-3">
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
                 {t('cms.badge') || 'CMS'}
               </div>
               
-              <h1 className="text-3xl font-semibold text-slate-800 dark:text-slate-200 mb-3 tracking-normal">
+              <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-3 tracking-tight">
                 {t('cms.title') || 'Content Management System'}
               </h1>
-              <p className="text-base text-slate-500 dark:text-slate-400 max-w-2xl leading-relaxed font-normal">
+              <p className="text-base text-gray-600 dark:text-gray-400 max-w-2xl leading-relaxed">
                 {t('cms.description') || 'Manage systems, codes, users, and tenants from a centralized dashboard'}
               </p>
             </div>
 
-            {/* Calm Search Box */}
+            {/* Search Box */}
             <div className="relative w-full max-w-md">
               <div className="relative">
-                <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
                 <input
@@ -353,21 +349,21 @@ export default function CMSHome() {
                   placeholder={t('cms.searchModules') || 'Search all modules...'}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-11 pr-11 py-2.5 text-sm border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-400/30 focus:border-blue-400 transition-all"
+                  className="w-full pl-12 pr-12 py-3 text-base border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all shadow-sm"
                 />
                 {searchTerm && (
                   <button
                     onClick={() => setSearchTerm('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors p-1 rounded"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
                   >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
                 )}
               </div>
               {searchTerm && visibleItems.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-2 px-3 py-1.5 bg-slate-50 dark:bg-slate-800 rounded-md text-xs text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                <div className="absolute top-full left-0 right-0 mt-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-md text-xs text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 shadow-sm">
                   <span className="font-medium">{visibleItems.length}</span> {visibleItems.length === 1 ? 'result found' : 'results found'}
                 </div>
               )}
@@ -375,42 +371,42 @@ export default function CMSHome() {
           </div>
         </div>
 
-        {/* Calm Categorized Cards View */}
+        {/* Categorized View - Gray and Light Blue */}
         {visibleItems.length === 0 ? (
-          <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+          <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
             <div className="flex flex-col items-center justify-center py-16 px-4">
-              <svg className="w-10 h-10 text-slate-300 dark:text-slate-700 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-12 h-12 text-gray-300 dark:text-gray-700 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
-              <h3 className="text-lg font-medium text-slate-700 dark:text-slate-300 mb-1">{t('cms.noModulesFound')}</h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">{t('cms.noModulesFound')}</h3>
+              <p className="text-base text-gray-600 dark:text-gray-400">
                 {searchTerm ? `${t('cms.noResultsFor')} "${searchTerm}"` : t('cms.noModulesAvailable')}
               </p>
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {Object.entries(categorizedItems).map(([catKey, category]) => (
               <div
                 key={catKey}
-                className={`bg-white dark:bg-slate-900 rounded-lg border ${category.borderColor} shadow-sm hover:shadow transition-all overflow-hidden bg-gradient-to-br ${category.bgGradient}`}
+                className={`bg-white dark:bg-gray-900 rounded-lg border-2 ${category.borderColor} shadow-sm hover:shadow-md transition-all overflow-hidden bg-gradient-to-br ${category.bgGradient}`}
               >
-                {/* Calm Category Header - Smaller */}
-                <div className={`px-4 py-3 bg-gradient-to-r ${category.gradient} border-b ${category.borderColor}`}>
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-lg bg-white/25 flex items-center justify-center text-white">
+                {/* Category Header */}
+                <div className={`px-5 py-4 bg-gradient-to-r ${category.gradient} border-b ${category.borderColor}`}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center text-white border border-white/30">
                       {category.icon}
                     </div>
                     <div className="flex-1">
-                      <h2 className="text-sm font-medium text-white mb-0.5">{category.title}</h2>
-                      <p className="text-xs text-white/80 font-normal">{category.items.length} {category.items.length === 1 ? 'module' : 'modules'}</p>
+                      <h2 className="text-lg font-bold text-white">{category.title}</h2>
+                      <p className="text-xs text-white/80 font-medium">{category.items.length} {category.items.length === 1 ? 'module' : 'modules'}</p>
                     </div>
                   </div>
                 </div>
 
-                {/* Calm Category Items - Smaller */}
-                <div className="p-3">
-                  <div className="grid grid-cols-1 gap-1.5">
+                {/* Category Items */}
+                <div className="p-4">
+                  <div className="grid grid-cols-1 gap-2">
                     {category.items.map((it) => {
                       let perms = null
                       
@@ -422,45 +418,45 @@ export default function CMSHome() {
                         console.error('Error getting permissions for item:', it, error)
                       }
                       
-                      const gradient = SECTION_GRADIENTS[it.to] || 'from-slate-400 to-slate-500'
+                      const gradient = SECTION_GRADIENTS[it.to] || 'from-gray-400 to-gray-500'
                       const icon = SECTION_ICONS[it.to]
                       
                       const iconContent = icon ? icon.props.children : (
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h16" />
                       )
                       
                       return (
                         <Link
                           key={it.to}
                           to={it.to}
-                          className="group/item flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-white dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 transition-all"
+                          className="group flex items-center gap-3 px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-all hover:shadow-sm"
                         >
-                          {/* Icon - Smaller */}
-                          <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${gradient} flex items-center justify-center flex-shrink-0 shadow-sm`}>
-                            <svg className="w-4.5 h-4.5 text-white" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          {/* Icon */}
+                          <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${gradient} flex items-center justify-center flex-shrink-0 shadow-sm group-hover:shadow-md transition-all`}>
+                            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                               {iconContent}
                             </svg>
                           </div>
 
                           {/* Content */}
                           <div className="flex-1 min-w-0">
-                            <h3 className={`text-sm font-medium ${category.accentColor} group-hover/item:text-blue-500 dark:group-hover/item:text-blue-400 transition-colors`}>
+                            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
                               {t(`cms.${it.to}`) || it.label}
                             </h3>
                             {perms && (
-                              <div className="flex items-center gap-1 mt-0.5">
+                              <div className="flex items-center gap-1.5 mt-1">
                                 {perms.canCreate && (
-                                  <span className="inline-flex items-center px-1 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 rounded text-[9px] font-normal">
+                                  <span className="inline-flex items-center px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded text-[10px] font-medium border border-gray-300 dark:border-gray-600">
                                     C
                                   </span>
                                 )}
                                 {perms.canUpdate && (
-                                  <span className="inline-flex items-center px-1 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-500 dark:text-blue-400 rounded text-[9px] font-normal">
+                                  <span className="inline-flex items-center px-1.5 py-0.5 bg-sky-100 dark:bg-sky-900/50 text-sky-700 dark:text-sky-400 rounded text-[10px] font-medium border border-sky-200 dark:border-sky-800">
                                     E
                                   </span>
                                 )}
                                 {perms.canDelete && (
-                                  <span className="inline-flex items-center px-1 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 rounded text-[9px] font-normal">
+                                  <span className="inline-flex items-center px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded text-[10px] font-medium border border-gray-300 dark:border-gray-600">
                                     D
                                   </span>
                                 )}
@@ -469,8 +465,8 @@ export default function CMSHome() {
                           </div>
                           
                           {/* Arrow Icon */}
-                          <svg className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600 group-hover/item:text-blue-500 dark:group-hover/item:text-blue-400 group-hover/item:translate-x-0.5 transition-all flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          <svg className="w-4 h-4 text-gray-400 group-hover:text-sky-600 dark:group-hover:text-sky-400 group-hover:translate-x-0.5 transition-all flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
                           </svg>
                         </Link>
                       )
@@ -482,46 +478,46 @@ export default function CMSHome() {
           </div>
         )}
 
-        {/* Calm Stats Footer */}
+        {/* Stats Footer - Gray and Light Blue */}
         <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-4 shadow-sm hover:shadow transition-all">
+          <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-300 dark:border-gray-700 p-4 shadow-sm hover:shadow transition-shadow">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center flex-shrink-0">
-                <svg className="w-5 h-5 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center flex-shrink-0 border border-gray-300 dark:border-gray-700">
+                <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
               </div>
               <div>
-                <div className="text-xl font-medium text-slate-700 dark:text-slate-300">{visibleItems.length}</div>
-                <div className="text-xs text-slate-500 dark:text-slate-400 font-normal mt-0.5">{t('cms.modules') || 'Available Modules'}</div>
+                <div className="text-xl font-bold text-gray-900 dark:text-gray-100">{visibleItems.length}</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">{t('cms.modules') || 'Available Modules'}</div>
               </div>
             </div>
           </div>
           
-          <div className="bg-white dark:bg-slate-900 rounded-lg border border-blue-200 dark:border-blue-800 p-4 shadow-sm hover:shadow transition-all">
+          <div className="bg-white dark:bg-gray-900 rounded-lg border border-sky-200 dark:border-sky-800 p-4 shadow-sm hover:shadow transition-shadow">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center flex-shrink-0">
-                <svg className="w-5 h-5 text-blue-400 dark:text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-10 h-10 rounded-lg bg-sky-50 dark:bg-sky-950/30 flex items-center justify-center flex-shrink-0 border border-sky-200 dark:border-sky-800">
+                <svg className="w-5 h-5 text-sky-600 dark:text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
               <div>
-                <div className="text-xl font-medium text-slate-700 dark:text-slate-300">{Object.keys(categorizedItems).length}</div>
-                <div className="text-xs text-slate-500 dark:text-slate-400 font-normal mt-0.5">{t('cms.categories') || 'Categories'}</div>
+                <div className="text-xl font-bold text-gray-900 dark:text-gray-100">{Object.keys(categorizedItems).length}</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">{t('cms.categories') || 'Categories'}</div>
               </div>
             </div>
           </div>
           
-          <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-4 shadow-sm hover:shadow transition-all">
+          <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-300 dark:border-gray-700 p-4 shadow-sm hover:shadow transition-shadow">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center flex-shrink-0">
-                <svg className="w-5 h-5 text-blue-400 dark:text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-10 h-10 rounded-lg bg-sky-50 dark:bg-sky-950/30 flex items-center justify-center flex-shrink-0 border border-sky-200 dark:border-sky-800">
+                <svg className="w-5 h-5 text-sky-600 dark:text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
               </div>
               <div>
-                <div className="text-xl font-medium text-slate-700 dark:text-slate-300">100%</div>
-                <div className="text-xs text-slate-500 dark:text-slate-400 font-normal mt-0.5">{t('cms.speed') || 'Performance'}</div>
+                <div className="text-xl font-bold text-gray-900 dark:text-gray-100">100%</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">{t('cms.speed') || 'Performance'}</div>
               </div>
             </div>
           </div>

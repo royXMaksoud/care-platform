@@ -8,6 +8,11 @@ on:
         required: true
         default: 'dev'
 
+env:
+  SERVICES_JAVA: "core-shared-lib service-registry gateway-service reference-data-service auth-service appointment-service access-management-service data-analysis-service"
+  SERVICES_DOCKER: "service-registry gateway-service reference-data-service auth-service appointment-service access-management-service data-analysis-service"
+  WEB_PORTAL: "web-portal"
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -22,8 +27,33 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Build with Maven
-        run: mvn clean package -DskipTests
+      - name: Build all Java projects (Maven)
+        run: |
+          for dir in $SERVICES_JAVA; do
+            if [ -d "$dir" ] && [ -f "$dir/pom.xml" ]; then
+              echo "🔨 Building $dir ..."
+              (cd "$dir" && mvn -q clean package -DskipTests)
+            else
+              echo "⚠️ Skipping $dir (no pom.xml)"
+            fi
+          done
+
+      - name: Set up Node.js for Web Portal
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Build Web Portal (React/Vite)
+        run: |
+          if [ -d "$WEB_PORTAL" ]; then
+            echo "🧱 Building $WEB_PORTAL ..."
+            cd "$WEB_PORTAL"
+            npm ci
+            npm run build
+            cd ..
+          else
+            echo "⚠️ Web portal directory not found, skipping..."
+          fi
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
@@ -31,24 +61,41 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build Docker image
+      - name: Build & Push Docker images (Java services)
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/care-platform:${{ github.sha }} .
-          docker tag ${{ secrets.DOCKER_USERNAME }}/care-platform:${{ github.sha }} ${{ secrets.DOCKER_USERNAME }}/care-platform:latest
+          for dir in $SERVICES_DOCKER; do
+            if [ -f "$dir/Dockerfile" ]; then
+              IMAGE="${{ secrets.DOCKER_USERNAME }}/$dir"
+              echo "🐳 Building & pushing $IMAGE ..."
+              docker build -t "$IMAGE:${{ github.sha }}" "$dir"
+              docker tag "$IMAGE:${{ github.sha }}" "$IMAGE:latest"
+              docker push "$IMAGE:${{ github.sha }}"
+              docker push "$IMAGE:latest"
+            else
+              echo "⚠️ Skipping $dir (no Dockerfile)"
+            fi
+          done
 
-      - name: Push Docker image
+      - name: Build & Push Web Portal Docker image
         run: |
-          docker push ${{ secrets.DOCKER_USERNAME }}/care-platform:${{ github.sha }}
-          docker push ${{ secrets.DOCKER_USERNAME }}/care-platform:latest
+          if [ -d "$WEB_PORTAL" ] && [ -f "$WEB_PORTAL/Dockerfile" ]; then
+            IMAGE="${{ secrets.DOCKER_USERNAME }}/$WEB_PORTAL"
+            echo "🌐 Building & pushing $IMAGE ..."
+            docker build -t "$IMAGE:${{ github.sha }}" "$WEB_PORTAL"
+            docker tag "$IMAGE:${{ github.sha }}" "$IMAGE:latest"
+            docker push "$IMAGE:${{ github.sha }}"
+            docker push "$IMAGE:latest"
+          else
+            echo "⚠️ Skipping web portal (no Dockerfile found)"
+          fi
 
       - name: Set up kubectl
         uses: azure/setup-kubectl@v4
 
       - name: Create kubeconfig file
-        run: |
-          echo "${{ secrets.KUBECONFIG_CONTENT }}" > kubeconfig.yaml
+        run: echo "${{ secrets.KUBECONFIG_CONTENT }}" > kubeconfig.yaml
 
       - name: Deploy to Kubernetes
         run: |
-          kubectl --kubeconfig=kubeconfig.yaml apply -f k8s/deployment.yaml
-          kubectl --kubeconfig=kubeconfig.yaml rollout status deployment/care-deployment
+          kubectl --kubeconfig=kubeconfig.yaml apply -f K8S/
+          kubectl --kubeconfig=kubeconfig.yaml get pods -A
