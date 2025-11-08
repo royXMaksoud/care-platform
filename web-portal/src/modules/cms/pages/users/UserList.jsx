@@ -163,11 +163,76 @@ export default function UsersList() {
       },
       meta: { type: 'date', operators: ['EQUAL','BEFORE','AFTER','BETWEEN'] },
     },
-    { 
-      id: 'language', 
-      accessorKey: 'language', 
-      header: 'Language', 
-      cell: (i) => i.getValue() || 'en' 
+    {
+      id: 'organization',
+      accessorKey: 'organization',
+      header: 'Organization',
+      cell: ({ getValue }) => {
+        const org = getValue()
+        return org?.name || org?.id || '-'
+      },
+      meta: { type: 'string', filterKey: 'organization.name', operators: ['LIKE','EQUAL'] },
+    },
+    {
+      id: 'tenant',
+      accessorKey: 'tenant',
+      header: 'Tenant',
+      cell: ({ getValue }) => {
+        const tenant = getValue()
+        return tenant?.name || tenant?.id || '-'
+      },
+      meta: { type: 'string', filterKey: 'tenant.name', operators: ['LIKE','EQUAL'] },
+    },
+    {
+      id: 'organizationBranch',
+      accessorKey: 'organizationBranch',
+      header: 'Organization Branch',
+      cell: ({ getValue }) => {
+        const branch = getValue()
+        return branch?.name || branch?.id || '-'
+      },
+      meta: { type: 'string', filterKey: 'organizationBranch.name', operators: ['LIKE','EQUAL'] },
+    },
+    {
+      id: 'roles',
+      accessorKey: 'roles',
+      header: 'Roles',
+      cell: ({ getValue }) => {
+        const roles = getValue()
+        if (!roles || (Array.isArray(roles) && roles.length === 0)) {
+          return <span className="text-gray-400">No roles</span>
+        }
+
+        const roleNames = Array.isArray(roles)
+          ? roles.map(r => r.name || r.roleName || r.id).join(', ')
+          : roles.name || roles.roleName || '-'
+
+        return (
+          <div className="flex flex-wrap gap-1">
+            {Array.isArray(roles) ? (
+              roles.map((role, idx) => (
+                <span
+                  key={idx}
+                  className="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-800 rounded text-xs font-medium border border-purple-300"
+                >
+                  {role.name || role.roleName || role.id}
+                </span>
+              ))
+            ) : (
+              <span className="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-800 rounded text-xs font-medium border border-purple-300">
+                {roles.name || roles.roleName || '-'}
+              </span>
+            )}
+          </div>
+        )
+      },
+      meta: { type: 'string', filterKey: 'roles.name', operators: ['LIKE','EQUAL'] },
+    },
+    {
+      id: 'language',
+      accessorKey: 'language',
+      header: 'Language',
+      cell: (i) => i.getValue() || 'en'
     },
     {
       id: 'createdAt', 
