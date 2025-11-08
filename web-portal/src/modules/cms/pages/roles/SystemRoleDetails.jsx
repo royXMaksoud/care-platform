@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { usePermissionCheck } from '@/contexts/PermissionsContext'
 import { SYSTEMS, CMS_SECTIONS } from '@/config/permissions-constants'
-import CMSBreadcrumb from '../../components/CMSBreadcrumb'
+import CMSBreadcrumb from '../../../components/CMSBreadcrumb'
 
 const pk = (arr) => arr.join('|')
 
