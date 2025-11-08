@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '@/lib/axios'
 import UserPermissionsTab from './UserPermissionsTab'
+import UserRolesTab from '../roles/UserRolesTab'
 
 export default function UserDetail() {
   const { userId } = useParams()
@@ -109,6 +110,19 @@ export default function UserDetail() {
           >
             User Info
             {tab==='info' && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>
+            )}
+          </button>
+          <button
+            className={`px-3 py-2 text-xs font-medium transition-all relative ${
+              tab==='roles'
+                ? 'text-blue-600'
+                : 'text-slate-600 hover:text-slate-800'
+            }`}
+            onClick={() => setTab('roles')}
+          >
+            Roles
+            {tab==='roles' && (
               <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>
             )}
           </button>
@@ -277,6 +291,12 @@ export default function UserDetail() {
               </button>
             </div>
           </form>
+        )}
+
+        {tab === 'roles' && (
+          <div className="h-full">
+            <UserRolesTab userId={userId} />
+          </div>
         )}
 
         {tab === 'permissions' && (
