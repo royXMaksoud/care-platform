@@ -87,6 +87,11 @@ const SECTION_ICONS = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
     </svg>
   ),
+  'roles': (
+    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 20h5v-2a3 3 0 00-5.856-1.487M15 10a3 3 0 11-6 0 3 3 0 016 0zM4.318 20H3a2 2 0 01-2-2v-2a6 6 0 0112 0v2a2 2 0 01-2 2h-8.682zM19 10a4 4 0 11-8 0 4 4 0 018 0z" />
+    </svg>
+  ),
 }
 
 // Soft Pastel Colors - Very Light
@@ -105,6 +110,7 @@ const SECTION_GRADIENTS = {
   'operations': 'from-blue-300 to-blue-400',
   'location': 'from-slate-400 to-slate-500',
   'auditLog': 'from-blue-300 to-blue-400',
+  'roles': 'from-purple-400 to-purple-500',
 }
 
 // Calm Professional Category Configuration
@@ -150,7 +156,7 @@ const CATEGORIES = {
     bgGradient: 'from-blue-50/20 to-blue-100/15 dark:from-blue-900/15 dark:to-blue-800/8',
     borderColor: 'border-blue-200 dark:border-blue-800',
     accentColor: 'text-blue-500 dark:text-blue-400',
-    items: ['users', 'auditLog']
+    items: ['users', 'roles', 'auditLog']
   },
   'tenant': {
     title: 'Tenant',
@@ -187,6 +193,7 @@ export default function CMSHome() {
     { to: 'dutyStations', label: 'Duty Stations' },
     { to: 'tenants', label: 'Tenants' },
     { to: 'users', label: 'Users' },
+    { to: 'roles', label: 'Roles' },
     { to: 'subscriptions', label: 'Tenant Subscriptions' },
     { to: 'codeTable', label: 'Code Table' },
     { to: 'codeCountry', label: 'Countries' },
