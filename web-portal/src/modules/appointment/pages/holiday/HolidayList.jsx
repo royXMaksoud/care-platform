@@ -9,31 +9,82 @@ export default function HolidayList() {
   // Use state-only tabs (no navigation) to prevent unmount/remount issues
   const [activeTab, setActiveTab] = useState('list')
   const [branchesMap, setBranchesMap] = useState({})
+  const [fixedFilters, setFixedFilters] = useState([])  // Branch filter for POST body
+  const [isReady, setIsReady] = useState(false)
 
-  // Load branches for lookup using filter endpoint (lookup endpoint causes UUID error)
+  // Load branches map for display in table AND extract authorized branch IDs from permissions
   useEffect(() => {
-    const loadBranches = async () => {
+    const loadBranchesMapAndPermissions = async () => {
       try {
-        // Use filter endpoint instead of lookup to avoid UUID conversion error
-        const response = await api.post('/access/api/organization-branches/filter', {
+        // Load all organization branches to populate the map
+        const res = await api.post('/access/api/organization-branches/filter', {
           criteria: []
-        }, { params: { page: 0, size: 1000 } })
-        
+        }, { params: { page: 0, size: 10000 } })
+
+        const branches = res?.data?.content || []
         const map = {}
-        const branches = response.data?.content || []
-        branches.forEach((branch) => {
-          if (branch?.organizationBranchId && branch?.name) {
-            map[branch.organizationBranchId] = branch.name
+        branches.forEach(branch => {
+          if (branch.organizationBranchId) {
+            map[branch.organizationBranchId] = branch.name || branch.code || 'Unknown'
           }
         })
-        
-        console.log('Loaded branches map:', Object.keys(map).length, 'branches')
         setBranchesMap(map)
+
+        // Extract authorized branch IDs from user permissions
+        try {
+          const permRes = await api.get('/auth/me/permissions')
+          const permissionsData = permRes?.data || {}
+          const authorizedBranchIds = new Set()
+
+          // Traverse permissions structure: systems -> sections -> actions -> scopes
+          if (permissionsData?.systems) {
+            permissionsData.systems.forEach(system => {
+              system.sections?.forEach(section => {
+                // Look for "Holiday" section (case-insensitive)
+                if (section.name?.toLowerCase().includes('holiday')) {
+                  section.actions?.forEach(action => {
+                    action.scopes?.forEach(scope => {
+                      // Only include ALLOW scopes with valid scopeValueId
+                      if (scope.effect === 'ALLOW' && scope.scopeValueId) {
+                        authorizedBranchIds.add(scope.scopeValueId)
+                      }
+                    })
+                  })
+                }
+              })
+            })
+          }
+
+          const branchIdArray = Array.from(authorizedBranchIds)
+          console.log('✅ DEBUG HolidayList - Authorized branch IDs:', branchIdArray)
+
+          if (branchIdArray.length > 0) {
+            // Send branch IDs as fixed filter in POST body (will be merged with user filters)
+            setFixedFilters([
+              {
+                key: 'organizationBranchId',
+                operator: 'IN',
+                value: branchIdArray,
+                dataType: 'UUID'
+              }
+            ])
+          } else {
+            setFixedFilters([])
+            console.log('⚠️ DEBUG HolidayList - No authorized branch IDs found, no branch filter applied.')
+          }
+        } catch (err) {
+          console.error('Failed to load permissions:', err)
+          setFixedFilters([])
+        }
       } catch (err) {
-        console.error('Failed to load branches:', err)
+        console.error('Failed to load branches map:', err)
+        setFixedFilters([])
+      } finally {
+        setIsReady(true)
       }
     }
-    loadBranches()
+
+    loadBranchesMapAndPermissions()
   }, [])
 
   // Memoize columns to update when branchesMap changes
@@ -224,35 +275,44 @@ export default function HolidayList() {
 
         {/* Tab Content */}
         {activeTab === 'list' ? (
-          <CrudPage
-            title="Holidays & Off-Days"
-            service="appointment-service"
-            resourceBase="/api/admin/holidays"
-            idKey="holidayId"
-            columns={holidayColumns}
-            pageSize={20}
-            enableCreate={true}
-            enableEdit={true}
-            enableDelete={true}
-            tableId="holidays-list"
-            renderCreate={({ open, onClose, onSuccess }) => (
-              <HolidayFormModal
-                open={open}
-                mode="create"
-                onClose={onClose}
-                onSuccess={onSuccess}
+          <div className="h-screen flex flex-col overflow-hidden">
+            {isReady ? (
+              <CrudPage
+                title="Holidays & Off-Days"
+                service="appointment-service"
+                resourceBase="/api/admin/holidays"
+                idKey="holidayId"
+                columns={holidayColumns}
+                pageSize={20}
+                enableCreate={true}
+                enableEdit={true}
+                enableDelete={true}
+                tableId="holidays-list"
+                fixedFilters={fixedFilters}
+                renderCreate={({ open, onClose, onSuccess }) => (
+                  <HolidayFormModal
+                    open={open}
+                    mode="create"
+                    onClose={onClose}
+                    onSuccess={onSuccess}
+                  />
+                )}
+                renderEdit={({ open, initial, onClose, onSuccess }) => (
+                  <HolidayFormModal
+                    open={open}
+                    mode="edit"
+                    initial={initial}
+                    onClose={onClose}
+                    onSuccess={onSuccess}
+                  />
+                )}
               />
+            ) : (
+              <div className="flex-1 flex items-center justify-center text-gray-500">
+                Loading permissions...
+              </div>
             )}
-            renderEdit={({ open, initial, onClose, onSuccess }) => (
-              <HolidayFormModal
-                open={open}
-                mode="edit"
-                initial={initial}
-                onClose={onClose}
-                onSuccess={onSuccess}
-              />
-            )}
-          />
+          </div>
         ) : (
           <div key="holiday-calendar-wrapper" className="holiday-calendar-container">
             {console.log('Rendering HolidayCalendar wrapper, activeTab:', activeTab)}
