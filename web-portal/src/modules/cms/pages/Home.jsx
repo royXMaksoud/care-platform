@@ -227,6 +227,7 @@ export default function CMSHome() {
       
     
       allItems.push({ to: 'auditLog', label: 'Audit Log' })
+      allItems.push({ to: 'roles', label: 'Roles' })
     } else {
       // ✅ TEMPORARY FIX: Always show defaultItems for testing
       allItems = defaultItems
