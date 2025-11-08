@@ -53,6 +53,7 @@ export const CMS_SECTIONS = {
   CODE_COUNTRY: 'Code Country',
   LOCATION: 'Location',
   USER_MANAGEMENT: 'User Management',
+  ROLES: 'Roles',
   SYSTEMS: 'System',
   SECTIONS: 'System Section',
   ORGANIZATION: 'Organization',  // Main Organization entity
@@ -279,6 +280,14 @@ export const CMS_MENU_ITEMS = [
     to: 'users',
     label: 'Users',
     sectionName: CMS_SECTIONS.USER_MANAGEMENT,
+    systemName: SYSTEMS.CMS,
+    requiredPermission: 'List',
+  },
+  {
+    id: 'roles',
+    to: 'roles',
+    label: 'Roles',
+    sectionName: CMS_SECTIONS.ROLES,
     systemName: SYSTEMS.CMS,
     requiredPermission: 'List',
   },
