@@ -21,7 +21,10 @@
     "cms": "Content-Management-System",
     "home": "Startseite",
     "logout": "Abmelden",
-    "welcome": "Willkommen, {{name}}"
+    "welcome": "Willkommen, {{name}}",
+    "logoutConfirm": "Möchten Sie sich abmelden?",
+    "logoutHint": "Sie können sich jederzeit wieder anmelden.",
+    "logoutAction": "Ja, abmelden"
   },
   "cms": {
     "badge": "Content-Management",
@@ -101,6 +104,7 @@
     "language_ar": "Arabisch",
     "language_fr": "Französisch",
     "language_de": "Deutsch",
+    "language_ku": "Kurdisch",
     "firstNameRequired": "Der Vorname ist erforderlich.",
     "surnameRequired": "Der Nachname ist erforderlich.",
     "passwordMismatch": "Die Passwörter stimmen nicht überein.",
@@ -125,6 +129,11 @@
     "terms": "Nutzungsbedingungen",
     "privacy": "Datenschutzrichtlinie",
     "securityNote": "Geschützt durch Sicherheit auf Unternehmensniveau"
+  },
+  "session": {
+    "warning": "Noch da? Wir melden dich in {{minutes}} Minute(n) wegen Inaktivität ab.",
+    "extend": "Angemeldet bleiben",
+    "timeout": "Du wurdest wegen Inaktivität abgemeldet."
   }
 }
 

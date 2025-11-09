@@ -1,577 +1,581 @@
-# Filter Scope Implementation Guide
-## Professional Standards for Dynamic Filtering with Scope-Based Authorization
+# Scope Filtering Process - Configuration & Mapping
+
+## Overview
+This document defines the scope filtering mechanism for the Care Management System. It provides a centralized mapping between JWT claim identifiers, filter fields, and database columns.
+
+**Purpose**: When a user makes a filter request with a specific `sectionId`, this document helps identify:
+1. Which JWT claim contains the allowed values (`scopeValueId`)
+2. Which database column to apply the scope filter on
+3. The data type for conversion
+4. Which services and entities are affected
 
 ---
 
-## Executive Summary
+## Scope Mapping Table
 
-This document outlines the complete architecture and implementation strategy for **scope-based filtering** in microservices, specifically handling cases where:
-- User permissions are scope-restricted (e.g., specific branch IDs)
-- Filter criteria contain array/collection values
-- Type conversion (UUID, ENUM, etc.) must occur safely
-- Cross-service consistency must be maintained
-
----
-
-## Problem Statement
-
-### Original Issue
-When filtering schedules by `organizationBranchId` with an `IN` operator and UUID values:
-```
-Error: Invalid UUID value for field 'organizationBranchId': [7df356fb-f1db-4075-a31b-ba20bc5aad15]
-```
-
-### Root Cause
-The `GenericSpecification.toPredicate()` method called `convertValue()` on **all values BEFORE** checking the operation type. For IN operators with array values, this attempted to convert an entire array as a single UUID.
-
-### Impact Chain
-```
-Frontend sends: ["uuid1", "uuid2", "uuid3"]
-↓
-Controller receives: Collection<String>
-↓
-GenericSpecification tries: convertValue(["uuid1", "uuid2", "uuid3"], UUID)
-↓
-Error: Cannot convert array [uuid...] to single UUID
-```
+| SectionId | Description | JWT Claim | ScopeValueId | Database Column | Data Type | Service | Entity | Configuration |
+|-----------|-------------|-----------|--------------|-----------------|-----------|---------|--------|-----------------|
+| `ORG_BRANCH` | Organization Branch Access | `organizationBranchIds` | `organizationBranchIds` | `organization_branch_id` | UUID | appointment-service | CenterWeeklySchedule | ScheduleFilterConfig |
+| `TENANT` | Tenant Access | `tenantIds` | `tenantIds` | `tenant_id` | UUID | access-management-service | TenantSubscription | TenantFilterConfig |
+| `ORG` | Organization Access | `organizationIds` | `organizationIds` | `organization_id` | UUID | reference-data-service | Organization | OrgFilterConfig |
+| `LOCATION` | Location Access | `locationIds` | `locationIds` | `location_id` | UUID | reference-data-service | Location | LocationFilterConfig |
+| `DUTY_STATION` | Duty Station Access | `dutyStationIds` | `dutyStationIds` | `duty_station_id` | UUID | reference-data-service | DutyStation | DutyStationFilterConfig |
 
 ---
 
-## Solution Architecture
+## Detailed Configuration
 
-### Layer 1: Frontend (ScheduleList.jsx)
+### 1. ORG_BRANCH (Organization Branch)
 
-**Responsibility:** Extract scope values from permissions and prepare filter payload
-
-```javascript
-// 1. Load user permissions from auth service
-const permRes = await api.get('/auth/me/permissions')
-
-// 2. Traverse permissions structure to find scopeValueId
-// Structure: systems → sections → actions → scopes
-permissionsData.systems.forEach(system => {
-  system.sections?.forEach(section => {
-    if (section.name?.toLowerCase().includes('schedule')) {
-      section.actions?.forEach(action => {
-        action.scopes?.forEach(scope => {
-          if (scope.effect === 'ALLOW' && scope.scopeValueId) {
-            authorizedBranchIds.add(scope.scopeValueId)  // Extract scopeValueId
-          }
-        })
-      })
-    }
-  })
-})
-
-// 3. Build filter for POST body (NOT query parameters)
-setFixedFilters([
-  {
-    key: 'organizationBranchId',
-    operator: 'IN',
-    value: Array.from(authorizedBranchIds),  // Array of UUIDs
-    dataType: 'UUID'
-  }
-])
-```
-
-**Key Principle:** Use `fixedFilters` (POST body) instead of `queryParams` (URL) for array values
-
-### Layer 2: Controller (ScheduleController.java)
-
-**Responsibility:** Normalize criteria before passing to service layer
-
-```java
-public ResponseEntity<Page<ScheduleResponse>> filterSchedules(
-        @RequestBody(required = false) FilterRequest request,
-        @PageableDefault(size = 20) Pageable pageable
-) {
-    FilterRequest safe = (request != null) ? request : new FilterRequest();
-
-    // CRITICAL: Normalize IN criteria to handle string-to-UUID conversion
-    normalizeInCriteria(safe);
-
-    Page<ScheduleResponse> page = loadAllSchedulesUseCase
-            .loadAll(safe, pageable)
-            .map(mapper::toResponse);
-    return ResponseEntity.ok(page);
-}
-
-private void normalizeInCriteria(FilterRequest request) {
-    if (request == null || request.getCriteria() == null) {
-        return;
-    }
-
-    List<SearchCriteria> normalized = new java.util.ArrayList<>();
-    for (SearchCriteria criteria : request.getCriteria()) {
-        // Handle IN/NOT_IN operations specially
-        if (criteria.getOperation() == SearchOperation.IN ||
-            criteria.getOperation() == SearchOperation.NOT_IN) {
-
-            Object value = criteria.getValue();
-
-            if (value instanceof Collection) {
-                Collection<?> col = (Collection<?>) value;
-
-                // Convert string elements to proper types (UUID, ENUM, etc.)
-                if (criteria.getDataType() == ValueDataType.UUID && !col.isEmpty()) {
-                    Object first = col.iterator().next();
-
-                    if (first instanceof String) {
-                        List<UUID> convertedList = new java.util.ArrayList<>();
-                        for (Object item : col) {
-                            if (item instanceof String) {
-                                try {
-                                    convertedList.add(UUID.fromString((String) item));
-                                } catch (IllegalArgumentException e) {
-                                    System.err.println("⚠️ Invalid UUID in filter: " + item);
-                                }
-                            } else if (item instanceof UUID) {
-                                convertedList.add((UUID) item);
-                            }
-                        }
-
-                        // Rebuild criteria with converted UUID objects
-                        SearchCriteria fixed = SearchCriteria.builder()
-                                .key(criteria.getKey())
-                                .operation(criteria.getOperation())
-                                .value(convertedList)  // UUID objects, not strings
-                                .valueTo(criteria.getValueTo())
-                                .groupId(criteria.getGroupId())
-                                .foreignKey(criteria.isForeignKey())
-                                .dataType(criteria.getDataType())
-                                .enumClassFqn(criteria.getEnumClassFqn())
-                                .build();
-                        normalized.add(fixed);
-                        continue;
-                    }
-                }
-            }
-
-            // No conversion needed, keep as-is
-            normalized.add(criteria);
-        } else {
-            // Non-IN/NOT_IN operations, keep as-is
-            normalized.add(criteria);
-        }
-    }
-
-    // Replace the original criteria list with normalized one
-    request.setCriteria(normalized);
-}
-```
-
-**Key Principle:** Convert string UUIDs to UUID objects BEFORE passing to JPA specifications
-
-### Layer 3: Shared Library (GenericSpecification.java)
-
-**Responsibility:** Handle JPA Criteria API conversion safely
-
-```java
-@Override
-public Predicate toPredicate(Root<T> root, CriteriaQuery<?> query, CriteriaBuilder cb) {
-    Path<?> path = resolvePath(root, criteria.getKey());
-
-    // CRITICAL FIX: Check for IN/NOT_IN FIRST before calling convertValue on collection
-    // This prevents attempting to convert an entire array as a single UUID value
-    if (criteria.getOperation() == SearchOperation.IN ||
-        criteria.getOperation() == SearchOperation.NOT_IN) {
-
-        // Use convertCollection() which iterates and converts each item individually
-        Collection<?> col = convertCollection(criteria.getValue(), criteria.getDataType());
-        CriteriaBuilder.In<Object> in = cb.in(path);
-        for (Object v : col) {
-            in.value(v);
-        }
-        return criteria.getOperation() == SearchOperation.IN ? in : cb.not(in);
-    }
-
-    // For all other operations, convert single values as before
-    Object value = convertValue(criteria.getValue(), criteria.getDataType());
-    Object valueTo = convertValue(criteria.getValueTo(), criteria.getDataType());
-
-    switch (criteria.getOperation()) {
-        case EQUAL:
-            return cb.equal(path, value);
-        case NOT_EQUAL:
-            return cb.notEqual(path, value);
-        // ... other operations (GREATER_THAN, LESS_THAN, LIKE, etc.)
-        case IS_NULL:
-            return cb.isNull(path);
-        case IS_NOT_NULL:
-            return cb.isNotNull(path);
-        default:
-            return cb.conjunction();
-    }
-}
-
-// Helper method that iterates and converts each collection item
-private Collection<?> convertCollection(Object value, ValueDataType type) {
-    if (value == null) {
-        return java.util.List.of();
-    }
-    Collection<?> raw = (value instanceof Collection)
-            ? (Collection<?>) value
-            : java.util.List.of(value);
-    java.util.List<Object> out = new java.util.ArrayList<>(raw.size());
-    for (Object v : raw) {
-        Object converted = convertValue(v, type);  // Convert each item individually
-        if (converted != null) {
-            out.add(converted);
-        }
-    }
-    return out;
-}
-```
-
-**Key Principle:** Check operation type BEFORE attempting type conversion; use `convertCollection()` for arrays
-
----
-
-## Implementation Flow
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│ 1. USER PERMISSION EXTRACTION (Frontend)                         │
-│    api.get('/auth/me/permissions')                               │
-│    └─→ Extract scopeValueId from scopes array                    │
-└────────────────┬────────────────────────────────────────────────┘
-                 │
-                 ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ 2. FILTER PAYLOAD CONSTRUCTION (Frontend)                        │
-│    fixedFilters = [{                                             │
-│      key: 'organizationBranchId',                                │
-│      operator: 'IN',                                             │
-│      value: ["uuid1", "uuid2"],  ← Array of strings             │
-│      dataType: 'UUID'                                            │
-│    }]                                                            │
-│    POST /api/admin/schedules/filter (POST body)                 │
-└────────────────┬────────────────────────────────────────────────┘
-                 │
-                 ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ 3. CRITERIA NORMALIZATION (Controller)                           │
-│    normalizeInCriteria(FilterRequest)                            │
-│    └─→ Convert ["uuid1", "uuid2"] → [UUID, UUID]               │
-└────────────────┬────────────────────────────────────────────────┘
-                 │
-                 ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ 4. JPA SPECIFICATION PROCESSING (SharedLib)                      │
-│    GenericSpecification.toPredicate()                            │
-│    └─→ Check IN operator FIRST                                  │
-│    └─→ Use convertCollection() for array                        │
-│    └─→ Build JPA IN predicate                                   │
-└────────────────┬────────────────────────────────────────────────┘
-                 │
-                 ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ 5. DATABASE QUERY (Repository)                                   │
-│    SELECT * FROM schedule                                        │
-│    WHERE organization_branch_id IN (uuid1, uuid2)               │
-└─────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## Request/Response Example
-
-### Frontend Request
-```javascript
-POST /api/admin/schedules/filter?page=0&size=20
-
+**JWT Claim Structure**:
+```json
 {
-  "criteria": [
-    {
-      "key": "organizationBranchId",
-      "operator": "IN",
-      "value": [
-        "7df356fb-f1db-4075-a31b-ba20bc5aad15",
-        "8abc123e-4567-89ab-cdef-0123456789ab"
-      ],
-      "dataType": "UUID"
-    }
+  "organizationBranchIds": [
+    "6240dfac-e4ac-4a29-86a4-7a7f29553c17",
+    "7df356fb-f1db-4075-a31b-ba20bc5aad15",
+    "39d4039f-dfd6-4ddb-9b73-5424b5b2d59e"
   ]
 }
 ```
 
-### Backend Response
+**Affected Services**:
+- `appointment-service` - ScheduleController, AppointmentAdminController
+- `reference-data-service` - DutyStationController
+
+**Affected Entities**:
+- `CenterWeeklySchedule` (center_weekly_schedule table)
+- `Appointment` (appointment table)
+- `AppointmentProvider` (appointment_provider table)
+- `DutyStation` (duty_station table)
+
+**Filter Configuration**:
+```java
+// ScheduleFilterConfig.ALLOWED_FIELDS
+Set.of(
+    "scheduleId",
+    "organizationBranchId",  // ← Filter column
+    "dayOfWeek",
+    "startTime",
+    "endTime",
+    // ...
+)
+```
+
+**Database Column**:
+```sql
+center_weekly_schedule.organization_branch_id UUID NOT NULL
+```
+
+**Filtering Implementation** (ScheduleController):
+```java
+private void applyUserScopes(FilterRequest filter) {
+    var currentUser = CurrentUserContext.get();
+    Object scopeValue = currentUser.claims().get("organizationBranchIds");
+
+    if (scopeValue != null) {
+        List<UUID> allowedBranchIds = extractUUIDs(scopeValue);
+
+        List<ScopeCriteria> scopes = // ...
+        scopes.add(ScopeCriteria.builder()
+            .fieldName("organizationBranchId")  // ← Database column name
+            .allowedValues(allowedBranchIds)
+            .dataType(ValueDataType.UUID)
+            .build());
+    }
+}
+```
+
+**Example Query**:
+```sql
+SELECT * FROM center_weekly_schedule
+WHERE organization_branch_id IN (
+    '6240dfac-e4ac-4a29-86a4-7a7f29553c17',
+    '7df356fb-f1db-4075-a31b-ba20bc5aad15',
+    '39d4039f-dfd6-4ddb-9b73-5424b5b2d59e'
+)
+```
+
+---
+
+### 2. TENANT (Tenant Scope)
+
+**JWT Claim Structure**:
 ```json
 {
-  "content": [
-    {
-      "scheduleId": "123e4567-e89b-12d3-a456-426614174000",
-      "organizationBranchId": "7df356fb-f1db-4075-a31b-ba20bc5aad15",
-      "dayOfWeek": 1,
-      "startTime": "08:00:00",
-      "endTime": "16:00:00",
-      "slotDurationMinutes": 30,
-      "maxCapacityPerSlot": 5,
-      "isActive": true,
-      "createdAt": "2025-11-08T10:30:00Z"
-    }
-  ],
-  "pageable": {
-    "pageNumber": 0,
-    "pageSize": 20,
-    "totalElements": 1,
-    "totalPages": 1
-  }
+  "tenantIds": [
+    "tenant-uuid-1",
+    "tenant-uuid-2"
+  ]
+}
+```
+
+**Affected Services**:
+- `access-management-service`
+- `auth-service`
+
+**Affected Entities**:
+- `TenantSubscription`
+- `UserTenant`
+
+**Filter Configuration**:
+```java
+Set.of(
+    "tenantId",  // ← Filter column
+    "subscriptionStatus",
+    "createdAt"
+)
+```
+
+**Implementation Pattern**:
+```java
+private void applyUserScopes(FilterRequest filter) {
+    var currentUser = CurrentUserContext.get();
+    Object scopeValue = currentUser.claims().get("tenantIds");
+
+    List<ScopeCriteria> scopes = // ...
+    scopes.add(ScopeCriteria.builder()
+        .fieldName("tenantId")  // ← Database column
+        .allowedValues(extractUUIDs(scopeValue))
+        .dataType(ValueDataType.UUID)
+        .build());
 }
 ```
 
 ---
 
-## Handling Additional Scope Types
+### 3. LOCATION (Location Scope)
 
-### Case 1: Enum-Based Scopes
-```javascript
-// Frontend
-setFixedFilters([
-  {
-    key: 'status',
-    operator: 'IN',
-    value: ['ACTIVE', 'PENDING'],  // Enum strings
-    dataType: 'ENUM',
-    enumClassFqn: 'com.care.appointment.domain.model.ScheduleStatus'
-  }
-])
+**JWT Claim Structure**:
+```json
+{
+  "locationIds": [
+    "location-uuid-1",
+    "location-uuid-2",
+    "location-uuid-3"
+  ]
+}
 ```
+
+**Affected Services**:
+- `reference-data-service`
+
+**Affected Entities**:
+- `Location`
+- `DutyStation` (has location_id)
+
+**Filter Configuration**:
+```java
+Set.of(
+    "locationId",  // ← Filter column
+    "locationName",
+    "regionId",
+    "createdAt"
+)
+```
+
+---
+
+## Scope Filtering Flow
+
+```
+1. Frontend Request
+   ├─ Filter Criteria: {"field": "organizationBranchId", "op": "IN", "value": [...]}
+   └─ JWT Token contains: {"organizationBranchIds": [...]}
+
+2. Controller (ScheduleController)
+   ├─ Extract JWT claims
+   ├─ Get scopeValueId: "organizationBranchIds"
+   ├─ Map to field name: "organizationBranchId"
+   └─ Add ScopeCriteria to FilterRequest
+
+3. Service Layer
+   ├─ Receive enriched FilterRequest
+   └─ Pass to database adapter
+
+4. Database Adapter (ScheduleDbAdapter)
+   ├─ Build GenericSpecificationBuilder
+   ├─ Add scopes (applied FIRST with AND)
+   ├─ Add criteria (applied with AND/OR based on groups)
+   └─ Execute JPA query
+
+5. Database Query Execution
+   ├─ WHERE organizationBranchId IN (scope values)  ← From JWT
+   └─ AND organizationBranchId IN (filter values)   ← From frontend
+
+6. Results Returned
+   └─ Only records matching BOTH scope and criteria
+```
+
+---
+
+## How to Add a New Scope
+
+### Step 1: Define in JWT Claims
+The Auth Service must include the scope in the JWT token during login:
 
 ```java
-// Controller - same normalization applies
-// GenericSpecification will convert strings to enum values
+// In AuthService.generateToken()
+Map<String, Object> claims = new HashMap<>();
+claims.put("organizationBranchIds", userAllowedBranchIds);
+claims.put("locationIds", userAllowedLocationIds);
+// ...
+```
 
-private void normalizeEnumCriteria(FilterRequest request) {
-    for (SearchCriteria criteria : request.getCriteria()) {
-        if (criteria.getDataType() == ValueDataType.ENUM &&
-            criteria.getOperation() == SearchOperation.IN) {
-            // Conversion handled by convertCollection() → convertEnum()
-        }
+### Step 2: Add to Service Controller
+Implement scope extraction in the controller's filter endpoint:
+
+```java
+@PostMapping("/filter")
+public ResponseEntity<Page<MyResponse>> filter(
+    @RequestBody(required = false) FilterRequest request,
+    @PageableDefault(size = 20) Pageable pageable
+) {
+    FilterRequest safe = (request != null) ? request : new FilterRequest();
+    FilterNormalizer.normalize(safe);
+
+    // NEW: Apply scope filtering
+    applyUserScopes(safe);
+
+    // Pass to service
+    Page<MyResponse> page = service.loadAll(safe, pageable);
+    return ResponseEntity.ok(page);
+}
+
+private void applyUserScopes(FilterRequest filter) {
+    var currentUser = CurrentUserContext.get();
+    if (currentUser == null) return;
+
+    Object scopeValue = currentUser.claims().get("myNewScopeId");
+    if (scopeValue != null) {
+        List<UUID> allowedIds = extractUUIDs(scopeValue);
+
+        List<ScopeCriteria> scopes = (filter.getScopes() != null)
+            ? new ArrayList<>(filter.getScopes())
+            : new ArrayList<>();
+
+        scopes.add(ScopeCriteria.builder()
+            .fieldName("myDatabaseColumnName")  // ← Map to actual DB column
+            .allowedValues(allowedIds)
+            .dataType(ValueDataType.UUID)
+            .build());
+
+        filter.setScopes(scopes);
     }
 }
 ```
 
-### Case 2: Date Range with Scope
-```javascript
-// Frontend
-setFixedFilters([
-  {
-    key: 'createdAt',
-    operator: 'BETWEEN',
-    value: '2025-01-01',
-    valueTo: '2025-12-31',
-    dataType: 'DATE'
-  }
-])
+### Step 3: Verify FilterConfig
+Ensure the column is in the ALLOWED_FIELDS:
+
+```java
+public class MyFilterConfig {
+    public static final Set<String> ALLOWED_FIELDS = Set.of(
+        "id",
+        "myDatabaseColumnName",  // ← Must be here
+        // ...
+    );
+}
 ```
 
-### Case 3: Multiple Scopes (AND logic)
-```javascript
-// Frontend
-setFixedFilters([
-  {
-    key: 'organizationBranchId',
-    operator: 'IN',
-    value: ["uuid1", "uuid2"],
-    dataType: 'UUID'
-  },
-  {
-    key: 'status',
-    operator: 'EQUAL',
-    value: 'ACTIVE',
-    dataType: 'STRING'
-  }
-])
+### Step 4: Update This Document
+Add a new row to the Scope Mapping Table above.
+
+---
+
+## ScopeCriteria to Database Column Mapping
+
+```
+ScopeCriteria Structure
+├─ fieldName: "organizationBranchId"  ← Maps to database column name
+├─ allowedValues: [UUID, UUID, ...]   ← From JWT claim
+└─ dataType: UUID                      ← Type for conversion
+
+↓ Converted to ↓
+
+SearchCriteria
+├─ key: "organizationBranchId"        ← Field name (must be whitelisted)
+├─ operation: IN
+├─ value: [UUID, UUID, ...]           ← Converted values
+└─ dataType: UUID
+
+↓ Executed as ↓
+
+SQL WHERE Clause
+└─ WHERE organization_branch_id IN ('uuid1', 'uuid2', 'uuid3')
 ```
 
 ---
 
-## Best Practices & Guidelines
+## JWT Claims → Database Column Resolution
 
-### ✅ DO
-
-1. **Use POST body for array filters**
-   ```javascript
-   // ✅ GOOD - POST body with array
-   fixedFilters=[{key: 'id', operator: 'IN', value: ['a','b','c']}]
-
-   // ❌ BAD - URL query params with array
-   ?organizationBranchIds=uuid1,uuid2,uuid3
-   ```
-
-2. **Specify dataType explicitly**
-   ```javascript
-   // ✅ GOOD
-   {key: 'id', operator: 'IN', value: [...], dataType: 'UUID'}
-
-   // ❌ BAD - no dataType specified
-   {key: 'id', operator: 'IN', value: [...]}
-   ```
-
-3. **Normalize at controller before passing to service**
-   - Ensures type safety
-   - Prevents repeated normalization
-   - Centralizes error handling
-
-4. **Handle permission scopes in frontend**
-   - Extract `scopeValueId` from nested permissions structure
-   - Build filter criteria with complete authorized scope
-   - Send as `fixedFilters` that auto-apply to all queries
-
-5. **Use alias support for field names**
-   ```java
-   @JsonAlias({"field", "fieldName"})  // Support multiple names
-   private String key;
-
-   @JsonAlias({"op", "operator"})      // Support multiple names
-   private SearchOperation operation;
-   ```
-
-### ❌ DON'T
-
-1. **Don't rely on URL query parameters for arrays**
-   - Gets flattened to strings
-   - Type information lost
-   - URL length limitations
-
-2. **Don't convert at every layer**
-   - Normalize once in controller
-   - Pass to service/repository
-   - Let JPA handle final conversion
-
-3. **Don't skip null checks**
-   ```java
-   // ❌ BAD
-   for (Object item : criteria.getValue()) { ... }
-
-   // ✅ GOOD
-   if (criteria.getValue() != null && criteria.getValue() instanceof Collection) {
-       Collection<?> col = (Collection<?>) criteria.getValue();
-       for (Object item : col) { ... }
-   }
-   ```
-
-4. **Don't modify GenericSpecification for service-specific logic**
-   - Keep it generic and shared across all services
-   - Handle service-specific conversions in controller
-   - Only add universal fixes to shared library
-
----
-
-## Testing Checklist
-
-### Unit Tests Required
-- [ ] Controller normalization with various data types (UUID, ENUM, NUMBER, DATE)
-- [ ] GenericSpecification with IN/NOT_IN operators
-- [ ] Permission scope extraction logic
-- [ ] Edge cases: null values, empty arrays, mixed types
-
-### Integration Tests Required
-- [ ] E2E filter with single scopeValueId
-- [ ] E2E filter with multiple scopeValueIds
-- [ ] E2E filter with permission-based scopes
-- [ ] E2E filter with user filters + fixed filters combined
-- [ ] Error handling for invalid UUIDs in filter
-
-### Manual Testing
-```bash
-# Test 1: Single scope value
-POST http://localhost:6060/appointment/api/admin/schedules/filter
-{
-  "criteria": [{
-    "key": "organizationBranchId",
-    "operator": "IN",
-    "value": ["7df356fb-f1db-4075-a31b-ba20bc5aad15"],
-    "dataType": "UUID"
-  }]
-}
-# Expected: 200 OK with filtered schedules
-
-# Test 2: Multiple scope values
-POST http://localhost:6060/appointment/api/admin/schedules/filter
-{
-  "criteria": [{
-    "key": "organizationBranchId",
-    "operator": "IN",
-    "value": ["uuid1", "uuid2", "uuid3"],
-    "dataType": "UUID"
-  }]
-}
-# Expected: 200 OK with schedules from all 3 branches
-
-# Test 3: NOT_IN operator
-POST http://localhost:6060/appointment/api/admin/schedules/filter
-{
-  "criteria": [{
-    "key": "organizationBranchId",
-    "operator": "NOT_IN",
-    "value": ["uuid1"],
-    "dataType": "UUID"
-  }]
-}
-# Expected: 200 OK with schedules excluding specified branch
+### For ORG_BRANCH:
+```
+JWT Claim: organizationBranchIds
+    ↓
+Extract: ["uuid1", "uuid2", "uuid3"]
+    ↓
+Create ScopeCriteria
+    ├─ fieldName: "organizationBranchId"  ← Matches FilterConfig.ALLOWED_FIELDS
+    ├─ allowedValues: [uuid1, uuid2, uuid3]
+    └─ dataType: UUID
+    ↓
+GenericSpecification converts to
+    ├─ Path: root.get("organizationBranchId")  ← JPA attribute name
+    └─ Predicate: cb.in(path).value(uuid1).value(uuid2)...
+    ↓
+SQL Query
+    └─ WHERE center_weekly_schedule.organization_branch_id IN (?, ?, ?)
 ```
 
 ---
 
 ## Common Issues & Solutions
 
-| Issue | Cause | Solution |
-|-------|-------|----------|
-| `Invalid UUID value for field '[uuid...]'` | Array sent to `convertValue()` | Check IN operator BEFORE convertValue() |
-| `[object Object]` in filters | Array sent as URL param | Use POST body with fixedFilters |
-| `Empty filter results` | Scope filter too restrictive | Verify scopeValueId extraction from permissions |
-| `Enum not found` | Missing enumClassFqn | Provide fully-qualified enum class name |
-| `Type mismatch` | DataType not specified | Always specify dataType in filter criteria |
+### Issue 1: SectionId Not Mapping to Correct Column
+
+**Problem**: Scope claim name doesn't match database column name in ScopeCriteria.
+
+**Solution**:
+```java
+// WRONG - claim name ≠ column name
+Object scopeValue = currentUser.claims().get("branchIds");  // JWT claim
+scopes.add(ScopeCriteria.builder()
+    .fieldName("organizationBranchId")  // DB column - MISMATCH!
+    // ...
+```
+
+**Fix**:
+```java
+// CORRECT - explicitly map
+Object scopeValue = currentUser.claims().get("organizationBranchIds");  // JWT claim
+scopes.add(ScopeCriteria.builder()
+    .fieldName("organizationBranchId")  // DB column - MATCHES!
+    // ...
+```
+
+### Issue 2: Field Not in ALLOWED_FIELDS
+
+**Problem**: Scope field is not whitelisted.
+
+```
+Error: "Field not allowed for filtering: organizationBranchId"
+```
+
+**Solution**: Add to FilterConfig:
+```java
+public static final Set<String> ALLOWED_FIELDS = Set.of(
+    "organizationBranchId",  // ← ADD THIS
+    // ...
+);
+```
+
+### Issue 3: Scope Values Are Strings, Not UUIDs
+
+**Problem**: JWT claim contains string UUIDs.
+
+**Solution**: Use `extractUUIDs()` helper:
+```java
+private List<UUID> extractUUIDs(Object scopeValue) {
+    List<UUID> result = new ArrayList<>();
+    if (scopeValue instanceof List<?>) {
+        ((List<?>) scopeValue).forEach(item -> {
+            try {
+                if (item instanceof String str) {
+                    result.add(UUID.fromString(str.trim()));  // ← Convert
+                }
+            } catch (Exception ignored) {}
+        });
+    }
+    return result;
+}
+```
+
+### Issue 4: No Results Even With Valid Scopes
+
+**Problem**: Filter returns 0 results even though scopes are correct.
+
+**Checklist**:
+1. ✓ JWT claim exists and has values?
+2. ✓ ScopeCriteria fieldName matches ALLOWED_FIELDS?
+3. ✓ UUID values are valid format?
+4. ✓ Database has records matching the scope values?
+5. ✓ Frontend criteria intersects with scope values?
 
 ---
 
-## Files Modified & Changes Summary
+## Debugging Steps
 
-### 1. **GenericSpecification.java** (shared-libs)
-**Change:** Moved IN/NOT_IN operator check before `convertValue()` calls
-```
-Before: convertValue(criteria.getValue()) → switch(operation)
-After:  if (IN/NOT_IN) → convertCollection() → return
-        else → convertValue() → switch(operation)
-```
-
-### 2. **ScheduleController.java** (appointment-service)
-**Change:** Added `normalizeInCriteria()` method to convert string UUIDs to UUID objects
-```
-Before: No normalization, direct pass to service
-After:  Normalize IN criteria → convert strings to UUID objects → pass to service
+### 1. Check JWT Token
+```bash
+# Decode JWT at jwt.io and verify claims contain scopeValueId
+{
+  "organizationBranchIds": ["uuid1", "uuid2", "uuid3"],
+  // ...
+}
 ```
 
-### 3. **ScheduleList.jsx** (web-portal)
-**Change:** Extract scopeValueId from permissions and use fixedFilters instead of queryParams
+### 2. Add Debug Logging
+```java
+private void applyUserScopes(FilterRequest filter) {
+    var currentUser = CurrentUserContext.get();
+    log.info("Current User: {}", currentUser);
+
+    Object scopeValue = currentUser.claims().get("organizationBranchIds");
+    log.info("Scope Value from JWT: {}", scopeValue);
+
+    List<UUID> allowedBranchIds = extractUUIDs(scopeValue);
+    log.info("Extracted Branch IDs: {}", allowedBranchIds);
+
+    // ... rest of code
+}
 ```
-Before: No permission-based filtering
-After:  Load permissions → extract scopeValueId → build fixedFilters → apply to CrudPage
+
+### 3. Check ScheduleDbAdapter Logs
+```java
+private Specification<CenterWeeklyScheduleEntity> buildSpecification(FilterRequest filter) {
+    log.debug("🔹 buildSpecification() - hasCriteria: {}, hasGroups: {}, hasScopes: {}",
+              hasCriteria, hasGroups, hasScopes);
+
+    if (hasScopes) {
+        filter.getScopes().forEach(s ->
+            log.debug("  Scope: field='{}', values={}",
+                      s.getFieldName(), s.getAllowedValues()));
+    }
+    // ...
+}
+```
+
+### 4. Verify Database Query
+```java
+// Enable SQL logging in application.yml
+spring:
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+```
+
+Expected output:
+```sql
+select * from center_weekly_schedule c1_0
+where c1_0.organization_branch_id in (
+    '6240dfac-e4ac-4a29-86a4-7a7f29553c17',
+    '7df356fb-f1db-4075-a31b-ba20bc5aad15'
+)
 ```
 
 ---
 
-## Future Enhancements
+## Reference Implementation
 
-1. **Scope Caching** - Cache permission scopes to reduce API calls
-2. **Multi-Scope AND/OR Logic** - Support complex scope combinations
-3. **Dynamic Scope Merging** - Merge user filters with scope filters intelligently
-4. **Audit Logging** - Log all scope-based filtering for compliance
-5. **Scope Validation** - Validate that returned data matches user's authorized scopes
+### Appointment Service - ScheduleController
+
+**File**: `appointment-service/src/main/java/com/care/appointment/web/controller/admin/ScheduleController.java`
+
+```java
+@PostMapping("/filter")
+public ResponseEntity<Page<ScheduleResponse>> filterSchedules(
+    @RequestBody(required = false) FilterRequest request,
+    @PageableDefault(size = 20) Pageable pageable
+) {
+    FilterRequest safe = (request != null) ? request : new FilterRequest();
+    FilterNormalizer.normalize(safe);
+
+    // Apply scope-based filtering (IMPORTANT!)
+    applyUserScopes(safe);
+
+    Page<ScheduleResponse> page = loadAllSchedulesUseCase
+        .loadAll(safe, pageable)
+        .map(mapper::toResponse);
+    return ResponseEntity.ok(page);
+}
+
+private void applyUserScopes(FilterRequest filter) {
+    try {
+        var currentUser = CurrentUserContext.get();
+        if (currentUser == null) return;
+
+        Object scopeValue = currentUser.claims().get("organizationBranchIds");
+        if (scopeValue != null) {
+            List<UUID> allowedBranchIds = extractUUIDs(scopeValue);
+
+            if (!allowedBranchIds.isEmpty()) {
+                List<ScopeCriteria> scopes = (filter.getScopes() != null)
+                    ? new ArrayList<>(filter.getScopes())
+                    : new ArrayList<>();
+
+                boolean hasBranchScope = scopes.stream()
+                    .anyMatch(s -> "organizationBranchId".equals(s.getFieldName()));
+
+                if (!hasBranchScope) {
+                    scopes.add(ScopeCriteria.builder()
+                        .fieldName("organizationBranchId")
+                        .allowedValues(new ArrayList<>(allowedBranchIds))
+                        .dataType(ValueDataType.UUID)
+                        .build());
+
+                    filter.setScopes(scopes);
+                }
+            }
+        }
+    } catch (Exception e) {
+        // Graceful failure - no scope restriction
+    }
+}
+
+@SuppressWarnings("unchecked")
+private List<UUID> extractUUIDs(Object scopeValue) {
+    List<UUID> result = new ArrayList<>();
+
+    if (scopeValue instanceof List<?>) {
+        ((List<?>) scopeValue).forEach(item -> {
+            try {
+                if (item instanceof UUID uuid) {
+                    result.add(uuid);
+                } else if (item instanceof String str) {
+                    result.add(UUID.fromString(str.trim()));
+                }
+            } catch (Exception ignored) {}
+        });
+    }
+    // ... other type handling
+
+    return result;
+}
+```
 
 ---
 
-## References
+## Testing Checklist
 
-- **Spring Data JPA Specifications:** [Spring Docs](https://docs.spring.io/spring-data/jpa/docs/current/reference/html/#specifications)
-- **JPA Criteria API:** [Jakarta Persistence Documentation](https://jakarta.ee/specifications/persistence/)
-- **Authorization/RBAC Pattern:** [OWASP Authorization Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html)
+- [ ] JWT token contains valid `organizationBranchIds` claim
+- [ ] Scope values are valid UUIDs
+- [ ] ScheduleFilterConfig includes "organizationBranchId" in ALLOWED_FIELDS
+- [ ] `applyUserScopes()` method is called in controller
+- [ ] Scope values match database records
+- [ ] Frontend criteria intersects with scope values
+- [ ] Database query includes both scope AND criteria WHERE clauses
+- [ ] Results are filtered correctly
 
 ---
 
-**Document Version:** 1.0
-**Last Updated:** 2025-11-09
-**Author:** Claude Code
-**Status:** Production Ready
+## Version Information
+
+- **System**: Care Management System
+- **Last Updated**: 2025-11-09
+- **Status**: ✅ IMPLEMENTED (ScheduleController)
+- **Pending Implementation**: Other controllers (AppointmentController, etc.)
+
+---
+
+## Quick Reference
+
+| Task | Location | Key Code |
+|------|----------|----------|
+| Add new scope | This document + JWT generation | Define sectionId, JWT claim, column name |
+| Implement scope filtering | Controller filter endpoint | Call `applyUserScopes()` |
+| Extract scope values | Controller | Use `extractUUIDs()` helper |
+| Verify allowed fields | FilterConfig | Add to `ALLOWED_FIELDS` set |
+| Debug filtering | Logs + SQL | Check JWT claims and WHERE clause |
+

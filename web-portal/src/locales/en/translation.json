@@ -25,7 +25,10 @@
     "cms": "Content Management System",
     "home": "Home",
     "logout": "Logout",
-    "welcome": "Welcome, {{name}}"
+    "welcome": "Welcome, {{name}}",
+    "logoutConfirm": "Ready to sign out?",
+    "logoutHint": "You can sign back in anytime.",
+    "logoutAction": "Yes, sign me out"
   },
   "cms": {
     "badge": "Content Management",
@@ -137,6 +140,7 @@
     "language_ar": "العربية",
     "language_fr": "Français",
     "language_de": "Deutsch",
+    "language_ku": "Kurdî",
     "firstNameRequired": "First name is required.",
     "surnameRequired": "Surname is required.",
     "passwordMismatch": "Passwords do not match.",
@@ -161,6 +165,11 @@
     "terms": "Terms of Service",
     "privacy": "Privacy Policy",
     "securityNote": "Protected by enterprise-grade security"
+  },
+  "session": {
+    "warning": "Still there? We’ll sign you out in {{minutes}} minute(s) because of inactivity.",
+    "extend": "Stay signed in",
+    "timeout": "You were signed out because of inactivity."
   }
 }
 

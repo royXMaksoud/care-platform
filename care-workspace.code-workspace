@@ -1,0 +1,29 @@
+{
+	"folders": [
+		{
+			"path": "appointment-service"
+		},
+		{
+			"path": "web-portal"
+		},
+		{
+			"path": "service-registry"
+		},
+		{
+			"path": "gateway-service"
+		},
+		{
+			"path": "auth-service/auth-service"
+		},
+		{
+			"path": "shared-libs/core-shared-lib/core-shared-lib"
+		},
+		{
+			"path": "config-server"
+		},
+		{
+			"path": "access-management-service"
+		}
+	],
+	"settings": {}
+}

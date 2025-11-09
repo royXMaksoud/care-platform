@@ -7,6 +7,7 @@ import enTranslation from '../locales/en/translation.json'
 import arTranslation from '../locales/ar/translation.json'
 import frTranslation from '../locales/fr/translation.json'
 import deTranslation from '../locales/de/translation.json'
+import kuTranslation from '../locales/ku/translation.json'
 
 const resources = {
   en: {
@@ -20,6 +21,9 @@ const resources = {
   },
   de: {
     translation: deTranslation
+  },
+  ku: {
+    translation: kuTranslation
   }
 }
 
@@ -29,7 +33,7 @@ i18n
   .init({
     resources,
     fallbackLng: 'en', // Default language
-    supportedLngs: ['en', 'ar', 'fr', 'de'], // Supported languages
+    supportedLngs: ['en', 'ar', 'fr', 'de', 'ku'], // Supported languages
     
     detection: {
       order: ['localStorage', 'navigator'], // Check localStorage first, then browser language

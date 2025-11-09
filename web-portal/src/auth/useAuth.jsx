@@ -13,7 +13,7 @@ export function useAuth() {
   async function login(email, password, language = 'en') {
     setLoading(true)
     try {
-      const { token } = await loginApi(email, password, language)
+      const { token, sessionTimeoutMinutes, tenantLogo } = await loginApi(email, password, language)
       if (!token) throw new Error('No token in response')
       authStorage.setToken(token)
 
@@ -23,6 +23,8 @@ export function useAuth() {
         type: getUserTypeFromToken(token),
         email: getEmailFromToken(token),
         lang: getLangFromToken(token),
+        sessionTimeoutMinutes: Number(sessionTimeoutMinutes) || 30,
+        tenantLogo: tenantLogo || null,
       }
       authStorage.setUser(user)
 
@@ -45,6 +47,8 @@ export function useAuth() {
         type: getUserTypeFromToken(token),
         email: getEmailFromToken(token),
         lang: getLangFromToken(token),
+        sessionTimeoutMinutes: 30,
+        tenantLogo: null,
       }
       authStorage.setUser(user)
 

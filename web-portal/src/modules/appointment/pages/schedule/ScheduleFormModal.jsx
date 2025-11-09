@@ -62,8 +62,7 @@ export default function ScheduleFormModal({
       try {
         setLoadingOrganizations(true)
 
-        // Get user's authorized branch IDs from permissions
-        // Try both with and without system name since getSectionPermissions might work differently
+        // Extract user's permission scopes from permissions context
         let sectionPerms = getSectionPermissions('Appointment Schedule Mangement', 'Appointments')
         console.log('🔍 DEBUG: sectionPerms (with system):', sectionPerms)
 
@@ -76,114 +75,86 @@ export default function ScheduleFormModal({
 
         console.log('🔍 DEBUG: Final sectionPerms.actions:', sectionPerms.actions)
 
-        const authorizedBranchIds = new Set()
+        // Extract scope values from permission actions
+        const scopeValueIds = []
+        let systemSectionActionId = null
 
         sectionPerms.actions?.forEach((action, idx) => {
           console.log(`🔍 DEBUG: action[${idx}]:`, action)
           console.log(`🔍 DEBUG: action[${idx}].scopes:`, action.scopes)
+
+          // Store the first action ID (usually all actions in a section have same action ID)
+          if (!systemSectionActionId && action.systemSectionActionId) {
+            systemSectionActionId = action.systemSectionActionId
+            console.log(`✅ DEBUG: Found systemSectionActionId:`, systemSectionActionId)
+          }
+
           action.scopes?.forEach((scope, sidx) => {
             console.log(`🔍 DEBUG: action[${idx}].scopes[${sidx}]:`, scope)
             if (scope.effect === 'ALLOW' && scope.scopeValueId) {
-              console.log(`✅ DEBUG: Adding authorized branch ID:`, scope.scopeValueId)
-              authorizedBranchIds.add(scope.scopeValueId)
+              console.log(`✅ DEBUG: Adding authorized scope value:`, scope.scopeValueId)
+              scopeValueIds.push(scope.scopeValueId)
             }
           })
         })
-        console.log('🔍 DEBUG: Final authorizedBranchIds:', Array.from(authorizedBranchIds))
+        console.log('✅ DEBUG: Final scopeValueIds:', scopeValueIds)
+        console.log('✅ DEBUG: systemSectionActionId:', systemSectionActionId)
 
-        // Load all branches to determine which organizations user has access to
-        const branchesRes = await api.post('/access/api/organization-branches/filter', {
-          criteria: [],
-          groups: [],
-          scopes: []
-        }, {
-          params: { page: 0, size: 10000, language: uiLang }
-        })
-        const allBranchesData = branchesRes?.data?.content || []
-        console.log('✅ All branches loaded:', allBranchesData.length, 'branches')
-        console.log('🔍 DEBUG: ALL BRANCHES DATA:')
-        allBranchesData.forEach((b, idx) => {
-          console.log(`  Branch[${idx}]:`, {
-            organizationBranchId: b.organizationBranchId,
-            name: b.name,
-            organizationId: b.organizationId,
-            allKeys: Object.keys(b)
-          })
-        })
-        console.log('✅ Authorized branch IDs:', Array.from(authorizedBranchIds))
-
-        // Filter branches by authorized IDs
-        const authorizedBranches = authorizedBranchIds.size > 0
-          ? allBranchesData.filter(b => {
-              const hasMatch = authorizedBranchIds.has(b.organizationBranchId)
-              if (hasMatch) console.log('✅ DEBUG: Branch matched:', { id: b.organizationBranchId, name: b.name, orgId: b.organizationId })
-              return hasMatch
-            })
-          : allBranchesData
-        console.log('✅ Authorized branches:', authorizedBranches.length, 'branches')
-        console.log('🔍 DEBUG: Authorized branches list:', authorizedBranches.map(b => ({ id: b.organizationBranchId, name: b.name, orgId: b.organizationId })))
-
-        // Get unique organization IDs from authorized branches
-        const orgIds = new Set(authorizedBranches.map(b => b.organizationId).filter(Boolean))
-        console.log('✅ Organizations to show:', Array.from(orgIds))
-
-        // Load all organizations - but try to get only organizations that have authorized branches
-        // TODO: Backend should provide a new endpoint: /access/api/dropdowns/organizations-by-branches
-        // that returns only organizations containing the user's authorized branches.
-        // This would eliminate the need for manual filtering on the frontend.
-        let orgRes = null
+        // Load organizations filtered by user's scope values
+        // Send criteria directly to organizations endpoint for backend filtering
         let filteredOrgs = []
 
         try {
-          // Try the new endpoint first (if it exists)
-          const newEndpointRes = await api.get('/access/api/dropdowns/organizations-by-branches', {
+          console.log('📡 Loading organizations with scope filtering...')
+          console.log('📊 Using scopeValueIds:', scopeValueIds)
+
+          // Build FilterRequest with organizationBranchId criteria
+          // Backend will query organization-branches table to get authorized orgs
+          const filterRequest = {
+            criteria: scopeValueIds.length > 0 ? [{
+              field: 'organizationBranchId',
+              op: 'IN',
+              value: scopeValueIds,
+              dataType: 'UUID'
+            }] : [],
+            groups: []
+          }
+
+          console.log('📊 Filter request:', filterRequest)
+
+          // POST to organizations endpoint with filter criteria
+          // Backend queries: SELECT DISTINCT organization FROM organization_branches
+          //                 WHERE organization_branch_id IN (scopeValueIds)
+          //                 Then joins with organizations table to get org details
+          const orgsRes = await api.post('/access/api/dropdowns/organizations', filterRequest, {
             params: { lang: uiLang }
           })
-          orgRes = newEndpointRes
-          console.log('✅ Organizations from new endpoint:', newEndpointRes?.data?.length || 0)
+
+          filteredOrgs = orgsRes?.data || []
+          console.log('✅ Organizations loaded from backend filtering:', filteredOrgs.length)
+          console.log('🔍 Organization data:', filteredOrgs.map(o => ({
+            id: o.organizationId || o.id,
+            name: o.name
+          })))
+
+          if (filteredOrgs.length === 0 && scopeValueIds.length > 0) {
+            console.warn('⚠️ No organizations found for user scopes')
+          }
         } catch (err) {
-          console.log('⚠️ New endpoint not available, falling back to manual filtering...')
-          // Fallback: load all organizations and filter manually
+          console.error('Failed to load organizations with scope filtering:', err)
+          // Fallback: Try GET endpoint without filtering
           try {
-            const allOrgsRes = await api.get('/access/api/dropdowns/organizations', {
+            console.log('📡 Falling back to GET endpoint without filtering...')
+            const fallbackRes = await api.get('/access/api/dropdowns/organizations', {
               params: { lang: uiLang }
             })
-            orgRes = allOrgsRes
-
-            console.log('✅ All organizations loaded:', allOrgsRes?.data?.length || 0)
-            console.log('🔍 DEBUG: Organizations from API:', allOrgsRes?.data?.map(o => ({ id: o.organizationId || o.id, name: o.name })))
-
-            // Filter organizations to only show those with authorized branches
-            filteredOrgs = (allOrgsRes?.data || []).filter(org => {
-              const orgId = org.organizationId || org.id || org.value
-              const hasMatch = orgIds.has(orgId)
-              console.log(`🔍 DEBUG: Checking org "${org.name}" (id: ${orgId}): ${hasMatch ? '✅ MATCH' : '❌ NO MATCH'}`)
-              return hasMatch
-            })
-          } catch (innerErr) {
-            console.error('Failed to load organizations:', innerErr)
-            // If even this fails, create virtual orgs from authorized branches
-            const orgMap = new Map()
-            authorizedBranches.forEach(branch => {
-              if (!orgMap.has(branch.organizationId)) {
-                orgMap.set(branch.organizationId, {
-                  id: branch.organizationId,
-                  organizationId: branch.organizationId,
-                  name: `Organization ${branch.organizationId.substring(0, 8)}`
-                })
-              }
-            })
-            filteredOrgs = Array.from(orgMap.values())
-            console.log('✅ Virtual organizations created from branches:', filteredOrgs)
+            filteredOrgs = fallbackRes?.data || []
+            console.log('⚠️ Using unfiltered organizations (fallback):', filteredOrgs.length)
+          } catch (fallbackErr) {
+            console.error('Fallback also failed:', fallbackErr)
+            toast.error('Failed to load organizations')
+            filteredOrgs = []
           }
-        }
-
-        if (filteredOrgs.length === 0 && orgRes?.data) {
-          // If we didn't filter from new endpoint, filter from old one
-          filteredOrgs = (orgRes?.data || []).filter(org => {
-            const orgId = org.organizationId || org.id || org.value
-            return orgIds.has(orgId)
-          })
         }
 
         console.log('✅ Final filtered organizations:', filteredOrgs.length, filteredOrgs.map(o => ({ id: o.organizationId || o.id, name: o.name })))
@@ -218,43 +189,85 @@ export default function ScheduleFormModal({
       try {
         setLoadingBranches(true)
 
-        // Get user's authorized branch IDs from permissions
+        // Extract user's authorized branch IDs from permissions
         let sectionPerms = getSectionPermissions('Appointment Schedule Mangement', 'Appointments')
+        console.log('🔍 Branch Loading: sectionPerms:', sectionPerms)
 
         // If no actions found, try without system name
         if (!sectionPerms.actions || sectionPerms.actions.length === 0) {
           sectionPerms = getSectionPermissions('Appointment Schedule Mangement')
         }
 
-        const authorizedBranchIds = new Set()
+        const scopeValueIds = []
+        let systemSectionActionId = null
 
         sectionPerms.actions?.forEach(action => {
+          if (!systemSectionActionId && action.systemSectionActionId) {
+            systemSectionActionId = action.systemSectionActionId
+          }
           action.scopes?.forEach(scope => {
             if (scope.effect === 'ALLOW' && scope.scopeValueId) {
-              authorizedBranchIds.add(scope.scopeValueId)
+              scopeValueIds.push(scope.scopeValueId)
             }
           })
         })
 
-        // Load branches for the selected organization
-        const res = await api.get('/access/api/cascade-dropdowns/access.organization-branches-by-organization', {
-          params: {
-            organizationId: form.organizationId,
-            lang: uiLang
-          }
-        })
+        console.log('🔍 Branch Loading: scopeValueIds:', scopeValueIds, 'systemSectionActionId:', systemSectionActionId)
 
-        // Filter branches by authorized IDs
-        const allBranchesForOrg = res?.data || []
-        const filteredBranches = authorizedBranchIds.size > 0
-          ? allBranchesForOrg.filter(b => authorizedBranchIds.has(b.organizationBranchId || b.id || b.value))
-          : allBranchesForOrg
+        // Load branches for the selected organization with scope filtering
+        // Apply scope restrictions to show only authorized branches for this org
+        let filteredBranches = []
+
+        try {
+          console.log('📡 Loading branches for org:', form.organizationId)
+          console.log('📊 Using scopeValueIds:', scopeValueIds)
+
+          // Load all branches for this organization first
+          const branchesRes = await api.get('/access/api/cascade-dropdowns/access.organization-branches-by-organization', {
+            params: {
+              organizationId: form.organizationId,
+              lang: uiLang
+            }
+          })
+
+          const allBranchesForOrg = branchesRes?.data || []
+          console.log('✅ All branches loaded for org:', allBranchesForOrg.length)
+          console.log('🔍 All branch IDs:', allBranchesForOrg.map(b => ({ id: b.organizationBranchId || b.id, name: b.name })))
+
+          // Filter branches by user's authorized scope values
+          // Only show branches that user has permission to access (from JWT scopes)
+          if (scopeValueIds.length > 0) {
+            const authorizedBranchIds = new Set(scopeValueIds)
+            console.log('🔍 Authorized branch IDs (from user scopes):', Array.from(authorizedBranchIds))
+
+            filteredBranches = allBranchesForOrg.filter(b => {
+              const branchId = b.organizationBranchId || b.id || b.value
+              const isAuthorized = authorizedBranchIds.has(branchId)
+              if (isAuthorized) {
+                console.log('✅ Branch authorized:', { id: branchId, name: b.name })
+              } else {
+                console.log('❌ Branch NOT authorized:', { id: branchId, name: b.name })
+              }
+              return isAuthorized
+            })
+            console.log('✅ Final filtered branches for org:', filteredBranches.length)
+          } else {
+            // If user has no specific branch scopes, show all branches for org
+            console.log('⚠️ User has no specific branch scopes, showing all branches')
+            filteredBranches = allBranchesForOrg
+          }
+        } catch (err) {
+          console.error('Failed to load branches:', err)
+          toast.error('Failed to load branches')
+          filteredBranches = []
+        }
 
         const options = filteredBranches.map((item) => ({
           value: item.organizationBranchId || item.id || item.value,
           label: item.name || item.label || item.branchName || 'Unknown',
         }))
 
+        console.log('✅ Branch options:', options)
         setOrgBranches(options)
         // Reset branch selection when organization changes
         setForm(prev => ({ ...prev, organizationBranchId: '' }))

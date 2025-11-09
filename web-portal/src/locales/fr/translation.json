@@ -21,7 +21,10 @@
     "cms": "Système de Gestion de Contenu",
     "home": "Accueil",
     "logout": "Déconnexion",
-    "welcome": "Bienvenue, {{name}}"
+    "welcome": "Bienvenue, {{name}}",
+    "logoutConfirm": "Voulez-vous vous déconnecter ?",
+    "logoutHint": "Vous pourrez vous reconnecter à tout moment.",
+    "logoutAction": "Oui, me déconnecter"
   },
   "cms": {
     "badge": "Gestion de Contenu",
@@ -101,6 +104,7 @@
     "language_ar": "Arabe",
     "language_fr": "Français",
     "language_de": "Allemand",
+    "language_ku": "Kurde",
     "firstNameRequired": "Le prénom est obligatoire.",
     "surnameRequired": "Le nom de famille est obligatoire.",
     "passwordMismatch": "Les mots de passe ne correspondent pas.",
@@ -125,6 +129,11 @@
     "terms": "Conditions d'utilisation",
     "privacy": "Politique de confidentialité",
     "securityNote": "Protégé par une sécurité de niveau entreprise"
+  },
+  "session": {
+    "warning": "Toujours là ? Nous vous déconnecterons dans {{minutes}} minute(s) pour inactivité.",
+    "extend": "Rester connecté(e)",
+    "timeout": "Vous avez été déconnecté(e) pour cause d’inactivité."
   }
 }
 

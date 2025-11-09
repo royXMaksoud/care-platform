@@ -1,0 +1,41 @@
+{
+	"folders": [
+		{
+			"path": "web-portal"
+		},
+		{
+			"path": "access-management-service"
+		},
+		{
+			"path": "auth-service/auth-service"
+		},
+		{
+			"path": "service-registry"
+		},
+		{
+			"path": "config-server"
+		},
+		{
+			"path": "gateway-service"
+		},
+		{
+			"path": "appointment-service"
+		},
+		{
+			"path": "care-mobile-app"
+		},
+		{
+			"path": "K8S"
+		},
+		{
+			"path": "data-analysis-service"
+		},
+		{
+			"path": "shared-libs/core-shared-lib/core-shared-lib"
+		}
+	],
+	"settings": {
+		"java.compile.nullAnalysis.mode": "automatic",
+		"java.configuration.updateBuildConfiguration": "interactive"
+	}
+}

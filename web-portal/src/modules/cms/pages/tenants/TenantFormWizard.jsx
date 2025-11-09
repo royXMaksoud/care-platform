@@ -11,6 +11,7 @@ import {
   TextInput,
   Select,
   Textarea,
+  NumberInput,
   Loader,
   Paper,
   Title,
@@ -18,6 +19,9 @@ import {
   Divider,
   Badge,
   Box,
+  FileInput,
+  Image,
+  CloseButton,
 } from '@mantine/core'
 
 const STEPS = [
@@ -52,6 +56,11 @@ export default function TenantFormWizard({ open, onClose, onSuccess, initialData
     focalPointPhone: initialData?.focalPointPhone || '',
     address: initialData?.address || '',
     comment: initialData?.comment || '',
+    sessionTimeoutMinutes:
+      typeof initialData?.sessionTimeoutMinutes === 'number'
+        ? initialData.sessionTimeoutMinutes
+        : 30,
+    tenantLogo: initialData?.tenantLogo || '',
   })
 
   useEffect(() => {
@@ -97,7 +106,38 @@ export default function TenantFormWizard({ open, onClose, onSuccess, initialData
   }
 
   const handleInputChange = (field, value) => {
-    setFormData((prev) => ({ ...prev, [field]: value ?? '' }))
+    setFormData((prev) => {
+      if (field === 'sessionTimeoutMinutes') {
+        if (value === '' || value === null || Number.isNaN(value)) {
+          return { ...prev, [field]: '' }
+        }
+        return { ...prev, [field]: Number(value) }
+      }
+      return { ...prev, [field]: value ?? '' }
+    })
+  }
+
+  const handleLogoUpload = (file) => {
+    if (!file) {
+      setFormData((prev) => ({ ...prev, tenantLogo: '' }))
+      return
+    }
+
+    if (file.size > 800 * 1024) {
+      toast.error('Logo should be smaller than 800KB')
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = () => {
+      const base64 = reader.result
+      setFormData((prev) => ({ ...prev, tenantLogo: base64 }))
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleLogoRemove = () => {
+    setFormData((prev) => ({ ...prev, tenantLogo: '' }))
   }
 
   const validateStep = (stepIndex) => {
@@ -113,6 +153,10 @@ export default function TenantFormWizard({ open, onClose, onSuccess, initialData
         }
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
           toast.error('Please enter a valid email address')
+          return false
+        }
+        if (!formData.sessionTimeoutMinutes || Number(formData.sessionTimeoutMinutes) <= 0) {
+          toast.error('Session timeout must be at least 1 minute')
           return false
         }
         return true
@@ -179,6 +223,8 @@ export default function TenantFormWizard({ open, onClose, onSuccess, initialData
         focalPointPhone: formData.focalPointPhone?.trim() || null,
         address: formData.address?.trim() || null,
         comment: formData.comment?.trim() || null,
+        sessionTimeoutMinutes: Number(formData.sessionTimeoutMinutes) || 30,
+        tenantLogo: formData.tenantLogo || null,
         isActive: true,
       }
 
@@ -230,6 +276,14 @@ export default function TenantFormWizard({ open, onClose, onSuccess, initialData
       { label: 'Subscription Plan', value: getPlanName(formData.subscriptionPlanId) },
       { label: 'Billing Currency', value: getCurrencyName(formData.billingCurrencyId) },
       { label: 'Billing Cycle', value: getCycleName(formData.billingCycleId) },
+      {
+        label: 'Session Timeout (min)',
+        value: formData.sessionTimeoutMinutes ? `${formData.sessionTimeoutMinutes} min` : '-',
+      },
+      {
+        label: 'Tenant Logo',
+        value: formData.tenantLogo ? 'Logo uploaded' : '—',
+      },
       { label: 'Focal Point', value: formData.focalPointName },
       { label: 'Phone', value: formData.focalPointPhone },
       { label: 'Address', value: formData.address },
@@ -276,6 +330,60 @@ export default function TenantFormWizard({ open, onClose, onSuccess, initialData
                 value={formData.email}
                 onChange={(event) => handleInputChange('email', event.currentTarget.value)}
               />
+              <NumberInput
+                label="Session timeout (minutes)"
+                min={1}
+                value={formData.sessionTimeoutMinutes}
+                onChange={(value) => handleInputChange('sessionTimeoutMinutes', value)}
+                description="Inactivity threshold before automatic logout."
+                required
+              />
+              <Stack spacing={8}>
+                <FileInput
+                  label="Tenant logo"
+                  placeholder="Upload logo (PNG, JPG, SVG)"
+                  accept="image/png,image/jpeg,image/svg+xml"
+                  onChange={handleLogoUpload}
+                  value={null}
+                  clearable
+                />
+                <Text size="xs" color="dimmed">
+                  This logo appears in the portal header and on exported invoices.
+                </Text>
+                {formData.tenantLogo && (
+                  <Group spacing="sm" align="center">
+                    <Box
+                      style={{
+                        position: 'relative',
+                        width: 80,
+                        height: 80,
+                      }}
+                    >
+                      <Image
+                        src={formData.tenantLogo}
+                        alt="Tenant logo preview"
+                        radius="md"
+                        withPlaceholder
+                        width={80}
+                        height={80}
+                        fit="contain"
+                        bg="gray.0"
+                      />
+                      <CloseButton
+                        size="sm"
+                        variant="filled"
+                        color="red"
+                        title="Remove logo"
+                        onClick={handleLogoRemove}
+                        style={{ position: 'absolute', top: 4, right: 4 }}
+                      />
+                    </Box>
+                    <Text size="xs" color="dimmed">
+                      Logo attached
+                    </Text>
+                  </Group>
+                )}
+              </Stack>
             </Stack>
           </Stack>
         )

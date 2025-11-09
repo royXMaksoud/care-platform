@@ -14,7 +14,11 @@ export async function loginApi(email, password, language = 'en') {
     err.response = { status: 500 }
     throw err
   }
-  return { token }
+  return { 
+    token,
+    sessionTimeoutMinutes: data?.sessionTimeoutMinutes ?? null,
+    tenantLogo: data?.tenantLogo ?? null
+  }
 }
 
 // POST /auth/register -> { token }

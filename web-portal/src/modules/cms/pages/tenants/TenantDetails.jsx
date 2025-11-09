@@ -18,6 +18,7 @@ export default function TenantDetailsPage() {
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
   const [formData, setFormData] = useState({})
+  const [logoUploading, setLogoUploading] = useState(false)
 
   // Get permissions for Tenants and Subscriptions
   // Tenants: Section "Tenants" under System "Access Management"
@@ -65,6 +66,7 @@ export default function TenantDetailsPage() {
       const { data } = await api.get(`/access/api/v1/tenants/${tenantId}`)
       setTenant(data)
       setFormData(data)
+      setLogoUploading(false)
     } catch (err) {
       toast.error('Failed to load tenant details')
       navigate('/cms/tenants')
@@ -90,6 +92,8 @@ export default function TenantDetailsPage() {
         focalPointPhone: formData.focalPointPhone || null,
         address: formData.address || null,
         comment: formData.comment || null,
+        sessionTimeoutMinutes: Number(formData.sessionTimeoutMinutes) || 30,
+        tenantLogo: formData.tenantLogo || null,
         isActive: true, // ✅ Always TRUE - cannot be deactivated
         rowVersion: formData.rowVersion,
       }
@@ -104,6 +108,37 @@ export default function TenantDetailsPage() {
       console.error('❌ Failed to update tenant:', err.response?.data || err.message)
       toast.error(err?.response?.data?.message || 'Failed to update tenant')
     }
+  }
+
+  const handleLogoUpload = async (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    if (file.size > 800 * 1024) {
+      toast.error('Logo should be smaller than 800KB')
+      return
+    }
+    setLogoUploading(true)
+    try {
+      const reader = new FileReader()
+      reader.onload = () => {
+        const base64 = reader.result
+        setFormData((prev) => ({ ...prev, tenantLogo: base64 }))
+        setLogoUploading(false)
+      }
+      reader.onerror = () => {
+        setLogoUploading(false)
+        toast.error('Failed to read logo file')
+      }
+      reader.readAsDataURL(file)
+    } catch (err) {
+      setLogoUploading(false)
+      toast.error('Failed to load logo file')
+    }
+  }
+
+  const handleLogoRemove = () => {
+    setFormData((prev) => ({ ...prev, tenantLogo: null }))
+    setLogoUploading(false)
   }
 
   const subscriptionColumns = [
@@ -186,6 +221,15 @@ export default function TenantDetailsPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
+              {tenant.tenantLogo && (
+                <div className="h-12 w-12 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm flex items-center justify-center">
+                  <img
+                    src={tenant.tenantLogo}
+                    alt={`${tenant.name} logo`}
+                    className="h-full w-full object-contain"
+                  />
+                </div>
+              )}
               <div>
                 <h1 className="text-2xl font-bold text-gray-800">{tenant.name}</h1>
                 <p className="text-sm text-gray-500">{tenant.email}</p>
@@ -350,6 +394,60 @@ export default function TenantDetailsPage() {
                     editValue={formData.countryId}
                     codeTableId={CODE_TABLE_IDS.COUNTRY}
                   />
+                  <InfoField
+                    label="Session Timeout (minutes)"
+                    value={tenant.sessionTimeoutMinutes ? `${tenant.sessionTimeoutMinutes} min` : '-'}
+                    editing={editing}
+                    onChange={(val) =>
+                      setFormData({
+                        ...formData,
+                        sessionTimeoutMinutes: val === '' ? '' : Number(val),
+                      })
+                    }
+                    editValue={formData.sessionTimeoutMinutes ?? ''}
+                    type="number"
+                  />
+                  <div className="md:col-span-2 flex flex-col gap-2">
+                    <label className="text-sm font-medium text-gray-700">Tenant Logo</label>
+                    {editing ? (
+                      <div className="flex flex-wrap items-center gap-4">
+                        <input
+                          type="file"
+                          accept="image/png,image/jpeg,image/svg+xml"
+                          onChange={handleLogoUpload}
+                          className="text-sm text-gray-600"
+                        />
+                        {logoUploading && <span className="text-xs text-gray-500">Loading preview…</span>}
+                        {formData.tenantLogo && (
+                          <div className="relative h-16 w-16 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+                            <img
+                              src={formData.tenantLogo}
+                              alt="Tenant logo preview"
+                              className="h-full w-full object-contain"
+                            />
+                            <button
+                              type="button"
+                              onClick={handleLogoRemove}
+                              className="absolute top-1 right-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-gray-600 shadow hover:bg-red-50 hover:text-red-600"
+                              title="Remove logo"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ) : formData.tenantLogo ? (
+                      <div className="h-16 w-16 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+                        <img
+                          src={formData.tenantLogo}
+                          alt={`${tenant.name} logo`}
+                          className="h-full w-full object-contain"
+                        />
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500">No logo uploaded.</p>
+                    )}
+                  </div>
                   <InfoField 
                     label="Focal Point Name" 
                     value={tenant.focalPointName}

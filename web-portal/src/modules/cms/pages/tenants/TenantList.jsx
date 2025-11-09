@@ -43,6 +43,35 @@ const tenantColumns = [
     cell: (info) => info.getValue() || '-' 
   },
   {
+    id: 'tenantLogo',
+    accessorKey: 'tenantLogo',
+    header: 'Logo',
+    cell: (info) => {
+      const value = info.getValue()
+      if (!value) return '—'
+      return (
+        <div className="flex items-center justify-center">
+          <img
+            src={value}
+            alt="Tenant logo"
+            className="h-8 w-8 rounded-full border border-slate-200 bg-white object-contain p-1"
+          />
+        </div>
+      )
+    },
+    enableSorting: false,
+  },
+  {
+    id: 'sessionTimeoutMinutes',
+    accessorKey: 'sessionTimeoutMinutes',
+    header: 'Session Timeout',
+    cell: (info) => {
+      const value = info.getValue()
+      return value ? `${value} min` : '-'
+    },
+    meta: { type: 'number' },
+  },
+  {
     id: 'isActive',
     accessorKey: 'isActive',
     header: 'Status',
@@ -78,6 +107,8 @@ const tenantFields = [
   { type: 'text', name: 'focalPointPhone', label: 'Focal Point Phone' },
   { type: 'textarea', name: 'address', label: 'Address', rows: 2 },
   { type: 'textarea', name: 'comment', label: 'Comments', rows: 2 },
+  { type: 'text', name: 'tenantLogo', label: 'Tenant Logo (Base64 or URL)' },
+  { type: 'number', name: 'sessionTimeoutMinutes', label: 'Session Timeout (minutes)', required: true, min: 1 },
   { type: 'checkbox', name: 'isActive', label: 'Active' },
 ]
 
@@ -209,6 +240,8 @@ export default function TenantListPage() {
           focalPointPhone: f.focalPointPhone?.trim() || null,
           address: f.address?.trim() || null,
           comment: f.comment?.trim() || null,
+          tenantLogo: f.tenantLogo?.trim() || null,
+          sessionTimeoutMinutes: Number(f.sessionTimeoutMinutes) || 30,
           isActive: true, // ✅ Always TRUE for new records
         })}
         toUpdatePayload={(f, row) => ({
@@ -226,6 +259,8 @@ export default function TenantListPage() {
           focalPointPhone: f.focalPointPhone?.trim() || null,
           address: f.address?.trim() || null,
           comment: f.comment?.trim() || null,
+          tenantLogo: f.tenantLogo?.trim() || (row.tenantLogo || null),
+          sessionTimeoutMinutes: Number(f.sessionTimeoutMinutes) || 30,
           isActive: true, // ✅ Always TRUE - cannot be deactivated
           rowVersion: row.rowVersion,
         })}

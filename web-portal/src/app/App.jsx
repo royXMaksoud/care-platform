@@ -1,10 +1,10 @@
 import { Link, Routes, Route, Navigate } from 'react-router-dom'
-import { Button } from '@/components/ui/button'
-import { lazy, Suspense } from 'react'                  // NEW
+import { lazy, Suspense, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
+import { LogOut, Sparkles } from 'lucide-react'
+import { toast } from 'sonner'
 
-import { Card } from '@/components/ui/card'
 import ShellSwitcher from '@/layout/ShellSwitcher'
 import HomeCare from '@/pages/home/HomeCare'
 // lazy-load CMS module
@@ -17,9 +17,11 @@ const AppointmentRoutes = lazy(() => import('@/modules/appointment/routes'))
 
 
 import { useAuth } from '@/auth/useAuth'
+import authStorage from '@/auth/authStorage'
 import { api } from '@/lib/axios'
 import { useMyModules } from '@/hooks/useMyModules'
 import LanguageSwitcher from '@/shared/components/LanguageSwitcher'
+import SessionTimeoutWatcher from '@/shared/components/SessionTimeoutWatcher'
 
 import '@/index.css'
 
@@ -37,6 +39,9 @@ function Placeholder({ title }) {
 export default function App() {
   const { t } = useTranslation()
   const { logout, claims } = useAuth()
+  const storedUser = authStorage.getUser()
+  const sessionTimeoutMinutes = storedUser?.sessionTimeoutMinutes ?? null
+  const tenantLogo = storedUser?.tenantLogo ?? null
 
   const userId =
     claims?.userId ||
@@ -56,7 +61,7 @@ export default function App() {
     staleTime: 5 * 60 * 1000,
   })
 
-  const currentUserName = (() => {
+  const currentUserName = useMemo(() => {
     if (!currentUser) return ''
     if (currentUser.fullName) return currentUser.fullName
     const nameParts = [
@@ -66,7 +71,7 @@ export default function App() {
     ].filter(Boolean)
     if (nameParts.length) return nameParts.join(' ')
     return currentUser.emailAddress || ''
-  })()
+  }, [currentUser])
 
   const fallbackName =
     claims?.fullName ||
@@ -77,6 +82,16 @@ export default function App() {
     ''
 
   const displayName = currentUserName || fallbackName
+  const userInitials = useMemo(() => {
+    if (!displayName) return ''
+    return displayName
+      .split(' ')
+      .filter(Boolean)
+      .map((part) => part[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase()
+  }, [displayName])
   
   const { modules, isLoading, isError } = useMyModules()
   
@@ -84,47 +99,86 @@ export default function App() {
   if (isLoading) return <div className="p-6">Loading…</div>
   if (isError) return <div className="p-6 text-red-600">Failed to load permissions.</div>
 
+  const handleLogout = () => {
+    toast.warning(t('nav.logoutConfirm'), {
+      description: t('nav.logoutHint'),
+      duration: 6000,
+      action: {
+        label: t('nav.logoutAction'),
+        onClick: () => logout(),
+      },
+    })
+  }
+
   return (
-    
     <div className="min-h-dvh bg-background text-foreground">
+      <SessionTimeoutWatcher timeoutMinutes={sessionTimeoutMinutes} onExpire={logout} />
       {/* Top bar */}
-      <header className="sticky top-0 z-10 border-b bg-background/70 backdrop-blur">
-        <div className="mx-auto flex h-14 w-full max-w-7xl items-center justify-between px-4">
-          <div className="flex items-center gap-3">
+      <header className="sticky top-0 z-20 border-b border-slate-200 bg-gradient-to-r from-slate-100 via-white to-slate-100 text-slate-900 shadow-md">
+        <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 lg:px-6">
+          <div className="flex items-center gap-4">
             <Link
               to="/"
-              className="text-sm font-semibold text-foreground hover:text-foreground/80 transition-colors"
+              className="group flex items-center gap-2 rounded-full bg-white px-3.5 py-1.5 text-sm font-semibold text-slate-800 shadow-sm transition-all duration-300 hover:bg-slate-100 hover:-translate-y-0.5"
             >
-              {t('nav.portal')}
+              {tenantLogo ? (
+                <>
+                  <span className="inline-flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-white">
+                    <img
+                      src={tenantLogo}
+                      alt={t('nav.portal')}
+                      className="h-full w-full object-contain"
+                    />
+                  </span>
+                  <span className="sr-only">{t('nav.portal')}</span>
+                </>
+              ) : (
+                <>
+                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-200 text-slate-700">
+                    <Sparkles className="h-3.5 w-3.5" />
+                  </span>
+                  {t('nav.portal')}
+                </>
+              )}
             </Link>
             {displayName && (
-              <span className="text-xs text-muted-foreground">
+              <span className="hidden md:inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-600 shadow-sm">
+                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-200 text-slate-700 text-[0.65rem] font-semibold">
+                  {userInitials}
+                </span>
                 {t('nav.welcome', { name: displayName })}
               </span>
             )}
           </div>
-          <nav className="flex items-center gap-4">
+          <nav className="flex items-center gap-3">
             {modules.map((m, idx) => (
               <Link
                 key={m.path || `${m.name}-${idx}`}
                 to={m.path}
-                className="text-sm font-medium text-foreground/80 hover:text-foreground"
+                className="group relative text-sm font-medium text-slate-600 transition-all duration-200 hover:text-slate-900 hover:-translate-y-0.5"
               >
                 {m.name}
+                <span className="pointer-events-none absolute left-1/2 top-full h-0.5 w-0 bg-blue-500 transition-all duration-200 group-hover:left-0 group-hover:w-full" />
               </Link>
             ))}
             <Link
               to="/"
-              className="text-sm font-medium text-foreground/80 hover:text-foreground"
+              className="group relative text-sm font-medium text-slate-600 transition-all duration-200 hover:text-slate-900 hover:-translate-y-0.5"
             >
               {t('nav.home')}
+              <span className="pointer-events-none absolute left-1/2 top-full h-0.5 w-0 bg-blue-500 transition-all duration-200 group-hover:left-0 group-hover:w-full" />
             </Link>
 
             <LanguageSwitcher />
 
-            <Button variant="outline" size="sm" onClick={logout}>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-rose-500 to-rose-600 px-4 py-1.5 text-sm font-semibold text-white shadow-lg shadow-rose-400/40 transition-all duration-200 hover:from-rose-600 hover:to-rose-700 hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-rose-300 focus:ring-offset-2 focus:ring-offset-slate-100"
+            >
+              <LogOut className="h-4 w-4" />
               {t('nav.logout')}
-            </Button>
+            </button>
           </nav>
         </div>
       </header>

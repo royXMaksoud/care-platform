@@ -14,7 +14,14 @@
       "Bash(cp:*)",
       "Bash(tree:*)",
       "Bash(rm:*)",
-      "Bash(mvn clean install:*)"
+      "Bash(mvn clean install:*)",
+      "Bash(jar tf:*)",
+      "Bash(for service in \"reference-data-service\" \"gateway-service\" \"data-analysis-service\")",
+      "Bash(do if [ -d \"c:\\Java\\care\\Code$service\" ])",
+      "Bash(then echo \"Rebuilding $service...\" cd \"c:\\Java\\care\\Code$service\")",
+      "Bash(find:*)",
+      "Bash(mvn clean compile:*)",
+      "Bash(\"C:\\Java\\care\\Code\\shared-libs\\core-shared-lib\\core-shared-lib\")"
     ],
     "deny": [],
     "ask": []
