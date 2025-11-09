@@ -21,7 +21,11 @@
       "Bash(then echo \"Rebuilding $service...\" cd \"c:\\Java\\care\\Code$service\")",
       "Bash(find:*)",
       "Bash(mvn clean compile:*)",
-      "Bash(\"C:\\Java\\care\\Code\\shared-libs\\core-shared-lib\\core-shared-lib\")"
+      "Bash(\"C:\\Java\\care\\Code\\shared-libs\\core-shared-lib\\core-shared-lib\")",
+      "Bash(git rev-parse:*)",
+      "Bash(git update-index:*)",
+      "Bash(cat:*)",
+      "Bash(git config:*)"
     ],
     "deny": [],
     "ask": []
