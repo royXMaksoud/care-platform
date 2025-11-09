@@ -49,26 +49,23 @@ export default function ScheduleList() {
           const authorizedBranchIds = new Set()
 
           // Traverse permissions structure: systems -> sections -> actions -> scopes
+          // Extract ALL scopeValueIds from ALL sections (not just Schedule)
           if (permissionsData?.systems) {
             permissionsData.systems.forEach(system => {
               system.sections?.forEach(section => {
-                // Look for "Schedule" section (case-insensitive)
-                if (section.name?.toLowerCase().includes('schedule')) {
-                  section.actions?.forEach(action => {
-                    action.scopes?.forEach(scope => {
-                      // Only include ALLOW scopes with valid scopeValueId
-                      if (scope.effect === 'ALLOW' && scope.scopeValueId) {
-                        authorizedBranchIds.add(scope.scopeValueId)
-                      }
-                    })
+                section.actions?.forEach(action => {
+                  action.scopes?.forEach(scope => {
+                    // Only include ALLOW scopes with valid scopeValueId
+                    if (scope.effect === 'ALLOW' && scope.scopeValueId) {
+                      authorizedBranchIds.add(scope.scopeValueId)
+                    }
                   })
-                }
+                })
               })
             })
           }
 
           const branchIdArray = Array.from(authorizedBranchIds)
-          console.log('✅ DEBUG ScheduleList - Authorized branch IDs:', branchIdArray)
 
           if (branchIdArray.length > 0) {
             // Send branch IDs as fixed filter in POST body (will be merged with user filters)
@@ -82,14 +79,11 @@ export default function ScheduleList() {
             ])
           } else {
             setFixedFilters([])
-            console.log('⚠️ DEBUG ScheduleList - No authorized branch IDs found, no branch filter applied.')
           }
         } catch (err) {
-          console.error('Failed to load permissions:', err)
           setFixedFilters([])
         }
       } catch (err) {
-        console.error('Failed to load branches map:', err)
         setFixedFilters([])
       } finally {
         setIsReady(true)
@@ -230,12 +224,9 @@ export default function ScheduleList() {
 
 
   const handleTabChange = (tab) => {
-    console.log('handleTabChange called, tab:', tab, 'current activeTab:', activeTab)
     if (tab === activeTab) {
-      console.log('Tab unchanged, skipping update')
       return
     }
-    console.log('Updating activeTab from', activeTab, 'to', tab)
     setActiveTab(tab)
   }
 

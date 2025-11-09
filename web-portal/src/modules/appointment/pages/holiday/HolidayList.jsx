@@ -37,26 +37,23 @@ export default function HolidayList() {
           const authorizedBranchIds = new Set()
 
           // Traverse permissions structure: systems -> sections -> actions -> scopes
+          // Extract ALL scopeValueIds from ALL sections (not just Holiday)
           if (permissionsData?.systems) {
             permissionsData.systems.forEach(system => {
               system.sections?.forEach(section => {
-                // Look for "Holiday" section (case-insensitive)
-                if (section.name?.toLowerCase().includes('holiday')) {
-                  section.actions?.forEach(action => {
-                    action.scopes?.forEach(scope => {
-                      // Only include ALLOW scopes with valid scopeValueId
-                      if (scope.effect === 'ALLOW' && scope.scopeValueId) {
-                        authorizedBranchIds.add(scope.scopeValueId)
-                      }
-                    })
+                section.actions?.forEach(action => {
+                  action.scopes?.forEach(scope => {
+                    // Only include ALLOW scopes with valid scopeValueId
+                    if (scope.effect === 'ALLOW' && scope.scopeValueId) {
+                      authorizedBranchIds.add(scope.scopeValueId)
+                    }
                   })
-                }
+                })
               })
             })
           }
 
           const branchIdArray = Array.from(authorizedBranchIds)
-          console.log('✅ DEBUG HolidayList - Authorized branch IDs:', branchIdArray)
 
           if (branchIdArray.length > 0) {
             // Send branch IDs as fixed filter in POST body (will be merged with user filters)
@@ -70,14 +67,11 @@ export default function HolidayList() {
             ])
           } else {
             setFixedFilters([])
-            console.log('⚠️ DEBUG HolidayList - No authorized branch IDs found, no branch filter applied.')
           }
         } catch (err) {
-          console.error('Failed to load permissions:', err)
           setFixedFilters([])
         }
       } catch (err) {
-        console.error('Failed to load branches map:', err)
         setFixedFilters([])
       } finally {
         setIsReady(true)
@@ -218,15 +212,10 @@ export default function HolidayList() {
 
 
   const handleTabChange = (tab) => {
-    console.log('handleTabChange called, tab:', tab, 'current activeTab:', activeTab)
     if (tab === activeTab) {
-      console.log('Tab unchanged, skipping update')
       return
     }
-    console.log('Updating activeTab from', activeTab, 'to', tab)
     setActiveTab(tab)
-    // Don't navigate - we're using the same route, just switching tabs
-    // Navigation to non-existent route causes unmount/remount issues
   }
 
   return (
