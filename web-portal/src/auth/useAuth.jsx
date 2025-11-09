@@ -17,13 +17,19 @@ export function useAuth() {
       if (!token) throw new Error('No token in response')
       authStorage.setToken(token)
 
+      // Store session timeout and tenant logo
+      const timeoutMinutes = Number(sessionTimeoutMinutes) || 30
+      authStorage.setSessionTimeoutMinutes(timeoutMinutes)
+      authStorage.setSessionStartTime(Date.now())
+      authStorage.setTenantLogo(tenantLogo || null)
+
       // Optional: you can pre-read claims and store a lightweight user object
       const user = {
         id: getUserIdFromToken(token),
         type: getUserTypeFromToken(token),
         email: getEmailFromToken(token),
         lang: getLangFromToken(token),
-        sessionTimeoutMinutes: Number(sessionTimeoutMinutes) || 30,
+        sessionTimeoutMinutes: timeoutMinutes,
         tenantLogo: tenantLogo || null,
       }
       authStorage.setUser(user)

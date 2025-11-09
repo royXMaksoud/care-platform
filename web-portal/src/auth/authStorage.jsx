@@ -3,6 +3,9 @@ const USER_KEY  = 'portal:user'
 const USER_ID_KEY = 'portal:user_id'
 const PERM_ETAG_KEY  = 'portal:perm_etag'
 const PERM_CACHE_KEY = 'portal:perm_cache'
+const TENANT_LOGO_KEY = 'portal:tenant_logo'
+const SESSION_TIMEOUT_KEY = 'portal:session_timeout_minutes'
+const SESSION_START_TIME_KEY = 'portal:session_start_time'
 
 const authStorage = {
   getToken: () => localStorage.getItem(TOKEN_KEY),
@@ -26,6 +29,48 @@ const authStorage = {
   setPermsCache: (d) => localStorage.setItem(PERM_CACHE_KEY, JSON.stringify(d)),
   clearPermsCache: () => localStorage.removeItem(PERM_CACHE_KEY),
 
+  // Tenant Logo
+  getTenantLogo: () => localStorage.getItem(TENANT_LOGO_KEY),
+  setTenantLogo: (logo) => {
+    if (logo) {
+      localStorage.setItem(TENANT_LOGO_KEY, logo)
+    } else {
+      localStorage.removeItem(TENANT_LOGO_KEY)
+    }
+  },
+  clearTenantLogo: () => localStorage.removeItem(TENANT_LOGO_KEY),
+
+  // Session Timeout
+  getSessionTimeoutMinutes: () => {
+    const timeout = localStorage.getItem(SESSION_TIMEOUT_KEY)
+    return timeout ? Number(timeout) : 30
+  },
+  setSessionTimeoutMinutes: (minutes) => {
+    if (minutes) {
+      localStorage.setItem(SESSION_TIMEOUT_KEY, String(minutes))
+    }
+  },
+  clearSessionTimeout: () => localStorage.removeItem(SESSION_TIMEOUT_KEY),
+
+  // Session Start Time (for tracking idle time)
+  getSessionStartTime: () => {
+    const time = localStorage.getItem(SESSION_START_TIME_KEY)
+    return time ? Number(time) : null
+  },
+  setSessionStartTime: (time) => localStorage.setItem(SESSION_START_TIME_KEY, String(time)),
+  clearSessionStartTime: () => localStorage.removeItem(SESSION_START_TIME_KEY),
+
+  // Check if session has expired
+  isSessionExpired: () => {
+    const startTime = authStorage.getSessionStartTime()
+    const timeoutMinutes = authStorage.getSessionTimeoutMinutes()
+    if (!startTime || !timeoutMinutes) return false
+
+    const now = Date.now()
+    const elapsedMinutes = (now - startTime) / (1000 * 60)
+    return elapsedMinutes >= timeoutMinutes
+  },
+
   // Convenience method for OAuth callback to store permissions directly
   setPermissions: (permissions) => {
     authStorage.setPermsCache(permissions)
@@ -41,6 +86,9 @@ const authStorage = {
     localStorage.removeItem(USER_ID_KEY)
     localStorage.removeItem(PERM_ETAG_KEY)
     localStorage.removeItem(PERM_CACHE_KEY)
+    localStorage.removeItem(TENANT_LOGO_KEY)
+    localStorage.removeItem(SESSION_TIMEOUT_KEY)
+    localStorage.removeItem(SESSION_START_TIME_KEY)
   }
 }
 

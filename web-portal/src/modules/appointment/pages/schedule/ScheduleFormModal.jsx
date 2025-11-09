@@ -101,33 +101,27 @@ export default function ScheduleFormModal({
         console.log('✅ DEBUG: systemSectionActionId:', systemSectionActionId)
 
         // Load organizations filtered by user's scope values
-        // Send criteria directly to organizations endpoint for backend filtering
+        // GET request with scopeValueIds as query parameter
         let filteredOrgs = []
 
         try {
           console.log('📡 Loading organizations with scope filtering...')
           console.log('📊 Using scopeValueIds:', scopeValueIds)
 
-          // Build FilterRequest with organizationBranchId criteria
-          // Backend will query organization-branches table to get authorized orgs
-          const filterRequest = {
-            criteria: scopeValueIds.length > 0 ? [{
-              field: 'organizationBranchId',
-              op: 'IN',
-              value: scopeValueIds,
-              dataType: 'UUID'
-            }] : [],
-            groups: []
+          // Build query parameters
+          const params = { lang: uiLang }
+          if (scopeValueIds.length > 0) {
+            params.scopeValueIds = scopeValueIds.join(',')
           }
 
-          console.log('📊 Filter request:', filterRequest)
+          console.log('📊 Query params:', params)
 
-          // POST to organizations endpoint with filter criteria
+          // GET organizations endpoint with scope filtering
           // Backend queries: SELECT DISTINCT organization FROM organization_branches
           //                 WHERE organization_branch_id IN (scopeValueIds)
           //                 Then joins with organizations table to get org details
-          const orgsRes = await api.post('/access/api/dropdowns/organizations', filterRequest, {
-            params: { lang: uiLang }
+          const orgsRes = await api.get('/access/api/dropdowns/organizations', {
+            params: params
           })
 
           filteredOrgs = orgsRes?.data || []
@@ -142,19 +136,8 @@ export default function ScheduleFormModal({
           }
         } catch (err) {
           console.error('Failed to load organizations with scope filtering:', err)
-          // Fallback: Try GET endpoint without filtering
-          try {
-            console.log('📡 Falling back to GET endpoint without filtering...')
-            const fallbackRes = await api.get('/access/api/dropdowns/organizations', {
-              params: { lang: uiLang }
-            })
-            filteredOrgs = fallbackRes?.data || []
-            console.log('⚠️ Using unfiltered organizations (fallback):', filteredOrgs.length)
-          } catch (fallbackErr) {
-            console.error('Fallback also failed:', fallbackErr)
-            toast.error('Failed to load organizations')
-            filteredOrgs = []
-          }
+          toast.error('Failed to load organizations')
+          filteredOrgs = []
         }
 
         console.log('✅ Final filtered organizations:', filteredOrgs.length, filteredOrgs.map(o => ({ id: o.organizationId || o.id, name: o.name })))
