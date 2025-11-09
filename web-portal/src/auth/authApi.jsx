@@ -3,9 +3,17 @@ import { api } from '../shared/lib/axios'
 // POST /auth/login -> { token } or { accessToken }
 export async function loginApi(email, password, language = 'en') {
   const { data } = await api.post('/auth/login', { email, password, language })
+
+  console.log('🔐 Login API Response:', {
+    fullData: data,
+    token: data?.token || data?.accessToken,
+    sessionTimeoutMinutes: data?.sessionTimeoutMinutes,
+    tenantLogo: data?.tenantLogo,
+  })
+
   const token =
     data?.token ??
-    data?.accessToken ??   
+    data?.accessToken ??
     data?.jwt ??
     data?.access_token
 
@@ -14,7 +22,7 @@ export async function loginApi(email, password, language = 'en') {
     err.response = { status: 500 }
     throw err
   }
-  return { 
+  return {
     token,
     sessionTimeoutMinutes: data?.sessionTimeoutMinutes ?? null,
     tenantLogo: data?.tenantLogo ?? null

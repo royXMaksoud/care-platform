@@ -100,42 +100,32 @@ export default function ScheduleFormModal({
         console.log('✅ DEBUG: Final scopeValueIds:', scopeValueIds)
         console.log('✅ DEBUG: systemSectionActionId:', systemSectionActionId)
 
-        // Load organizations filtered by user's scope values
-        // GET request with scopeValueIds as query parameter
+        // Load organizations filtered by user's scope values from JWT
+        // Backend extracts scope values from JWT claims and filters automatically
         let filteredOrgs = []
 
         try {
-          console.log('📡 Loading organizations with scope filtering...')
-          console.log('📊 Using scopeValueIds:', scopeValueIds)
+          console.log('📡 Loading organizations (backend filters by JWT scopes)...')
+          console.log('📊 User scopeValueIds from permissions:', scopeValueIds)
 
-          // Build query parameters
-          const params = { lang: uiLang }
-          if (scopeValueIds.length > 0) {
-            params.scopeValueIds = scopeValueIds.join(',')
-          }
-
-          console.log('📊 Query params:', params)
-
-          // GET organizations endpoint with scope filtering
-          // Backend queries: SELECT DISTINCT organization FROM organization_branches
-          //                 WHERE organization_branch_id IN (scopeValueIds)
-          //                 Then joins with organizations table to get org details
+          // Simple GET request - backend extracts organizationBranchIds from JWT
+          // Same pattern as /organization-branches/filter endpoint
           const orgsRes = await api.get('/access/api/dropdowns/organizations', {
-            params: params
+            params: { lang: uiLang }
           })
 
           filteredOrgs = orgsRes?.data || []
-          console.log('✅ Organizations loaded from backend filtering:', filteredOrgs.length)
+          console.log('✅ Organizations loaded (filtered by JWT scopes on backend):', filteredOrgs.length)
           console.log('🔍 Organization data:', filteredOrgs.map(o => ({
             id: o.organizationId || o.id,
             name: o.name
           })))
 
-          if (filteredOrgs.length === 0 && scopeValueIds.length > 0) {
-            console.warn('⚠️ No organizations found for user scopes')
+          if (filteredOrgs.length === 0) {
+            console.warn('⚠️ No organizations found for user')
           }
         } catch (err) {
-          console.error('Failed to load organizations with scope filtering:', err)
+          console.error('Failed to load organizations:', err)
           toast.error('Failed to load organizations')
           filteredOrgs = []
         }

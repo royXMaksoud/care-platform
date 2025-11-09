@@ -34,8 +34,28 @@ export function useAuth() {
       }
       authStorage.setUser(user)
 
-      // Go home (ProtectedRoute will allow)
-      window.location.href = '/'
+      // Debug: log stored values
+      console.log('✅ Login successful', {
+        sessionTimeoutMinutes: timeoutMinutes,
+        tenantLogo: tenantLogo,
+        storedUser: authStorage.getUser(),
+        storedLogo: authStorage.getTenantLogo(),
+        storedTimeout: authStorage.getSessionTimeoutMinutes(),
+      })
+
+      // Small delay to ensure all data is written to localStorage
+      setTimeout(() => {
+        // Verify data was saved
+        const verify = {
+          userCheck: authStorage.getUser(),
+          logoCheck: authStorage.getTenantLogo(),
+          timeoutCheck: authStorage.getSessionTimeoutMinutes(),
+        }
+        console.log('✔️ Data verification before navigation:', verify)
+
+        // Go home (ProtectedRoute will allow)
+        window.location.href = '/'
+      }, 100)
     } finally {
       setLoading(false)
     }

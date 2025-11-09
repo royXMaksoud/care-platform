@@ -13,6 +13,11 @@ export default function SessionTimeoutWatcher({ timeoutMinutes, onExpire }) {
   const warningToastIdRef = useRef(null)
   const warningShownRef = useRef(false)
 
+  console.log('⏱️ SessionTimeoutWatcher initialized', {
+    timeoutMinutes,
+    isValid: timeoutMinutes && Number(timeoutMinutes) > 0,
+  })
+
   const dismissWarning = useCallback(() => {
     if (warningToastIdRef.current) {
       toast.dismiss(warningToastIdRef.current)
