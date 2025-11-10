@@ -132,11 +132,11 @@ export default function AppointmentDetails() {
             </div>
             <div className="ml-auto">
               <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
-                appointment.status === 'CONFIRMED' ? 'bg-green-100 text-green-800' : 
-                appointment.status === 'CANCELLED' ? 'bg-red-100 text-red-800' :
+                appointment.appointmentStatus === 'CONFIRMED' ? 'bg-green-100 text-green-800' : 
+                appointment.appointmentStatus === 'CANCELLED' ? 'bg-red-100 text-red-800' :
                 'bg-gray-100 text-gray-800'
               }`}>
-                {appointment.status || 'PENDING'}
+                {appointment.appointmentStatus || 'PENDING'}
               </span>
             </div>
           </div>
@@ -229,13 +229,15 @@ function AppointmentInfoTab({ appointment, branchesMap, beneficiariesMap, servic
       </div>
       
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Patient & Service</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Beneficiary & Service</h3>
         
         <div className="flex items-start gap-3">
           <User className="w-5 h-5 text-gray-400 mt-0.5" />
           <div>
-            <p className="text-xs text-gray-500">Patient</p>
-            <p className="font-medium">{beneficiariesMap[appointment.beneficiaryId] || '-'}</p>
+            <p className="text-xs text-gray-500">Beneficiary</p>
+            <p className="font-medium">
+              {beneficiariesMap[appointment.beneficiaryId] || appointment.beneficiaryName || '-'}
+            </p>
           </div>
         </div>
         
@@ -243,7 +245,9 @@ function AppointmentInfoTab({ appointment, branchesMap, beneficiariesMap, servic
           <FileText className="w-5 h-5 text-gray-400 mt-0.5" />
           <div>
             <p className="text-xs text-gray-500">Service</p>
-            <p className="font-medium">{serviceTypesMap[appointment.serviceTypeId] || '-'}</p>
+            <p className="font-medium">
+              {serviceTypesMap[appointment.serviceTypeId] || appointment.serviceTypeName || '-'}
+            </p>
           </div>
         </div>
       </div>
@@ -308,7 +312,7 @@ function AppointmentHistoryTab({ appointmentId }) {
                  <RefreshCw className="w-5 h-5 text-blue-600" />}
               </div>
               <div>
-                <p className="font-semibold text-gray-900">{item.status}</p>
+                <p className="font-semibold text-gray-900">{item.status || '-'}</p>
                 {item.changedAt && (
                   <p className="text-sm text-gray-600">
                     {new Date(item.changedAt).toLocaleString()}

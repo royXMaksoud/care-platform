@@ -1,0 +1,149 @@
+warning: in the working copy of 'web-portal/src/modules/appointment/pages/schedule/ScheduleFormModal.jsx', CRLF will be replaced by LF the next time Git touches it
+[1mdiff --git a/web-portal/src/modules/appointment/pages/schedule/ScheduleFormModal.jsx b/web-portal/src/modules/appointment/pages/schedule/ScheduleFormModal.jsx[m
+[1mindex d66ab8a..75289f0 100644[m
+[1m--- a/web-portal/src/modules/appointment/pages/schedule/ScheduleFormModal.jsx[m
+[1m+++ b/web-portal/src/modules/appointment/pages/schedule/ScheduleFormModal.jsx[m
+[36m@@ -46,215 +46,118 @@[m [mexport default function ScheduleFormModal({[m
+     offDays: [],[m
+   })[m
+   [m
+[32m+[m[32m  const [allOrganizationBranches, setAllOrganizationBranches] = useState([])[m
+   const [organizations, setOrganizations] = useState([])[m
+   const [orgBranches, setOrgBranches] = useState([])[m
+   const [loadingOrganizations, setLoadingOrganizations] = useState(false)[m
+[31m-  const [loadingBranches, setLoadingBranches] = useState(false)[m
+ [m
+   const uiLang = (typeof navigator !== 'undefined' && (navigator.language || '').startsWith('ar')) ? 'ar' : 'en'[m
+   const { getSectionPermissions, permissionsData } = usePermissionCheck()[m
+ [m
+[31m-  // Load organizations based on user permissions[m
+   useEffect(() => {[m
+     if (!open) return[m
+ [m
+[31m-    const loadOrganizations = async () => {[m
+[31m-      try {[m
+[31m-        setLoadingOrganizations(true)[m
+[31m-[m
+[31m-        // Extract user's permission scopes from permissions context[m
+[31m-        let sectionPerms = getSectionPermissions('Appointment Schedule Mangement', 'Appointments')[m
+[31m-        console.log('🔍 DEBUG: sectionPerms (with system):', sectionPerms)[m
+[31m-[m
+[31m-        // If no actions found, try without system name[m
+[31m-        if (!sectionPerms.actions || sectionPerms.actions.length === 0) {[m
+[31m-          console.log('🔍 DEBUG: No actions with system name, trying without...')[m
+[31m-          sectionPerms = getSectionPermissions('Appointment Schedule Mangement')[m
+[31m-          console.log('🔍 DEBUG: sectionPerms (without system):', sectionPerms)[m
+[31m-        }[m
+[31m-[m
+[31m-        console.log('🔍 DEBUG: Final sectionPerms.actions:', sectionPerms.actions)[m
+[31m-[m
+[31m-        // Extract scope values from permission actions[m
+[31m-        const scopeValueIds = [][m
+[31m-        let systemSectionActionId = null[m
+[31m-[m
+[31m-        sectionPerms.actions?.forEach((action, idx) => {[m
+[31m-          console.log(`🔍 DEBUG: action[${idx}]:`, action)[m
+[31m-          console.log(`🔍 DEBUG: action[${idx}].scopes:`, action.scopes)[m
+[32m+[m[32m    const extractScopeValueIds = () => {[m
+[32m+[m[32m      let sectionPerms = getSectionPermissions('Appointment Schedule Mangement', 'Appointments')[m
+[32m+[m[32m      if (!sectionPerms?.actions?.length && !sectionPerms?.allActions?.length) {[m
+[32m+[m[32m        sectionPerms = getSectionPermissions('Appointment Schedule Mangement')[m
+[32m+[m[32m      }[m
+ [m
+[31m-          // Store the first action ID (usually all actions in a section have same action ID)[m
+[31m-          if (!systemSectionActionId && action.systemSectionActionId) {[m
+[31m-            systemSectionActionId = action.systemSectionActionId[m
+[31m-            console.log(`✅ DEBUG: Found systemSectionActionId:`, systemSectionActionId)[m
+[32m+[m[32m      const actions = sectionPerms?.allActions ?? sectionPerms?.actions ?? [][m
+[32m+[m[32m      const ids = new Set()[m
+[32m+[m[32m      actions.forEach((action) => {[m
+[32m+[m[32m        ;(action.scopes ?? []).forEach((scope) => {[m
+[32m+[m[32m          if (scope.effect === 'ALLOW' && scope.scopeValueId) {[m
+[32m+[m[32m            ids.add(scope.scopeValueId)[m
+           }[m
+[31m-[m
+[31m-          action.scopes?.forEach((scope, sidx) => {[m
+[31m-            console.log(`🔍 DEBUG: action[${idx}].scopes[${sidx}]:`, scope)[m
+[31m-            if (scope.effect === 'ALLOW' && scope.scopeValueId) {[m
+[31m-              console.log(`✅ DEBUG: Adding authorized scope value:`, scope.scopeValueId)[m
+[31m-              scopeValueIds.push(scope.scopeValueId)[m
+[31m-            }[m
+[31m-          })[m
+         })[m
+[31m-        console.log('✅ DEBUG: Final scopeValueIds:', scopeValueIds)[m
+[31m-        console.log('✅ DEBUG: systemSectionActionId:', systemSectionActionId)[m
+[31m-[m
+[31m-        // Load organizations filtered by user's scope values from JWT[m
+[31m-        // Backend extracts scope values from JWT claims and filters automatically[m
+[31m-        let filteredOrgs = [][m
+[31m-[m
+[31m-        try {[m
+[31m-          console.log('📡 Loading organizations (backend filters by JWT scopes)...')[m
+[31m-          console.log('📊 User scopeValueIds from permissions:', scopeValueIds)[m
+[32m+[m[32m      })[m
+ [m
+[31m-          // Simple GET request - backend extracts organizationBranchIds from JWT[m
+[31m-          // Same pattern as /organization-branches/filter endpoint[m
+[31m-          const orgsRes = await api.get('/access/api/dropdowns/organizations', {[m
+[31m-            params: { lang: uiLang }[m
+[31m-          })[m
+[32m+[m[32m      return Array.from(ids)[m
+[32m+[m[32m    }[m
+ [m
+[31m-          filteredOrgs = orgsRes?.data || [][m
+[31m-          console.log('✅ Organizations loaded (filtered by JWT scopes on backend):', filteredOrgs.length)[m
+[31m-          console.log('🔍 Organization data:', filteredOrgs.map(o => ({[m
+[31m-            id: o.organizationId || o.id,[m
+[31m-            name: o.name[m
+[31m-          })))[m
+[32m+[m[32m    let isActive = true[m
+ [m
+[31m-          if (filteredOrgs.length === 0) {[m
+[31m-            console.warn('⚠️ No organizations found for user')[m
+[31m-          }[m
+[31m-        } catch (err) {[m
+[31m-          console.error('Failed to load organizations:', err)[m
+[31m-          toast.error('Failed to load organizations')[m
+[31m-          filteredOrgs = [][m
+[32m+[m[32m    const loadScopedBranches = async () => {[m
+[32m+[m[32m      setLoadingOrganizations(true)[m
+[32m+[m[32m      try {[m
+[32m+[m[32m        const scopeValueIds = extractScopeValueIds()[m
+[32m+[m[32m        const payload = {[m
+[32m+[m[32m          scopeValueIds,[m
+[32m+[m[32m          lang: uiLang,[m
+         }[m
+ [m
+[31m-        console.log('✅ Final filtered organizations:', filteredOrgs.length, filteredOrgs.map(o => ({ id: o.organizationId || o.id, name: o.name })))[m
+[32m+[m[32m        const { data } = await api.post('/access/api/dropdowns/organization-branches/by-scope', payload)[m
+[32m+[m[32m        if (!isActive) return[m
+ [m
+[31m-        const options = filteredOrgs.map((item) => ({[m
+[31m-          value: item.organizationId || item.id || item.value,[m
+[31m-          label: item.name || item.label || 'Unknown',[m
+[31m-        }))[m
+[32m+[m[32m        const items = Array.isArray(data) ? data : [][m
+[32m+[m[32m        setAllOrganizationBranches(items)[m
+[32m+[m
+[32m+[m[32m        const seen = new Set()[m
+[32m+[m[32m        const options = items.reduce((acc, item) => {[m
+[32m+[m[32m          if (!item?.organizationId || seen.has(item.organizationId)) {[m
+[32m+[m[32m            return acc[m
+[32m+[m[32m          }[m
+[32m+[m[32m          seen.add(item.organizationId)[m
+[32m+[m[32m          acc.push({[m
+[32m+[m[32m            value: item.organizationId,[m
+[32m+[m[32m            label: item.organizationName || 'Unknown organization',[m
+[32m+[m[32m          })[m
+[32m+[m[32m          return acc[m
+[32m+[m[32m        }, [])[m
+ [m
+         setOrganizations(options)[m
+[32m+[m[32m        setOrgBranches([])[m
+       } catch (err) {[m
+[31m-        console.error('Failed to load organizations:', err)[m
+[32m+[m[32m        if (!isActive) return[m
+         toast.error('Failed to load organizations')[m
+[32m+[m[32m        setAllOrganizationBranches([])[m
+         setOrganizations([])[m
+[32m+[m[32m        setOrgBranch

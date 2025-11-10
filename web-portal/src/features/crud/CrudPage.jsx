@@ -79,10 +79,10 @@ export default function CrudPage({
   const mergedFilters = useMemo(
     () => {
       const merged = [...(fixedFilters || []), ...(userFilters || [])]
-      console.log('📦 DEBUG CrudPage - mergedFilters:', merged)
-      console.log('📦 DEBUG CrudPage - fixedFilters:', fixedFilters)
-      console.log('📦 DEBUG CrudPage - userFilters:', userFilters)
-      return merged
+      // console.log('📦 DEBUG CrudPage - mergedFilters:', merged)
+      // console.log('📦 DEBUG CrudPage - fixedFilters:', fixedFilters)
+      // console.log('📦 DEBUG CrudPage - userFilters:', userFilters)
+     return merged
     },
     [fixedFilters, userFilters]
   )

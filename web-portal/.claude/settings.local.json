@@ -25,7 +25,22 @@
       "Bash(git rev-parse:*)",
       "Bash(git update-index:*)",
       "Bash(cat:*)",
-      "Bash(git config:*)"
+      "Bash(git config:*)",
+      "Bash(mvn spring-boot:run:*)",
+      "Bash(curl:*)",
+      "Bash(mvn clean package:*)",
+      "Bash(tasklist:*)",
+      "Bash(netstat:*)",
+      "Bash(mvn package:*)",
+      "Bash(pkill:*)",
+      "Bash(timeout 15 mvn:*)",
+      "Bash(java:*)",
+      "Bash(jar -tf:*)",
+      "Bash(timeout 30 mvn spring-boot:run:*)",
+      "Bash(jar xf:*)",
+      "Bash(timeout 30 java:*)",
+      "Bash(timeout 40 java:*)",
+      "Bash(python3:*)"
     ],
     "deny": [],
     "ask": []

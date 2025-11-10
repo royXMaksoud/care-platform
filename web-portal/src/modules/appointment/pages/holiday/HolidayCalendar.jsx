@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
@@ -7,6 +7,7 @@ import { Plus, Calendar as CalendarIcon } from 'lucide-react'
 import HolidayFormModal from './HolidayFormModal'
 import SearchableSelect from '@/components/SearchableSelect'
 import { toast } from 'sonner'
+import { usePermissionCheck } from '@/contexts/PermissionsContext'
 
 // FullCalendar v6 includes CSS automatically, but we'll add a wrapper to ensure it renders
 
@@ -22,14 +23,14 @@ function HolidayCalendar() {
   // Organization and Branch filters
   const [organizationId, setOrganizationId] = useState('')
   const [organizationBranchId, setOrganizationBranchId] = useState('')
-  const [organizations, setOrganizations] = useState([])
-  const [orgBranches, setOrgBranches] = useState([])
-  const [loadingOrganizations, setLoadingOrganizations] = useState(false)
-  const [loadingBranches, setLoadingBranches] = useState(false)
+  const [allOrganizationBranches, setAllOrganizationBranches] = useState([])
+  const [loadingScopedBranches, setLoadingScopedBranches] = useState(false)
   const [branchesMap, setBranchesMap] = useState({})
   const [error, setError] = useState(null)
 
   const uiLang = (typeof navigator !== 'undefined' && (navigator.language || '').startsWith('ar')) ? 'ar' : 'en'
+  const { getSectionPermissions, permissionsData } = usePermissionCheck()
+  const lastScopeFetchKeyRef = useRef(null)
 
   // Debug: Log component mount (only once)
   useEffect(() => {
@@ -50,90 +51,138 @@ function HolidayCalendar() {
     return () => window.removeEventListener('error', errorHandler)
   }, [])
 
-  // Load organizations from dropdown API
+  const extractScopeValueIds = () => {
+    let sectionPerms = getSectionPermissions('Appointment Schedule Mangement', 'Appointments')
+    if (!sectionPerms?.actions?.length && !sectionPerms?.allActions?.length) {
+      sectionPerms = getSectionPermissions('Appointment Schedule Mangement')
+    }
+
+    const actions = sectionPerms?.allActions ?? sectionPerms?.actions ?? []
+    const ids = new Set()
+    actions.forEach((action) => {
+      ;(action.scopes ?? []).forEach((scope) => {
+        if (scope.effect === 'ALLOW' && scope.scopeValueId) {
+          ids.add(scope.scopeValueId)
+        }
+      })
+    })
+
+    return Array.from(ids)
+  }
+
+  // Load scoped organizations/branches based on permissions
   useEffect(() => {
-    let isMounted = true
-    console.log('Starting to load organizations, isMounted:', isMounted)
-    
-    const loadOrganizations = async () => {
+    let isActive = true
+    const loadScopedBranches = async () => {
       try {
-        setLoadingOrganizations(true)
-        const res = await api.get('/access/api/dropdowns/organizations', {
-          params: { lang: uiLang }
-        })
-        const options = (res?.data || []).map((item) => ({
-          value: item.id || item.value,
-          label: item.name || item.label || 'Unknown',
-        }))
-        console.log('Loaded organizations:', options.length, 'isMounted:', isMounted)
-        if (isMounted) {
-          setOrganizations(options)
+        setLoadingScopedBranches(true)
+
+        const scopeValueIds = extractScopeValueIds()
+        const scopeKey = JSON.stringify({ scopeValueIds, lang: uiLang })
+
+        if (!scopeValueIds.length) {
+          lastScopeFetchKeyRef.current = scopeKey
+          setAllOrganizationBranches([])
+          setOrganizationId('')
+          setOrganizationBranchId('')
+          return
         }
+
+        if (lastScopeFetchKeyRef.current === scopeKey) {
+          return
+        }
+
+        lastScopeFetchKeyRef.current = scopeKey
+
+        const payload = { scopeValueIds, lang: uiLang }
+        const { data } = await api.post('/access/api/dropdowns/organization-branches/by-scope', payload)
+        if (!isActive) return
+
+        const items = Array.isArray(data) ? data : []
+        setAllOrganizationBranches(items)
       } catch (err) {
-        console.error('Failed to load organizations:', err)
-        // Continue anyway - don't break the component
-        if (isMounted) {
-          setOrganizations([])
-        }
+        if (!isActive) return
+        console.error('Failed to load scoped organizations/branches:', err)
+        toast.error('Failed to load organizations')
+        setAllOrganizationBranches([])
+        lastScopeFetchKeyRef.current = null
       } finally {
-        if (isMounted) {
-          setLoadingOrganizations(false)
+        if (isActive) {
+          setLoadingScopedBranches(false)
         }
       }
     }
     
-    loadOrganizations()
+    loadScopedBranches()
     
     return () => {
-      console.log('Organizations loader cleanup, setting isMounted=false')
-      isMounted = false
+      isActive = false
     }
-  }, [uiLang])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uiLang, permissionsData])
 
-  // Load branches when organization changes (cascade dropdown)
+  const organizationOptions = useMemo(() => {
+    const seen = new Set()
+    return allOrganizationBranches.reduce((acc, item) => {
+      if (!item?.organizationId || seen.has(item.organizationId)) {
+        return acc
+      }
+      seen.add(item.organizationId)
+      acc.push({
+        value: item.organizationId,
+        label: item.organizationName || 'Unknown organization',
+      })
+      return acc
+    }, [])
+  }, [allOrganizationBranches])
+
+  const branchOptions = useMemo(() => {
+    if (!organizationId) return []
+    return allOrganizationBranches
+      .filter((item) => item.organizationId === organizationId)
+      .map((item) => ({
+        value: item.organizationBranchId,
+        label: item.organizationBranchName || 'Unknown branch',
+      }))
+  }, [allOrganizationBranches, organizationId])
+
+  useEffect(() => {
+    const map = {}
+    allOrganizationBranches.forEach((item) => {
+      if (item?.organizationBranchId) {
+        map[item.organizationBranchId] = item.organizationBranchName || item.organizationBranchId
+      }
+    })
+    setBranchesMap(map)
+  }, [allOrganizationBranches])
+
+  useEffect(() => {
+    if (!organizationId) return
+    if (!organizationOptions.some((org) => org.value === organizationId)) {
+      setOrganizationId('')
+      setOrganizationBranchId('')
+    }
+  }, [organizationOptions, organizationId])
+
   useEffect(() => {
     if (!organizationId) {
-      setOrgBranches([])
-      setOrganizationBranchId('')
-      setBranchesMap({})
+      if (organizationBranchId) {
+        setOrganizationBranchId('')
+      }
       return
     }
-    
-    const loadBranches = async () => {
-      try {
-        setLoadingBranches(true)
-        const res = await api.get('/access/api/cascade-dropdowns/access.organization-branches-by-organization', {
-          params: {
-            organizationId: organizationId,
-            lang: uiLang
-          }
-        })
-        const options = (res?.data || []).map((item) => ({
-          value: item.id || item.value,
-          label: item.name || item.label || 'Unknown',
-        }))
-        setOrgBranches(options)
-        
-        // Create branches map
-        const map = {}
-        options.forEach((option) => {
-          map[option.value] = option.label
-        })
-        setBranchesMap(map)
-        
-        // Reset branch selection when organization changes
+
+    if (!branchOptions.length) {
+      if (organizationBranchId) {
         setOrganizationBranchId('')
-      } catch (err) {
-        console.error('Failed to load organization branches:', err)
-        setOrgBranches([])
-        setBranchesMap({})
-      } finally {
-        setLoadingBranches(false)
       }
+      return
     }
-    
-    loadBranches()
-  }, [organizationId, uiLang])
+
+    if (!branchOptions.some((branch) => branch.value === organizationBranchId)) {
+      setOrganizationBranchId('')
+    }
+  }, [organizationId, organizationBranchId, branchOptions])
 
   // Load holidays when branch is selected
   useEffect(() => {
@@ -208,11 +257,19 @@ function HolidayCalendar() {
         holidays: holidays.length,
         calendarEvents: calendarEvents.length,
         loading,
-        organizationsCount: organizations.length,
-        branchesCount: orgBranches.length
+        organizationsCount: organizationOptions.length,
+        branchesCount: branchOptions.length
       })
     }
-  }, [organizationId, organizationBranchId, holidays.length, calendarEvents.length, loading, organizations.length, orgBranches.length])
+  }, [
+    organizationId,
+    organizationBranchId,
+    holidays.length,
+    calendarEvents.length,
+    loading,
+    organizationOptions.length,
+    branchOptions.length,
+  ])
 
   // Handle date click (to add new holiday)
   const handleDateClick = (info) => {
@@ -294,7 +351,7 @@ function HolidayCalendar() {
 
   // Ensure component always renders something visible
   console.log('Rendering HolidayCalendar:', {
-    hasOrganizations: organizations.length > 0,
+    hasOrganizations: organizationOptions.length > 0,
     hasOrgId: !!organizationId,
     hasBranchId: !!organizationBranchId,
     holidaysCount: holidays.length,
@@ -335,27 +392,27 @@ function HolidayCalendar() {
           <div className="grid gap-2">
             <label className="text-sm font-medium text-gray-700">Organization <span className="text-red-500">*</span></label>
             <SearchableSelect
-              options={organizations}
+              options={organizationOptions}
               value={organizationId}
               onChange={(value) => setOrganizationId(value)}
               placeholder="Select organization"
               isClearable={false}
               isSearchable={true}
-              isLoading={loadingOrganizations}
+              isLoading={loadingScopedBranches}
             />
           </div>
 
           <div className="grid gap-2">
             <label className="text-sm font-medium text-gray-700">Center/Branch <span className="text-red-500">*</span></label>
             <SearchableSelect
-              options={orgBranches}
+              options={branchOptions}
               value={organizationBranchId}
               onChange={(value) => setOrganizationBranchId(value)}
               placeholder={organizationId ? 'Select center/branch' : 'Select organization first'}
-              isDisabled={!organizationId || loadingBranches}
+              isDisabled={!organizationId || branchOptions.length === 0}
               isClearable={false}
               isSearchable={true}
-              isLoading={loadingBranches}
+              isLoading={loadingScopedBranches}
             />
           </div>
         </div>

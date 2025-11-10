@@ -54,6 +54,6 @@ export function buildFilterRequest(filters: UiCriterion[] | undefined): FilterRe
     criteria: criteria.length > 0 ? criteria : undefined,
     scopes: scopes.length > 0 ? scopes : undefined,
   }
-  console.log('📤 DEBUG buildFilterRequest - Final result:', result)
+//  console.log('📤 DEBUG buildFilterRequest - Final result:', result)
   return result
 }

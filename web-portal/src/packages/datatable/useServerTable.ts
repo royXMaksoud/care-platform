@@ -55,11 +55,8 @@ export function useServerTable({
     queryKey: ['table', service, base, pageIndex, pageSize, sorting, filters, queryParams, refreshKey], // <-- NEW
     queryFn: async () => {
       const payload = buildFilterRequest(filters)
-      console.log('📤 DEBUG useServerTable - POST URL:', url)
-      console.log('📤 DEBUG useServerTable - POST payload:', payload)
-      console.log('📤 DEBUG useServerTable - Filters input:', filters)
       const { data } = await api.post(url, payload)
-      console.log('📤 DEBUG useServerTable - Response:', data)
+    //  console.log('📤 DEBUG useServerTable - Response:', data)
       return {
         rows: data?.content ?? [],
         total: data?.totalElements ?? 0,

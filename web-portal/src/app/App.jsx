@@ -44,16 +44,16 @@ export default function App() {
   const tenantLogo = storedUser?.tenantLogo ?? authStorage.getTenantLogo()
 
   // Debug: log data from storage
-  console.log('📱 App.jsx loaded', {
-    storedUser,
-    sessionTimeoutMinutes,
-    tenantLogo,
-    allLocalStorage: {
-      user: localStorage.getItem('portal:user'),
-      logo: localStorage.getItem('portal:tenant_logo'),
-      timeout: localStorage.getItem('portal:session_timeout_minutes'),
-    }
-  })
+  // console.log('📱 App.jsx loaded', {
+  //   storedUser,
+  //   sessionTimeoutMinutes,
+  //   tenantLogo,
+  //   allLocalStorage: {
+  //     user: localStorage.getItem('portal:user'),
+  //     logo: localStorage.getItem('portal:tenant_logo'),
+  //     timeout: localStorage.getItem('portal:session_timeout_minutes'),
+  //   }
+  // })
 
   const userId =
     claims?.userId ||

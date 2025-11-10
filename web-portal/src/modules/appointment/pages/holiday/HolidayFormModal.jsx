@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '@/lib/axios'
 import { toast } from 'sonner'
 import SearchableSelect from '@/components/SearchableSelect'
+import { usePermissionCheck } from '@/contexts/PermissionsContext'
 
 export default function HolidayFormModal({ 
   open, 
@@ -21,96 +22,149 @@ export default function HolidayFormModal({
     isActive: true,
   })
   
-  const [organizations, setOrganizations] = useState([])
-  const [orgBranches, setOrgBranches] = useState([])
-  const [loadingOrganizations, setLoadingOrganizations] = useState(false)
-  const [loadingBranches, setLoadingBranches] = useState(false)
+  const [allOrganizationBranches, setAllOrganizationBranches] = useState([])
+  const [loadingScopedBranches, setLoadingScopedBranches] = useState(false)
 
   const uiLang = (typeof navigator !== 'undefined' && (navigator.language || '').startsWith('ar')) ? 'ar' : 'en'
+  const { getSectionPermissions, permissionsData } = usePermissionCheck()
+  const lastScopeFetchKeyRef = useRef(null)
 
-  // Load organizations from dropdown API
   useEffect(() => {
     if (!open) return
-    
-    const loadOrganizations = async () => {
-      try {
-        setLoadingOrganizations(true)
-        const res = await api.get('/access/api/dropdowns/organizations', {
-          params: { lang: uiLang }
-        })
-        const options = (res?.data || []).map((item) => ({
-          value: item.id || item.value,
-          label: item.name || item.label || 'Unknown',
-        }))
-        setOrganizations(options)
-      } catch (err) {
-        console.error('Failed to load organizations:', err)
-        toast.error('Failed to load organizations')
-      } finally {
-        setLoadingOrganizations(false)
-      }
-    }
-    
-    loadOrganizations()
-  }, [open, uiLang])
 
-  // Load branches when organization changes (cascade dropdown)
-  useEffect(() => {
-    if (!form.organizationId) {
-      setOrgBranches([])
-      setForm(prev => ({ ...prev, organizationBranchId: '' }))
-      return
-    }
-    
-    const loadBranches = async () => {
-      try {
-        setLoadingBranches(true)
-        const res = await api.get('/access/api/cascade-dropdowns/access.organization-branches-by-organization', {
-          params: {
-            organizationId: form.organizationId,
-            lang: uiLang
+    const extractScopeValueIds = () => {
+      let sectionPerms = getSectionPermissions('Appointment Schedule Mangement', 'Appointments')
+      if (!sectionPerms?.actions?.length && !sectionPerms?.allActions?.length) {
+        sectionPerms = getSectionPermissions('Appointment Schedule Mangement')
+      }
+
+      const actions = sectionPerms?.allActions ?? sectionPerms?.actions ?? []
+      const ids = new Set()
+      actions.forEach((action) => {
+        ;(action.scopes ?? []).forEach((scope) => {
+          if (scope.effect === 'ALLOW' && scope.scopeValueId) {
+            ids.add(scope.scopeValueId)
           }
         })
-        const options = (res?.data || []).map((item) => ({
-          value: item.id || item.value,
-          label: item.name || item.label || 'Unknown',
-        }))
-        setOrgBranches(options)
-        // Reset branch selection when organization changes (only in create mode)
-        if (mode === 'create') {
-          setForm(prev => ({ ...prev, organizationBranchId: '' }))
-        }
-      } catch (err) {
-        console.error('Failed to load organization branches:', err)
-        toast.error('Failed to load branches')
-        setOrgBranches([])
-      } finally {
-        setLoadingBranches(false)
-      }
-    }
-    
-    loadBranches()
-  }, [form.organizationId, uiLang, mode])
+      })
 
-  // Load organizationId from branch if not provided in edit mode
-  useEffect(() => {
-    if (!open || mode !== 'edit' || !initial?.organizationBranchId) return
-    if (initial.organizationId) return // Already have organizationId
-    
-    const loadBranchOrgId = async () => {
+      return Array.from(ids)
+    }
+
+    let isActive = true
+
+    const loadScopedBranches = async () => {
       try {
-        const res = await api.get(`/access/api/organization-branches/${initial.organizationBranchId}`)
-        const orgId = res?.data?.organizationId
-        if (orgId) {
-          setForm(prev => ({ ...prev, organizationId: orgId }))
+        setLoadingScopedBranches(true)
+
+        const scopeValueIds = extractScopeValueIds()
+        const scopeKey = JSON.stringify({ scopeValueIds, lang: uiLang })
+
+        if (!scopeValueIds.length) {
+          lastScopeFetchKeyRef.current = scopeKey
+          setAllOrganizationBranches([])
+          return
         }
+
+        if (lastScopeFetchKeyRef.current === scopeKey) {
+          return
+        }
+
+        lastScopeFetchKeyRef.current = scopeKey
+
+        const payload = {
+          scopeValueIds,
+          lang: uiLang,
+        }
+
+        const { data } = await api.post('/access/api/dropdowns/organization-branches/by-scope', payload)
+        if (!isActive) return
+
+        const items = Array.isArray(data) ? data : []
+        setAllOrganizationBranches(items)
       } catch (err) {
-        console.error('Failed to load branch organization:', err)
+        if (!isActive) return
+        console.error('Failed to load organizations:', err)
+        toast.error('Failed to load organizations')
+        lastScopeFetchKeyRef.current = null
+        setAllOrganizationBranches([])
+      } finally {
+        if (isActive) {
+          setLoadingScopedBranches(false)
+        }
       }
     }
-    
-    loadBranchOrgId()
-  }, [open, mode, initial?.organizationBranchId, initial?.organizationId])
+
+    loadScopedBranches()
+
+    return () => {
+      isActive = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, uiLang, permissionsData])
+
+  const organizationOptions = useMemo(() => {
+    const seen = new Set()
+    return allOrganizationBranches.reduce((acc, item) => {
+      if (!item?.organizationId || seen.has(item.organizationId)) {
+        return acc
+      }
+      seen.add(item.organizationId)
+      acc.push({
+        value: item.organizationId,
+        label: item.organizationName || 'Unknown organization',
+      })
+      return acc
+    }, [])
+  }, [allOrganizationBranches])
+
+  const branchOptions = useMemo(() => {
+    if (!form.organizationId) return []
+    return allOrganizationBranches
+      .filter((item) => item.organizationId === form.organizationId)
+      .map((item) => ({
+        value: item.organizationBranchId,
+        label: item.organizationBranchName || 'Unknown branch',
+      }))
+  }, [allOrganizationBranches, form.organizationId])
+
+  useEffect(() => {
+    if (!form.organizationId && form.organizationBranchId) {
+      const match = allOrganizationBranches.find(
+        (item) => item.organizationBranchId === form.organizationBranchId
+      )
+      if (match?.organizationId) {
+        setForm((prev) => ({ ...prev, organizationId: match.organizationId }))
+      }
+    }
+  }, [form.organizationId, form.organizationBranchId, allOrganizationBranches])
+
+  useEffect(() => {
+    if (!form.organizationId) return
+    if (!organizationOptions.some((org) => org.value === form.organizationId)) {
+      setForm((prev) => ({ ...prev, organizationId: '', organizationBranchId: '' }))
+    }
+  }, [organizationOptions, form.organizationId])
+
+  useEffect(() => {
+    if (!form.organizationId) {
+      if (form.organizationBranchId) {
+        setForm((prev) => ({ ...prev, organizationBranchId: '' }))
+      }
+      return
+    }
+
+    if (!branchOptions.length) {
+      if (form.organizationBranchId) {
+        setForm((prev) => ({ ...prev, organizationBranchId: '' }))
+      }
+      return
+    }
+
+    if (!branchOptions.some((branch) => branch.value === form.organizationBranchId)) {
+      setForm((prev) => ({ ...prev, organizationBranchId: '' }))
+    }
+  }, [form.organizationId, form.organizationBranchId, branchOptions])
 
   useEffect(() => {
     if (!open) return
@@ -198,13 +252,13 @@ export default function HolidayFormModal({
         <div className="grid gap-2">
           <label className="text-sm font-medium">Organization</label>
           <SearchableSelect
-            options={organizations}
+            options={organizationOptions}
             value={form.organizationId}
             onChange={(value) => update('organizationId', value)}
             placeholder="Select organization"
             isClearable={false}
             isSearchable={true}
-            isLoading={loadingOrganizations}
+            isLoading={loadingScopedBranches}
             isDisabled={mode === 'edit'}
           />
         </div>
@@ -212,14 +266,14 @@ export default function HolidayFormModal({
         <div className="grid gap-2">
           <label className="text-sm font-medium">Center/Branch <span className="text-red-500">*</span></label>
           <SearchableSelect
-            options={orgBranches}
+            options={branchOptions}
             value={form.organizationBranchId}
             onChange={(value) => update('organizationBranchId', value)}
             placeholder={form.organizationId ? 'Select center/branch' : 'Select organization first'}
-            isDisabled={!form.organizationId || loadingBranches}
+            isDisabled={!form.organizationId || branchOptions.length === 0}
             isClearable={false}
             isSearchable={true}
-            isLoading={loadingBranches}
+            isLoading={loadingScopedBranches}
           />
         </div>
 

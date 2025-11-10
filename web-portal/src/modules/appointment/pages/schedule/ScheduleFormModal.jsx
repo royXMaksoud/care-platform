@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '@/lib/axios'
 import { toast } from 'sonner'
 import SearchableSelect from '@/components/SearchableSelect'
@@ -46,215 +46,139 @@ export default function ScheduleFormModal({
     offDays: [],
   })
   
-  const [organizations, setOrganizations] = useState([])
-  const [orgBranches, setOrgBranches] = useState([])
+  const [allOrganizationBranches, setAllOrganizationBranches] = useState([])
   const [loadingOrganizations, setLoadingOrganizations] = useState(false)
-  const [loadingBranches, setLoadingBranches] = useState(false)
 
   const uiLang = (typeof navigator !== 'undefined' && (navigator.language || '').startsWith('ar')) ? 'ar' : 'en'
   const { getSectionPermissions, permissionsData } = usePermissionCheck()
 
-  // Load organizations based on user permissions
+  const lastScopeFetchKeyRef = useRef(null)
+
   useEffect(() => {
     if (!open) return
 
-    const loadOrganizations = async () => {
-      try {
-        setLoadingOrganizations(true)
+    const extractScopeValueIds = () => {
+      let sectionPerms = getSectionPermissions('Appointment Schedule Mangement', 'Appointments')
+      if (!sectionPerms?.actions?.length && !sectionPerms?.allActions?.length) {
+        sectionPerms = getSectionPermissions('Appointment Schedule Mangement')
+      }
 
-        // Extract user's permission scopes from permissions context
-        let sectionPerms = getSectionPermissions('Appointment Schedule Mangement', 'Appointments')
-        console.log('🔍 DEBUG: sectionPerms (with system):', sectionPerms)
-
-        // If no actions found, try without system name
-        if (!sectionPerms.actions || sectionPerms.actions.length === 0) {
-          console.log('🔍 DEBUG: No actions with system name, trying without...')
-          sectionPerms = getSectionPermissions('Appointment Schedule Mangement')
-          console.log('🔍 DEBUG: sectionPerms (without system):', sectionPerms)
-        }
-
-        console.log('🔍 DEBUG: Final sectionPerms.actions:', sectionPerms.actions)
-
-        // Extract scope values from permission actions
-        const scopeValueIds = []
-        let systemSectionActionId = null
-
-        sectionPerms.actions?.forEach((action, idx) => {
-          console.log(`🔍 DEBUG: action[${idx}]:`, action)
-          console.log(`🔍 DEBUG: action[${idx}].scopes:`, action.scopes)
-
-          // Store the first action ID (usually all actions in a section have same action ID)
-          if (!systemSectionActionId && action.systemSectionActionId) {
-            systemSectionActionId = action.systemSectionActionId
-            console.log(`✅ DEBUG: Found systemSectionActionId:`, systemSectionActionId)
+      const actions = sectionPerms?.allActions ?? sectionPerms?.actions ?? []
+      const ids = new Set()
+      actions.forEach((action) => {
+        ;(action.scopes ?? []).forEach((scope) => {
+          if (scope.effect === 'ALLOW' && scope.scopeValueId) {
+            ids.add(scope.scopeValueId)
           }
-
-          action.scopes?.forEach((scope, sidx) => {
-            console.log(`🔍 DEBUG: action[${idx}].scopes[${sidx}]:`, scope)
-            if (scope.effect === 'ALLOW' && scope.scopeValueId) {
-              console.log(`✅ DEBUG: Adding authorized scope value:`, scope.scopeValueId)
-              scopeValueIds.push(scope.scopeValueId)
-            }
-          })
         })
-        console.log('✅ DEBUG: Final scopeValueIds:', scopeValueIds)
-        console.log('✅ DEBUG: systemSectionActionId:', systemSectionActionId)
+      })
 
-        // Load organizations filtered by user's scope values from JWT
-        // Backend extracts scope values from JWT claims and filters automatically
-        let filteredOrgs = []
+      return Array.from(ids)
+    }
 
-        try {
-          console.log('📡 Loading organizations (backend filters by JWT scopes)...')
-          console.log('📊 User scopeValueIds from permissions:', scopeValueIds)
+    let isActive = true
 
-          // Simple GET request - backend extracts organizationBranchIds from JWT
-          // Same pattern as /organization-branches/filter endpoint
-          const orgsRes = await api.get('/access/api/dropdowns/organizations', {
-            params: { lang: uiLang }
-          })
+    const loadScopedBranches = async () => {
+      setLoadingOrganizations(true)
+      try {
+        const scopeValueIds = extractScopeValueIds()
+        const scopeKey = JSON.stringify({ scopeValueIds, lang: uiLang })
 
-          filteredOrgs = orgsRes?.data || []
-          console.log('✅ Organizations loaded (filtered by JWT scopes on backend):', filteredOrgs.length)
-          console.log('🔍 Organization data:', filteredOrgs.map(o => ({
-            id: o.organizationId || o.id,
-            name: o.name
-          })))
-
-          if (filteredOrgs.length === 0) {
-            console.warn('⚠️ No organizations found for user')
-          }
-        } catch (err) {
-          console.error('Failed to load organizations:', err)
-          toast.error('Failed to load organizations')
-          filteredOrgs = []
+        if (!scopeValueIds.length) {
+          lastScopeFetchKeyRef.current = scopeKey
+          setAllOrganizationBranches([])
+          setLoadingOrganizations(false)
+          return
         }
 
-        console.log('✅ Final filtered organizations:', filteredOrgs.length, filteredOrgs.map(o => ({ id: o.organizationId || o.id, name: o.name })))
+        if (lastScopeFetchKeyRef.current === scopeKey) {
+          setLoadingOrganizations(false)
+          return
+        }
 
-        const options = filteredOrgs.map((item) => ({
-          value: item.organizationId || item.id || item.value,
-          label: item.name || item.label || 'Unknown',
-        }))
+        lastScopeFetchKeyRef.current = scopeKey
 
-        setOrganizations(options)
+        const payload = {
+          scopeValueIds,
+          lang: uiLang,
+        }
+
+        const { data } = await api.post('/access/api/dropdowns/organization-branches/by-scope', payload)
+        if (!isActive) return
+
+        const items = Array.isArray(data) ? data : []
+        setAllOrganizationBranches(items)
       } catch (err) {
-        console.error('Failed to load organizations:', err)
+        if (!isActive) return
         toast.error('Failed to load organizations')
-        setOrganizations([])
+        setAllOrganizationBranches([])
+        lastScopeFetchKeyRef.current = null
       } finally {
-        setLoadingOrganizations(false)
+        if (isActive) {
+          setLoadingOrganizations(false)
+        }
       }
     }
 
-    loadOrganizations()
+    loadScopedBranches()
+
+    return () => {
+      isActive = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, uiLang, permissionsData])
 
-  // Load branches when organization changes (cascade dropdown) - filtered by permissions
+  const organizationOptions = useMemo(() => {
+    const seen = new Set()
+    return allOrganizationBranches.reduce((acc, item) => {
+      if (!item?.organizationId || seen.has(item.organizationId)) {
+        return acc
+      }
+      seen.add(item.organizationId)
+      acc.push({
+        value: item.organizationId,
+        label: item.organizationName || 'Unknown organization',
+      })
+      return acc
+    }, [])
+  }, [allOrganizationBranches])
+
+  const branchOptions = useMemo(() => {
+    if (!form.organizationId) return []
+    return allOrganizationBranches
+      .filter((item) => item.organizationId === form.organizationId)
+      .map((item) => ({
+        value: item.organizationBranchId,
+        label: item.organizationBranchName || 'Unknown branch',
+      }))
+  }, [allOrganizationBranches, form.organizationId])
+
+  useEffect(() => {
+    if (!form.organizationId) return
+    if (!organizationOptions.some((org) => org.value === form.organizationId)) {
+      setForm((prev) => ({ ...prev, organizationId: '', organizationBranchId: '' }))
+    }
+  }, [organizationOptions, form.organizationId])
+
   useEffect(() => {
     if (!form.organizationId) {
-      setOrgBranches([])
-      setForm(prev => ({ ...prev, organizationBranchId: '' }))
+      if (form.organizationBranchId) {
+        setForm((prev) => ({ ...prev, organizationBranchId: '' }))
+      }
       return
     }
 
-    const loadBranches = async () => {
-      try {
-        setLoadingBranches(true)
-
-        // Extract user's authorized branch IDs from permissions
-        let sectionPerms = getSectionPermissions('Appointment Schedule Mangement', 'Appointments')
-        console.log('🔍 Branch Loading: sectionPerms:', sectionPerms)
-
-        // If no actions found, try without system name
-        if (!sectionPerms.actions || sectionPerms.actions.length === 0) {
-          sectionPerms = getSectionPermissions('Appointment Schedule Mangement')
-        }
-
-        const scopeValueIds = []
-        let systemSectionActionId = null
-
-        sectionPerms.actions?.forEach(action => {
-          if (!systemSectionActionId && action.systemSectionActionId) {
-            systemSectionActionId = action.systemSectionActionId
-          }
-          action.scopes?.forEach(scope => {
-            if (scope.effect === 'ALLOW' && scope.scopeValueId) {
-              scopeValueIds.push(scope.scopeValueId)
-            }
-          })
-        })
-
-        console.log('🔍 Branch Loading: scopeValueIds:', scopeValueIds, 'systemSectionActionId:', systemSectionActionId)
-
-        // Load branches for the selected organization with scope filtering
-        // Apply scope restrictions to show only authorized branches for this org
-        let filteredBranches = []
-
-        try {
-          console.log('📡 Loading branches for org:', form.organizationId)
-          console.log('📊 Using scopeValueIds:', scopeValueIds)
-
-          // Load all branches for this organization first
-          const branchesRes = await api.get('/access/api/cascade-dropdowns/access.organization-branches-by-organization', {
-            params: {
-              organizationId: form.organizationId,
-              lang: uiLang
-            }
-          })
-
-          const allBranchesForOrg = branchesRes?.data || []
-          console.log('✅ All branches loaded for org:', allBranchesForOrg.length)
-          console.log('🔍 All branch IDs:', allBranchesForOrg.map(b => ({ id: b.organizationBranchId || b.id, name: b.name })))
-
-          // Filter branches by user's authorized scope values
-          // Only show branches that user has permission to access (from JWT scopes)
-          if (scopeValueIds.length > 0) {
-            const authorizedBranchIds = new Set(scopeValueIds)
-            console.log('🔍 Authorized branch IDs (from user scopes):', Array.from(authorizedBranchIds))
-
-            filteredBranches = allBranchesForOrg.filter(b => {
-              const branchId = b.organizationBranchId || b.id || b.value
-              const isAuthorized = authorizedBranchIds.has(branchId)
-              if (isAuthorized) {
-                console.log('✅ Branch authorized:', { id: branchId, name: b.name })
-              } else {
-                console.log('❌ Branch NOT authorized:', { id: branchId, name: b.name })
-              }
-              return isAuthorized
-            })
-            console.log('✅ Final filtered branches for org:', filteredBranches.length)
-          } else {
-            // If user has no specific branch scopes, show all branches for org
-            console.log('⚠️ User has no specific branch scopes, showing all branches')
-            filteredBranches = allBranchesForOrg
-          }
-        } catch (err) {
-          console.error('Failed to load branches:', err)
-          toast.error('Failed to load branches')
-          filteredBranches = []
-        }
-
-        const options = filteredBranches.map((item) => ({
-          value: item.organizationBranchId || item.id || item.value,
-          label: item.name || item.label || item.branchName || 'Unknown',
-        }))
-
-        console.log('✅ Branch options:', options)
-        setOrgBranches(options)
-        // Reset branch selection when organization changes
-        setForm(prev => ({ ...prev, organizationBranchId: '' }))
-      } catch (err) {
-        console.error('Failed to load organization branches:', err)
-        toast.error('Failed to load branches')
-        setOrgBranches([])
-      } finally {
-        setLoadingBranches(false)
+    if (!branchOptions.length) {
+      if (form.organizationBranchId) {
+        setForm((prev) => ({ ...prev, organizationBranchId: '' }))
       }
+      return
     }
 
-    loadBranches()
-  }, [form.organizationId, uiLang, permissionsData])
+    if (!branchOptions.some((branch) => branch.value === form.organizationBranchId)) {
+      setForm((prev) => ({ ...prev, organizationBranchId: '' }))
+    }
+  }, [form.organizationId, form.organizationBranchId, branchOptions])
 
   useEffect(() => {
     if (!open) return
@@ -381,7 +305,7 @@ export default function ScheduleFormModal({
         <div className="grid gap-2">
           <label className="text-sm font-medium">Organization</label>
           <SearchableSelect
-            options={organizations}
+            options={organizationOptions}
             value={form.organizationId}
             onChange={(value) => update('organizationId', value)}
             placeholder="Select organization"
@@ -394,14 +318,13 @@ export default function ScheduleFormModal({
         <div className="grid gap-2">
           <label className="text-sm font-medium">Center/Branch</label>
           <SearchableSelect
-            options={orgBranches}
+            options={branchOptions}
             value={form.organizationBranchId}
             onChange={(value) => update('organizationBranchId', value)}
             placeholder={form.organizationId ? 'Select center/branch' : 'Select organization first'}
-            isDisabled={!form.organizationId || loadingBranches}
+            isDisabled={!form.organizationId || branchOptions.length === 0}
             isClearable={false}
             isSearchable={true}
-            isLoading={loadingBranches}
           />
         </div>
 
