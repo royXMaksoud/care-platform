@@ -185,70 +185,195 @@ export default function AppointmentDetails() {
 }
 
 function AppointmentInfoTab({ appointment, branchesMap, beneficiariesMap, serviceTypesMap }) {
+  const formatDateTime = (value) => (value ? new Date(value).toLocaleString() : '-')
+  const formatTime = (value) => {
+    if (!value) return '-'
+    if (typeof value === 'string' && value.length >= 5) return value.substring(0, 5)
+    return value
+  }
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div className="space-y-4">
+    <div className="space-y-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Appointment Information</h3>
-        
-        <div className="flex items-start gap-3">
-          <Calendar className="w-5 h-5 text-gray-400 mt-0.5" />
-          <div>
-            <p className="text-xs text-gray-500">Date</p>
-            <p className="font-medium">
-              {appointment.appointmentDate 
-                ? new Date(appointment.appointmentDate + 'T00:00:00').toLocaleDateString()
-                : '-'
-              }
-            </p>
+
+        <div className="space-y-4">
+          <div className="flex items-start gap-3">
+            <Calendar className="w-5 h-5 text-gray-400 mt-0.5" />
+            <div>
+              <p className="text-xs text-gray-500">Date</p>
+              <p className="font-medium">
+                {appointment.appointmentDate
+                  ? new Date(appointment.appointmentDate + 'T00:00:00').toLocaleDateString()
+                  : '-'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <Clock className="w-5 h-5 text-gray-400 mt-0.5" />
+            <div>
+              <p className="text-xs text-gray-500">Time</p>
+              <p className="font-medium">{formatTime(appointment.appointmentTime)}</p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="w-5 h-5 text-gray-400 mt-0.5" />
+            <div>
+              <p className="text-xs text-gray-500">Status</p>
+              <p className="font-medium">{appointment.appointmentStatus || '-'}</p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <Building className="w-5 h-5 text-gray-400 mt-0.5" />
+            <div>
+              <p className="text-xs text-gray-500">Center</p>
+              <p className="font-medium">
+                {branchesMap[appointment.organizationBranchId] ||
+                  appointment.branchName ||
+                  '-'}
+              </p>
+            </div>
           </div>
         </div>
-        
-        <div className="flex items-start gap-3">
-          <Clock className="w-5 h-5 text-gray-400 mt-0.5" />
-          <div>
-            <p className="text-xs text-gray-500">Time</p>
-            <p className="font-medium">{appointment.appointmentTime || '-'}</p>
+
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-gray-900">Beneficiary & Service</h3>
+
+          <div className="flex items-start gap-3">
+            <User className="w-5 h-5 text-gray-400 mt-0.5" />
+            <div>
+              <p className="text-xs text-gray-500">Beneficiary</p>
+              <p className="font-medium">
+                {beneficiariesMap[appointment.beneficiaryId] ||
+                  appointment.beneficiaryName ||
+                  '-'}
+              </p>
+            </div>
           </div>
-        </div>
-        
-        <div className="flex items-start gap-3">
-          <CheckCircle2 className="w-5 h-5 text-gray-400 mt-0.5" />
-          <div>
-            <p className="text-xs text-gray-500">Status</p>
-            <p className="font-medium">{appointment.status || '-'}</p>
+
+          <div className="flex items-start gap-3">
+            <FileText className="w-5 h-5 text-gray-400 mt-0.5" />
+            <div>
+              <p className="text-xs text-gray-500">Service</p>
+              <p className="font-medium">
+                {serviceTypesMap[appointment.serviceTypeId] ||
+                  appointment.serviceTypeName ||
+                  '-'}
+              </p>
+            </div>
           </div>
-        </div>
-        
-        <div className="flex items-start gap-3">
-          <Building className="w-5 h-5 text-gray-400 mt-0.5" />
-          <div>
-            <p className="text-xs text-gray-500">Center</p>
-            <p className="font-medium">{branchesMap[appointment.organizationBranchId] || '-'}</p>
+
+          <div className="flex items-start gap-3">
+            <Clock className="w-5 h-5 text-gray-400 mt-0.5" />
+            <div>
+              <p className="text-xs text-gray-500">Slot Duration</p>
+              <p className="font-medium">
+                {appointment.slotDurationMinutes ? `${appointment.slotDurationMinutes} minutes` : '-'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <RefreshCw className="w-5 h-5 text-gray-400 mt-0.5" />
+            <div>
+              <p className="text-xs text-gray-500">Priority</p>
+              <p className="font-medium">{appointment.priority || 'NORMAL'}</p>
+            </div>
           </div>
         </div>
       </div>
-      
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Beneficiary & Service</h3>
-        
-        <div className="flex items-start gap-3">
-          <User className="w-5 h-5 text-gray-400 mt-0.5" />
-          <div>
-            <p className="text-xs text-gray-500">Beneficiary</p>
-            <p className="font-medium">
-              {beneficiariesMap[appointment.beneficiaryId] || appointment.beneficiaryName || '-'}
-            </p>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-gray-900">Outcome & Actions</h3>
+
+          <div className="flex items-start gap-3">
+            <FileText className="w-5 h-5 text-gray-400 mt-0.5" />
+            <div>
+              <p className="text-xs text-gray-500">Action Type</p>
+              <p className="font-medium">{appointment.actionTypeName || '-'}</p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <FileText className="w-5 h-5 text-gray-400 mt-0.5" />
+            <div>
+              <p className="text-xs text-gray-500">Action Notes</p>
+              <p className="font-medium whitespace-pre-wrap">
+                {appointment.actionNotes || '—'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <Calendar className="w-5 h-5 text-gray-400 mt-0.5" />
+            <div>
+              <p className="text-xs text-gray-500">Attended At</p>
+              <p className="font-medium">{formatDateTime(appointment.attendedAt)}</p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <Calendar className="w-5 h-5 text-gray-400 mt-0.5" />
+            <div>
+              <p className="text-xs text-gray-500">Completed At</p>
+              <p className="font-medium">{formatDateTime(appointment.completedAt)}</p>
+            </div>
           </div>
         </div>
-        
-        <div className="flex items-start gap-3">
-          <FileText className="w-5 h-5 text-gray-400 mt-0.5" />
-          <div>
-            <p className="text-xs text-gray-500">Service</p>
-            <p className="font-medium">
-              {serviceTypesMap[appointment.serviceTypeId] || appointment.serviceTypeName || '-'}
-            </p>
+
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-gray-900">Cancellation & Audit</h3>
+
+          <div className="flex items-start gap-3">
+            <XCircle className="w-5 h-5 text-gray-400 mt-0.5" />
+            <div>
+              <p className="text-xs text-gray-500">Cancelled At</p>
+              <p className="font-medium">{formatDateTime(appointment.cancelledAt)}</p>
+            </div>
           </div>
+
+          <div className="flex items-start gap-3">
+            <Trash2 className="w-5 h-5 text-gray-400 mt-0.5" />
+            <div>
+              <p className="text-xs text-gray-500">Cancellation Reason</p>
+              <p className="font-medium whitespace-pre-wrap">
+                {appointment.cancellationReason || '—'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <User className="w-5 h-5 text-gray-400 mt-0.5" />
+            <div>
+              <p className="text-xs text-gray-500">Created By</p>
+              <p className="font-medium">{appointment.createdById || '—'}</p>
+              <p className="text-xs text-gray-500 mt-1">
+                {formatDateTime(appointment.createdAt)}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <User className="w-5 h-5 text-gray-400 mt-0.5" />
+            <div>
+              <p className="text-xs text-gray-500">Updated By</p>
+              <p className="font-medium">{appointment.updatedById || '—'}</p>
+              <p className="text-xs text-gray-500 mt-1">
+                {formatDateTime(appointment.updatedAt)}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <h3 className="text-lg font-semibold text-gray-900">Notes</h3>
+        <div className="rounded border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700 whitespace-pre-wrap">
+          {appointment.notes || 'No notes provided.'}
         </div>
       </div>
     </div>
