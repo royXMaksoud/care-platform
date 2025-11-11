@@ -118,6 +118,14 @@ export default function BeneficiaryList() {
       max: 180,
       placeholder: '36.2765'
     },
+    {
+      type: 'map',
+      name: 'locationPicker',
+      label: 'Select location on map',
+      buttonLabel: 'Choose on Map',
+      latName: 'latitude',
+      lngName: 'longitude',
+    },
     { type: 'date', name: 'dateOfBirth', label: 'Date of Birth' },
     { 
       type: 'select',
@@ -155,6 +163,9 @@ export default function BeneficiaryList() {
     { type: 'checkbox', name: 'isActive', label: 'Active', defaultValue: true },
   ]
 
+  const toNullableFloat = (value) =>
+    value === '' || value === null || value === undefined ? null : parseFloat(value)
+
   const toCreatePayload = (formData) => ({
     nationalId: formData.nationalId || null,
     fullName: formData.fullName,
@@ -162,8 +173,8 @@ export default function BeneficiaryList() {
     mobileNumber: formData.mobileNumber,
     email: formData.email || null,
     address: formData.address || null,
-    latitude: formData.latitude ? parseFloat(formData.latitude) : null,
-    longitude: formData.longitude ? parseFloat(formData.longitude) : null,
+    latitude: toNullableFloat(formData.latitude),
+    longitude: toNullableFloat(formData.longitude),
     dateOfBirth: formData.dateOfBirth || null,
     genderCodeValueId: formData.genderCodeValueId || null,
     profilePhotoUrl: formData.profilePhotoUrl || null,
@@ -179,8 +190,8 @@ export default function BeneficiaryList() {
     mobileNumber: formData.mobileNumber,
     email: formData.email || null,
     address: formData.address || null,
-    latitude: formData.latitude ? parseFloat(formData.latitude) : null,
-    longitude: formData.longitude ? parseFloat(formData.longitude) : null,
+    latitude: toNullableFloat(formData.latitude),
+    longitude: toNullableFloat(formData.longitude),
     dateOfBirth: formData.dateOfBirth || null,
     genderCodeValueId: formData.genderCodeValueId || null,
     profilePhotoUrl: formData.profilePhotoUrl || null,

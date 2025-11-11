@@ -1,8 +1,11 @@
 import React from 'react'
+import { useNavigate } from 'react-router-dom'
 import CrudPage from '@/features/crud/CrudPage'
-import { Shield } from 'lucide-react'
+import { Shield, Languages } from 'lucide-react'
 
 export default function ActionTypeList() {
+  const navigate = useNavigate()
+
   const actionTypeColumns = [
     {
       id: 'name',
@@ -75,6 +78,24 @@ export default function ActionTypeList() {
       ),
       meta: { type: 'boolean', filterKey: 'isActive', operators: ['EQUAL'] },
     },
+    {
+      id: 'languages',
+      header: 'Languages',
+      cell: ({ row }) => (
+        <button
+          type="button"
+          className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 border border-blue-200 rounded-full hover:bg-blue-100 hover:text-blue-700 transition-colors"
+          onClick={(e) => {
+            e.stopPropagation()
+            navigate(`/appointment/action-types/${row.original.actionTypeId}`)
+          }}
+        >
+          <Languages className="w-4 h-4" />
+          Manage
+        </button>
+      ),
+      enableSorting: false,
+    },
   ]
 
   const actionTypeFields = [
@@ -137,6 +158,7 @@ export default function ActionTypeList() {
           enableEdit={true}
           enableDelete={true}
           tableId="action-types-list"
+          onRowClick={(row) => navigate(`/appointment/action-types/${row.actionTypeId}`)}
         />
       </div>
     </div>

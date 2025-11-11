@@ -67,6 +67,20 @@ export default function BeneficiaryDetails() {
     { id: 'family', label: 'Family Members', icon: UsersIcon },
     { id: 'documents', label: 'Documents', icon: FileText },
   ]
+
+  const hasCoordinates =
+    beneficiary.latitude !== null &&
+    beneficiary.latitude !== undefined &&
+    beneficiary.latitude !== '' &&
+    beneficiary.longitude !== null &&
+    beneficiary.longitude !== undefined &&
+    beneficiary.longitude !== ''
+
+  const formattedLatitude = hasCoordinates ? Number(beneficiary.latitude).toFixed(6) : null
+  const formattedLongitude = hasCoordinates ? Number(beneficiary.longitude).toFixed(6) : null
+  const locationLink = hasCoordinates
+    ? `https://www.google.com/maps?q=${beneficiary.latitude},${beneficiary.longitude}`
+    : null
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
@@ -222,14 +236,24 @@ function PersonalInfoTab({ beneficiary }) {
           </div>
         </div>
         
-        {beneficiary.latitude && beneficiary.longitude && (
+        {hasCoordinates && (
           <div className="flex items-start gap-3">
             <MapPin className="w-5 h-5 text-gray-400 mt-0.5" />
             <div>
               <p className="text-xs text-gray-500">Location</p>
               <p className="font-medium text-sm font-mono">
-                {beneficiary.latitude.toFixed(6)}, {beneficiary.longitude.toFixed(6)}
+                {formattedLatitude}, {formattedLongitude}
               </p>
+              {locationLink && (
+                <a
+                  href={locationLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-1 inline-flex items-center text-xs font-medium text-indigo-600 hover:text-indigo-800"
+                >
+                  Open in Maps →
+                </a>
+              )}
             </div>
           </div>
         )}

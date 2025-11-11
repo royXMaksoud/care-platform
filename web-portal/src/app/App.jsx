@@ -20,6 +20,7 @@ import { useAuth } from '@/auth/useAuth'
 import authStorage from '@/auth/authStorage'
 import { api } from '@/lib/axios'
 import { useMyModules } from '@/hooks/useMyModules'
+import { useFastAccessShortcuts } from '@/hooks/useFastAccessShortcuts'
 import LanguageSwitcher from '@/shared/components/LanguageSwitcher'
 import SessionTimeoutWatcher from '@/shared/components/SessionTimeoutWatcher'
 
@@ -106,6 +107,7 @@ export default function App() {
   }, [displayName])
   
   const { modules, isLoading, isError } = useMyModules()
+  const { shortcuts } = useFastAccessShortcuts()
   
 
   if (isLoading) return <div className="p-6">Loading…</div>
@@ -193,6 +195,25 @@ export default function App() {
             </button>
           </nav>
         </div>
+        {shortcuts.length > 0 && (
+          <div className="border-t border-white/60 bg-white/60 backdrop-blur-sm">
+            <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center gap-2 px-4 py-2 text-xs text-slate-500 lg:px-6">
+              <span className="font-semibold uppercase tracking-wide text-slate-400">Fast Access</span>
+              {shortcuts.map((shortcut) => (
+                <Link
+                  key={shortcut.path}
+                  to={shortcut.path}
+                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-[0.7rem] font-medium text-slate-600 shadow-sm transition-all duration-200 hover:border-slate-300 hover:text-slate-900"
+                >
+                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-[0.7rem] font-semibold text-slate-500">
+                    {shortcut.title.slice(0, 2).toUpperCase()}
+                  </span>
+                  {shortcut.title}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
       </header>
       
 

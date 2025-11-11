@@ -18,8 +18,13 @@ export default function CrudFormModal({
   const initialState = useMemo(() => {
     const base = {}
     fields.forEach((f) => {
-      if (f.type === 'checkbox') base[f.name] = false
-      else base[f.name] = ''
+      if (Object.prototype.hasOwnProperty.call(f, 'defaultValue')) {
+        base[f.name] = f.defaultValue
+      } else if (f.type === 'checkbox') {
+        base[f.name] = false
+      } else {
+        base[f.name] = ''
+      }
     })
     return base
   }, [fields])
@@ -28,7 +33,7 @@ export default function CrudFormModal({
   const [selectOptions, setSelectOptions] = useState({}) // Store options for each select field
   const [loadingFields, setLoadingFields] = useState({}) // Track loading state per field
   const [mapOpen, setMapOpen] = useState(false)
-  const [mapConfig, setMapConfig] = useState(null) // { latName, lngName }
+  const [mapConfig, setMapConfig] = useState(null) // { latName, lngName, label }
   const firstFocusRef = useRef(null)
 
   useEffect(() => {
@@ -142,6 +147,16 @@ export default function CrudFormModal({
     }
   }
 
+  const mapField = fields.find((f) => f.type === 'map')
+
+  const mapButtonLabel = mapField?.buttonLabel || mapField?.label || 'Pick on map'
+
+  const formatCoordinate = (value) => {
+    const numeric = Number(value)
+    if (Number.isNaN(numeric)) return ''
+    return Number(numeric.toFixed(6))
+  }
+
   return ReactDOM.createPortal(
     <>
       <div
@@ -235,18 +250,22 @@ export default function CrudFormModal({
           </div>
         </form>
         {/* Map Picker field: rendered as a dedicated control when present */}
-        {fields.some(f => f.type === 'map') && (
+        {mapField && (
           <div className="px-4 pb-4">
             <button
               type="button"
               className="rounded-xl border px-3 py-2 hover:bg-gray-50"
               onClick={() => {
-                const f = fields.find(x => x.type === 'map')
-                setMapConfig({ latName: f.latName, lngName: f.lngName })
+                if (!mapField?.latName || !mapField?.lngName) return
+                setMapConfig({
+                  latName: mapField.latName,
+                  lngName: mapField.lngName,
+                  label: mapButtonLabel,
+                })
                 setMapOpen(true)
               }}
             >
-              Pick on map
+              {mapButtonLabel}
             </button>
           </div>
         )}
@@ -258,7 +277,11 @@ export default function CrudFormModal({
         initialLng={form[mapConfig?.lngName]}
         onPick={({ latitude, longitude }) => {
           if (!mapConfig) return
-          setForm((f) => ({ ...f, [mapConfig.latName]: latitude, [mapConfig.lngName]: longitude }))
+          setForm((f) => ({
+            ...f,
+            [mapConfig.latName]: formatCoordinate(latitude),
+            [mapConfig.lngName]: formatCoordinate(longitude),
+          }))
         }}
       />
     </>,
