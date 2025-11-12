@@ -47,19 +47,26 @@ const SearchableSelect = ({
       minHeight: '38px',
       borderRadius: '0.375rem',
     }),
-    option: (provided, state) => ({
-      ...provided,
-      backgroundColor: state.isSelected 
-        ? '#3b82f6' 
-        : state.isFocused 
-        ? '#dbeafe' 
-        : 'white',
-      color: state.isSelected ? 'white' : '#1f2937',
-      cursor: 'pointer',
-      '&:active': {
-        backgroundColor: '#2563eb',
-      },
-    }),
+    option: (provided, state) => {
+      const depth = typeof state?.data?.depth === 'number' ? state.data.depth : 0
+      const isLeaf = state?.data?.leaf !== false
+      return {
+        ...provided,
+        backgroundColor: state.isSelected
+          ? '#3b82f6'
+          : state.isFocused
+          ? '#dbeafe'
+          : 'white',
+        color: state.isDisabled ? '#9ca3af' : state.isSelected ? 'white' : '#1f2937',
+        cursor: state.isDisabled ? 'not-allowed' : 'pointer',
+        fontWeight: isLeaf ? provided.fontWeight || 400 : 600,
+        opacity: state.isDisabled ? 0.75 : 1,
+        paddingLeft: `${12 + depth * 12}px`,
+        '&:active': {
+          backgroundColor: '#2563eb',
+        },
+      }
+    },
     menu: (provided) => ({
       ...provided,
       zIndex: 50,
@@ -75,6 +82,16 @@ const SearchableSelect = ({
     }),
   }
 
+  const formatOptionLabel = (option, { context }) => {
+    if (option && Object.prototype.hasOwnProperty.call(option, 'displayLabel')) {
+      if (context === 'value') {
+        return option.pathLabel || option.label || option.displayLabel
+      }
+      return option.displayLabel || option.label || ''
+    }
+    return option?.label ?? ''
+  }
+
   return (
     <Select
       options={options}
@@ -87,6 +104,8 @@ const SearchableSelect = ({
       isSearchable={isSearchable}
       styles={customStyles}
       className={className}
+      formatOptionLabel={formatOptionLabel}
+      isOptionDisabled={(option) => Boolean(option?.isDisabled)}
       noOptionsMessage={() => 'No options found'}
       loadingMessage={() => 'Loading...'}
       {...rest}

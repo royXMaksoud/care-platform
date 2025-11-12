@@ -4,9 +4,26 @@ import { api } from '@/lib/axios'
 import DataTable from '@/packages/datatable/DataTable'
 import SearchableSelect from '@/components/SearchableSelect'
 import { toast } from 'sonner'
-import AppointmentFormModal from '@/modules/appointment/components/AppointmentFormModal'
+import AppointmentFormModal from './AppointmentFormModal'
 import AppointmentCalendar from '@/modules/appointment/pages/appointments/AppointmentCalendar'
-import { Calendar, Clock, User, Building, FileText, RefreshCw, PlusCircle, Edit3, Trash2, Eye, Filter, List as ListIcon } from 'lucide-react'
+import {
+  Calendar,
+  Clock,
+  User,
+  Building,
+  FileText,
+  RefreshCw,
+  PlusCircle,
+  Edit3,
+  Trash2,
+  Eye,
+  Filter,
+  MapPin,
+  Navigation,
+  Route,
+  Loader2,
+  List as ListIcon,
+} from 'lucide-react'
 
 export default function AppointmentList() {
   const navigate = useNavigate()
@@ -21,6 +38,7 @@ export default function AppointmentList() {
   const [selectedBranchId, setSelectedBranchId] = useState(null)
   const [beneficiaryOptions, setBeneficiaryOptions] = useState([])
   const [serviceTypeOptions, setServiceTypeOptions] = useState([])
+  const [serviceTypeTree, setServiceTypeTree] = useState([])
 const [statusOptions, setStatusOptions] = useState([])
 const [organizationOptions, setOrganizationOptions] = useState([])
 const [showCreateModal, setShowCreateModal] = useState(false)
@@ -29,15 +47,97 @@ const [showFilters, setShowFilters] = useState(true)
 const [activeTab, setActiveTab] = useState('list')
 const [selectedDateFilter, setSelectedDateFilter] = useState(null)
 const [selectedBeneficiaryId, setSelectedBeneficiaryId] = useState(null)
+const [selectedServiceTypeId, setSelectedServiceTypeId] = useState(null)
 const [selectedStatusId, setSelectedStatusId] = useState(null)
 const [selectedPriority, setSelectedPriority] = useState(null)
   const [selectedAppointment, setSelectedAppointment] = useState(null)
   const [deletingId, setDeletingId] = useState(null)
+  const [beneficiaryLocation, setBeneficiaryLocation] = useState(null)
+  const [loadingNearestLocation, setLoadingNearestLocation] = useState(false)
+  const [loadingNearestAvailability, setLoadingNearestAvailability] = useState(false)
+  const [nearestByLocation, setNearestByLocation] = useState([])
+  const [nearestByAvailability, setNearestByAvailability] = useState([])
+  const [nearestError, setNearestError] = useState(null)
+  const [nearestLocationSearched, setNearestLocationSearched] = useState(false)
+  const [nearestAvailabilitySearched, setNearestAvailabilitySearched] = useState(false)
+  const [nearestLimit, setNearestLimit] = useState(5)
   const uiLang = (typeof navigator !== 'undefined' && (navigator.language || '').startsWith('ar')) ? 'ar' : 'en'
 
   const refresh = useCallback(() => {
     setRefreshKey((key) => key + 1)
   }, [])
+
+  const buildServiceTypeOptions = useCallback((nodes = []) => {
+    const collected = []
+    const map = {}
+
+    const traverse = (items, path = [], depth = 0) => {
+      if (!Array.isArray(items)) return
+      items.forEach((item) => {
+        if (!item) return
+        const name = item.name || item.code || 'Service'
+        const children = Array.isArray(item.children) ? item.children : []
+        const isLeaf = item.leaf ?? children.length === 0
+        const currentPath = [...path, name]
+        const pathLabel = currentPath.join(' › ')
+        const option = {
+          value: item.serviceTypeId,
+          label: name,
+          pathLabel,
+          depth,
+          leaf: isLeaf,
+          displayLabel: name,
+          isDisabled: !isLeaf,
+        }
+        collected.push(option)
+        if (item.serviceTypeId) {
+          map[item.serviceTypeId] = pathLabel
+        }
+        if (children.length) {
+          traverse(children, currentPath, depth + 1)
+        }
+      })
+    }
+
+    traverse(nodes)
+
+    const options = collected.map((opt) => ({
+      value: opt.value,
+      label: opt.pathLabel,
+      depth: opt.depth,
+      leaf: opt.leaf,
+      displayLabel: opt.displayLabel,
+      rawLabel: opt.displayLabel,
+      pathLabel: opt.pathLabel,
+      isDisabled: opt.isDisabled,
+    }))
+
+    return { options, map }
+  }, [])
+
+  const formatDistance = (km) => {
+    if (km == null || Number.isNaN(km)) return '—'
+    return `${Number(km).toFixed(2)} km`
+  }
+
+  const formatDateDisplay = (value) => {
+    if (!value) return '—'
+    try {
+      return new Date(value).toLocaleDateString('en-GB')
+    } catch {
+      return value
+    }
+  }
+
+  const formatTimeDisplay = (value) => {
+    if (!value) return '—'
+    return value.substring(0, 5)
+  }
+
+  const formatCoordinate = (value) => {
+    if (value == null || Number.isNaN(value)) return '—'
+    return Number(value).toFixed(4)
+  }
 
   const handleOpenCreate = useCallback(() => {
     setSelectedAppointment(null)
@@ -82,6 +182,85 @@ const toggleFilters = useCallback(() => {
     [refresh]
   )
   
+  const handleNearestSearch = useCallback(
+    async (mode) => {
+      if (!selectedBeneficiaryId || !selectedServiceTypeId) {
+        toast.error('Select both beneficiary and service type first')
+        return
+      }
+
+      if (
+        !beneficiaryLocation?.latitude ||
+        Number.isNaN(beneficiaryLocation.latitude) ||
+        !beneficiaryLocation?.longitude ||
+        Number.isNaN(beneficiaryLocation.longitude)
+      ) {
+        toast.error('Beneficiary location is missing. Please update beneficiary coordinates.')
+        return
+      }
+
+      const endpoint =
+        mode === 'location'
+          ? '/appointment-service/api/admin/appointments/nearest/location'
+          : '/appointment-service/api/admin/appointments/nearest/availability'
+
+      const limitValue = Number(nearestLimit)
+      const effectiveLimit = Number.isFinite(limitValue) && limitValue > 0 ? Math.min(limitValue, 50) : 5
+
+      const payload = {
+        beneficiaryId: selectedBeneficiaryId,
+        serviceTypeId: selectedServiceTypeId,
+        latitude: beneficiaryLocation.latitude,
+        longitude: beneficiaryLocation.longitude,
+        limit: effectiveLimit,
+        searchWindowDays: 30,
+      }
+
+      setNearestError(null)
+
+      try {
+        if (mode === 'location') {
+          setLoadingNearestLocation(true)
+        } else {
+          setLoadingNearestAvailability(true)
+        }
+
+        const response = await api.post(endpoint, payload)
+        const results = Array.isArray(response?.data) ? response.data : []
+
+        if (mode === 'location') {
+          setNearestByLocation(results)
+          setNearestLocationSearched(true)
+        } else {
+          setNearestByAvailability(results)
+          setNearestAvailabilitySearched(true)
+        }
+
+        if (!results.length) {
+          toast.info('No matching centers found for the selected criteria.')
+        }
+      } catch (error) {
+        const message =
+          error?.response?.data?.message ||
+          error?.response?.data?.details?.[0]?.message ||
+          'Failed to load nearest branches'
+        setNearestError(message)
+        toast.error(message)
+      } finally {
+        if (mode === 'location') {
+          setLoadingNearestLocation(false)
+        } else {
+          setLoadingNearestAvailability(false)
+        }
+      }
+    },
+    [
+      selectedBeneficiaryId,
+      selectedServiceTypeId,
+      beneficiaryLocation,
+    ]
+  )
+  
   const handleRowClick = (row) => {
     navigate(`/appointment/appointments/${row.appointmentId}`)
   }
@@ -92,14 +271,7 @@ const toggleFilters = useCallback(() => {
     const loadInitialData = async () => {
       setLoadingLookups(true)
       try {
-        const [
-          branchesRes,
-          beneficiariesRes,
-          servicesRes,
-          permissionsRes,
-          statusesRes,
-          organizationsRes,
-        ] = await Promise.all([
+        const results = await Promise.allSettled([
           api.post(
             '/access/api/organization-branches/filter',
             { criteria: [] },
@@ -108,7 +280,7 @@ const toggleFilters = useCallback(() => {
             }
           ),
           api.get('/appointment-service/api/admin/beneficiaries/lookup'),
-          api.get('/appointment-service/api/admin/service-types/lookup'),
+          api.get('/appointment-service/api/admin/service-types/tree'),
           api.get('/auth/me/permissions'),
           api.get('/appointment-service/api/admin/appointment-statuses/lookup', {
             params: { lang: uiLang },
@@ -122,9 +294,31 @@ const toggleFilters = useCallback(() => {
           ),
         ])
 
+        const getValue = (idx) =>
+          results[idx]?.status === 'fulfilled' ? results[idx].value : null
+
+        const branchesRes = getValue(0)
+        const beneficiariesRes = getValue(1)
+        const servicesRes = getValue(2)
+        const permissionsRes = getValue(3)
+        const statusesRes = getValue(4)
+        const organizationsRes = getValue(5)
+
+        const rejectedReasons = results
+          .map((item) => (item?.status === 'rejected' ? item.reason : null))
+          .filter(Boolean)
+        if (rejectedReasons.length) {
+          console.warn('Some lookup calls failed', rejectedReasons)
+        }
+
         if (!isActive) return
 
-        const branchItems = branchesRes?.data?.content ?? []
+        const branchData = branchesRes?.data
+        const branchItems = Array.isArray(branchData)
+          ? branchData
+          : Array.isArray(branchData?.content)
+          ? branchData.content
+          : []
         setAllOrganizationBranches(branchItems)
 
         const brMap = {}
@@ -136,7 +330,9 @@ const toggleFilters = useCallback(() => {
         })
         setBranchesMap(brMap)
 
-        const beneficiaryItems = beneficiariesRes?.data ?? []
+        const beneficiaryItems = Array.isArray(beneficiariesRes?.data)
+          ? beneficiariesRes.data
+          : []
         const benMap = {}
         beneficiaryItems.forEach((b) => {
           if (b.beneficiaryId) {
@@ -151,22 +347,17 @@ const toggleFilters = useCallback(() => {
           }))
         )
 
-        const serviceItems = servicesRes?.data ?? []
-        const stMap = {}
-        serviceItems.forEach((s) => {
-          if (s.serviceTypeId) {
-            stMap[s.serviceTypeId] = s.name || s.code || 'Service'
-          }
-        })
+        const serviceTreeData = Array.isArray(servicesRes?.data)
+          ? servicesRes.data
+          : []
+        setServiceTypeTree(serviceTreeData)
+        const { options: flattenedServiceOptions, map: stMap } = buildServiceTypeOptions(serviceTreeData)
         setServiceTypesMap(stMap)
-        setServiceTypeOptions(
-          serviceItems.map((s) => ({
-            value: s.serviceTypeId,
-            label: s.name || s.code || 'Service',
-          }))
-        )
+        setServiceTypeOptions(flattenedServiceOptions)
 
-        const statusItems = statusesRes?.data ?? []
+        const statusItems = Array.isArray(statusesRes?.data)
+          ? statusesRes.data
+          : []
         setStatusOptions(
           statusItems.map((status) => ({
             value: status.value,
@@ -176,7 +367,12 @@ const toggleFilters = useCallback(() => {
           }))
         )
 
-        const organizationItems = organizationsRes?.data?.content ?? []
+        const organizationsData = organizationsRes?.data
+        const organizationItems = Array.isArray(organizationsData)
+          ? organizationsData
+          : Array.isArray(organizationsData?.content)
+          ? organizationsData.content
+          : []
         const orgMap = {}
         const orgOptionList = []
 
@@ -247,7 +443,7 @@ const toggleFilters = useCallback(() => {
     return () => {
       isActive = false
     }
-  }, [uiLang])
+  }, [uiLang, buildServiceTypeOptions])
 
   useEffect(() => {
     if (!selectedOrganizationId) return
@@ -271,10 +467,57 @@ const toggleFilters = useCallback(() => {
   }, [allOrganizationBranches, selectedBranchId])
 
   useEffect(() => {
+    if (!selectedBeneficiaryId) {
+      setBeneficiaryLocation(null)
+      return
+    }
+
+    let cancelled = false
+
+    const fetchBeneficiaryLocation = async () => {
+      try {
+        const response = await api.get(
+          `/appointment-service/api/admin/beneficiaries/${selectedBeneficiaryId}`
+        )
+        if (cancelled) return
+        const data = response?.data || {}
+        setBeneficiaryLocation({
+          latitude: data.latitude ?? null,
+          longitude: data.longitude ?? null,
+          name:
+            data.fullName ||
+            beneficiariesMap[selectedBeneficiaryId] ||
+            data.nationalId ||
+            'Beneficiary',
+        })
+      } catch (error) {
+        if (!cancelled) {
+          console.error('Failed to load beneficiary location', error)
+          setBeneficiaryLocation(null)
+        }
+      }
+    }
+
+    fetchBeneficiaryLocation()
+
+    return () => {
+      cancelled = true
+    }
+  }, [selectedBeneficiaryId, beneficiariesMap])
+
+  useEffect(() => {
     if (activeTab === 'calendar') {
       setShowFilters(true)
     }
   }, [activeTab])
+
+  useEffect(() => {
+    setNearestByLocation([])
+    setNearestByAvailability([])
+    setNearestLocationSearched(false)
+    setNearestAvailabilitySearched(false)
+    setNearestError(null)
+  }, [selectedBeneficiaryId, selectedServiceTypeId])
 
   const branchOptions = useMemo(() => {
     return allOrganizationBranches
@@ -358,6 +601,15 @@ const toggleFilters = useCallback(() => {
       })
     }
 
+    if (selectedServiceTypeId) {
+      filters.push({
+        key: 'serviceTypeId',
+        operator: 'EQUAL',
+        value: selectedServiceTypeId,
+        dataType: 'UUID',
+      })
+    }
+
     if (selectedStatusId) {
       filters.push({
         key: 'appointmentStatusId',
@@ -383,10 +635,11 @@ const toggleFilters = useCallback(() => {
     selectedOrganizationId,
     allOrganizationBranches,
     authorizedBranchIds,
-  selectedDateFilter,
-  selectedBeneficiaryId,
-  selectedStatusId,
-  selectedPriority,
+    selectedDateFilter,
+    selectedBeneficiaryId,
+    selectedServiceTypeId,
+    selectedStatusId,
+    selectedPriority,
   ])
 
   const statusLabelMap = useMemo(() => {
@@ -402,36 +655,6 @@ const toggleFilters = useCallback(() => {
   }, [statusOptions])
 
   const appointmentColumns = [
-    {
-      id: 'appointmentDate',
-      accessorKey: 'appointmentDate',
-      header: 'Date',
-      cell: ({ getValue }) => {
-        const date = getValue()
-        return date ? (
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-gray-500" />
-            <span className="font-medium">{new Date(date + 'T00:00:00').toLocaleDateString('en-GB')}</span>
-          </div>
-        ) : '-'
-      },
-      meta: { type: 'date', filterKey: 'appointmentDate', operators: ['EQUAL', 'BEFORE', 'AFTER', 'BETWEEN'] },
-    },
-    {
-      id: 'appointmentTime',
-      accessorKey: 'appointmentTime',
-      header: 'Time',
-      cell: ({ getValue }) => {
-        const time = getValue()
-        return time ? (
-          <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-gray-500" />
-            <span className="font-mono text-sm">{time?.substring(0,5)}</span>
-          </div>
-        ) : '-'
-      },
-      meta: { type: 'string', filterKey: 'appointmentTime', operators: ['EQUAL', 'GREATER_THAN', 'LESS_THAN'] },
-    },
     {
       id: 'beneficiaryId',
       accessorKey: 'beneficiaryId',
@@ -450,6 +673,80 @@ const toggleFilters = useCallback(() => {
       meta: { type: 'string', filterKey: 'beneficiaryId', operators: ['EQUAL'] },
     },
     {
+      id: 'serviceTypeId',
+      accessorKey: 'serviceTypeId',
+      header: 'Service Type',
+      cell: ({ getValue, row }) => {
+        const stId = getValue()
+        const original = row?.original || {}
+        const displayName = serviceTypesMap[stId] || original.serviceTypeName || stId || '-'
+        return (
+          <div className="flex items-center gap-2">
+            <FileText className="h-4 w-4 text-gray-500" />
+            <span className="text-sm">{displayName}</span>
+          </div>
+        )
+      },
+      meta: { type: 'string', filterKey: 'serviceTypeId', operators: ['EQUAL', 'IN'] },
+    },
+    {
+      id: 'appointmentDate',
+      accessorKey: 'appointmentDate',
+      header: 'Date',
+      cell: ({ getValue }) => {
+        const date = getValue()
+        return date ? (
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-gray-500" />
+            <span className="font-medium">
+              {new Date(date + 'T00:00:00').toLocaleDateString('en-GB')}
+            </span>
+          </div>
+        ) : (
+          '-'
+        )
+      },
+      meta: {
+        type: 'date',
+        filterKey: 'appointmentDate',
+        operators: ['EQUAL', 'BEFORE', 'AFTER', 'BETWEEN'],
+      },
+    },
+    {
+      id: 'appointmentTime',
+      accessorKey: 'appointmentTime',
+      header: 'Time',
+      cell: ({ getValue }) => {
+        const time = getValue()
+        return time ? (
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-gray-500" />
+            <span className="font-mono text-sm">{time?.substring(0, 5)}</span>
+          </div>
+        ) : (
+          '-'
+        )
+      },
+      meta: { type: 'string', filterKey: 'appointmentTime', operators: ['EQUAL', 'GREATER_THAN', 'LESS_THAN'] },
+    },
+    {
+      id: 'organizationBranchId',
+      accessorKey: 'organizationBranchId',
+      header: 'Center',
+      cell: ({ getValue, row }) => {
+        const brId = getValue()
+        const original = row?.original || {}
+        const displayName = branchesMap[brId] || original.branchName || brId || '-'
+        return (
+          <div className="flex items-center gap-2">
+            <Building className="h-4 w-4 text-gray-500" />
+            <span>{displayName}</span>
+          </div>
+        )
+      },
+      meta: { type: 'string', filterKey: 'organizationBranchId', operators: ['EQUAL', 'IN'] },
+    },
+    {
       id: 'appointmentStatus',
       accessorKey: 'appointmentStatus',
       header: 'Status',
@@ -460,8 +757,7 @@ const toggleFilters = useCallback(() => {
           statusOptions.find((opt) => opt.value === statusId) ||
           statusOptions.find((opt) => opt.code === statusCode)
 
-        const badgeLabel =
-          option?.label || option?.name || statusCode || 'UNKNOWN'
+        const badgeLabel = option?.label || option?.name || statusCode || 'UNKNOWN'
 
         const badgeTone = (option?.code || statusCode || '').toUpperCase()
         const style =
@@ -482,38 +778,30 @@ const toggleFilters = useCallback(() => {
       meta: { type: 'string', filterKey: 'appointmentStatusId', operators: ['EQUAL', 'IN'] },
     },
     {
-      id: 'organizationBranchId',
-      accessorKey: 'organizationBranchId',
-      header: 'Center',
-      cell: ({ getValue, row }) => {
-        const brId = getValue()
-        const original = row?.original || {}
-        const displayName = branchesMap[brId] || original.branchName || brId || '-'
+      id: 'priority',
+      accessorKey: 'priority',
+      header: 'Priority',
+      cell: ({ getValue }) => {
+        const priority = getValue()
         return (
-          <div className="flex items-center gap-2">
-            <Building className="h-4 w-4 text-gray-500" />
-            <span>{displayName}</span>
-          </div>
+          <span
+            className={`px-2 py-1 text-xs font-semibold rounded-full ${
+              priority === 'URGENT' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
+            }`}
+          >
+            {priority || 'NORMAL'}
+          </span>
         )
       },
-      meta: { type: 'string', filterKey: 'organizationBranchId', operators: ['EQUAL', 'IN'] },
-    },
-    {
-      id: 'serviceTypeId',
-      accessorKey: 'serviceTypeId',
-      header: 'Service',
-      cell: ({ getValue, row }) => {
-        const stId = getValue()
-        const original = row?.original || {}
-        const displayName = serviceTypesMap[stId] || original.serviceTypeName || stId || '-'
-        return (
-          <div className="flex items-center gap-2">
-            <FileText className="h-4 w-4 text-gray-500" />
-            <span className="text-sm">{displayName}</span>
-          </div>
-        )
+      meta: {
+        type: 'string',
+        filterKey: 'priority',
+        operators: ['EQUAL'],
+        enumValues: [
+          { value: 'NORMAL', label: 'Normal' },
+          { value: 'URGENT', label: 'Urgent' },
+        ],
       },
-      meta: { type: 'string', filterKey: 'serviceTypeId', operators: ['EQUAL', 'IN'] },
     },
     {
       id: 'slotDurationMinutes',
@@ -536,30 +824,6 @@ const toggleFilters = useCallback(() => {
       },
     },
     {
-      id: 'priority',
-      accessorKey: 'priority',
-      header: 'Priority',
-      cell: ({ getValue }) => {
-        const priority = getValue()
-        return (
-          <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-            priority === 'URGENT' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
-          }`}>
-            {priority || 'NORMAL'}
-          </span>
-        )
-      },
-      meta: { 
-        type: 'string', 
-        filterKey: 'priority', 
-        operators: ['EQUAL'],
-        enumValues: [
-          { value: 'NORMAL', label: 'Normal' },
-          { value: 'URGENT', label: 'Urgent' },
-        ]
-      },
-    },
-    {
       id: 'createdAt',
       accessorKey: 'createdAt',
       header: 'Created',
@@ -567,7 +831,11 @@ const toggleFilters = useCallback(() => {
         const date = getValue()
         return date ? new Date(date).toLocaleString() : '-'
       },
-      meta: { type: 'date', filterKey: 'createdAt', operators: ['EQUAL', 'BEFORE', 'AFTER', 'BETWEEN'] },
+      meta: {
+        type: 'date',
+        filterKey: 'createdAt',
+        operators: ['EQUAL', 'BEFORE', 'AFTER', 'BETWEEN'],
+      },
     },
     {
       id: 'attendedAt',
@@ -722,6 +990,11 @@ const toggleFilters = useCallback(() => {
                 setSelectedOrganizationId(null)
                 setSelectedBranchId(null)
                 setSelectedDateFilter(null)
+              setSelectedBeneficiaryId(null)
+              setSelectedServiceTypeId(null)
+              setSelectedStatusId(null)
+              setSelectedPriority(null)
+              setBeneficiaryLocation(null)
               }}
               disabled={loadingLookups}
             >
@@ -739,7 +1012,86 @@ const toggleFilters = useCallback(() => {
           </div>
 
           {showFilters && (
+            <>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-2">
+                <label className="text-sm font-medium">Beneficiary</label>
+                <SearchableSelect
+                  options={beneficiaryOptions}
+                  value={selectedBeneficiaryId}
+                  onChange={(value) => setSelectedBeneficiaryId(value)}
+                  placeholder="All beneficiaries"
+                  isClearable
+                />
+              </div>
+              <div className="grid gap-2">
+                <label className="text-sm font-medium">Service Type</label>
+                <SearchableSelect
+                  options={serviceTypeOptions}
+                  value={selectedServiceTypeId}
+                  onChange={(value) => setSelectedServiceTypeId(value)}
+                  placeholder="All service types"
+                  isClearable
+                />
+              </div>
+              {(selectedBeneficiaryId && selectedServiceTypeId) && (
+                <div className="grid gap-2">
+                  <label className="text-sm font-medium">Find Nearest Centers</label>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs font-medium text-blue-800">
+                        Max results
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={50}
+                        value={nearestLimit}
+                        onChange={(e) => setNearestLimit(e.target.value)}
+                        className="w-20 rounded-md border border-blue-200 px-2 py-1 text-xs focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-300"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-2 rounded-md border border-blue-600 bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={() => handleNearestSearch('location')}
+                      disabled={
+                        loadingNearestLocation ||
+                        !selectedBeneficiaryId ||
+                        !selectedServiceTypeId ||
+                        !beneficiaryLocation?.latitude ||
+                        !beneficiaryLocation?.longitude
+                      }
+                    >
+                      {loadingNearestLocation ? <Loader2 className="h-4 w-4 animate-spin" /> : <Navigation className="h-4 w-4" />}
+                      Show nearest branch
+                    </button>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-2 rounded-md border border-amber-500 bg-amber-500 px-3 py-2 text-sm font-medium text-white hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={() => handleNearestSearch('availability')}
+                      disabled={
+                        loadingNearestAvailability ||
+                        !selectedBeneficiaryId ||
+                        !selectedServiceTypeId ||
+                        !beneficiaryLocation?.latitude ||
+                        !beneficiaryLocation?.longitude
+                      }
+                    >
+                      {loadingNearestAvailability ? <Loader2 className="h-4 w-4 animate-spin" /> : <Calendar className="h-4 w-4" />}
+                      Show earliest availability
+                    </button>
+                  </div>
+                  {nearestError && (
+                    <p className="mt-1 text-xs text-red-600">{nearestError}</p>
+                  )}
+                  {selectedBeneficiaryId && (!beneficiaryLocation?.latitude || !beneficiaryLocation?.longitude) && (
+                    <p className="mt-1 text-xs text-amber-600">
+                      Beneficiary location coordinates are missing. Please update beneficiary coordinates to use this feature.
+                    </p>
+                  )}
+                </div>
+              )}
               <div className="grid gap-2">
                 <label className="text-sm font-medium">Organization</label>
                 <SearchableSelect
@@ -767,16 +1119,6 @@ const toggleFilters = useCallback(() => {
                 />
               </div>
               <div className="grid gap-2">
-                <label className="text-sm font-medium">Beneficiary</label>
-                <SearchableSelect
-                  options={beneficiaryOptions}
-                  value={selectedBeneficiaryId}
-                  onChange={(value) => setSelectedBeneficiaryId(value)}
-                  placeholder="All beneficiaries"
-                  isClearable
-                />
-              </div>
-              <div className="grid gap-2">
                 <label className="text-sm font-medium">Status</label>
                 <SearchableSelect
                   options={statusOptions}
@@ -799,6 +1141,152 @@ const toggleFilters = useCallback(() => {
                   isClearable
                 />
               </div>
+            </div>
+            </>
+          )}
+
+          {(nearestByLocation.length > 0 ||
+            nearestByAvailability.length > 0 ||
+            nearestLocationSearched ||
+            nearestAvailabilitySearched) && (
+            <div className="space-y-4">
+              {nearestByLocation.length > 0 ? (
+                <div className="rounded-lg border border-blue-200 bg-blue-50/70 p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-blue-800 font-semibold">
+                      <Navigation className="h-4 w-4" />
+                      <span>Nearest centers by distance</span>
+                    </div>
+                    <span className="text-xs font-medium text-blue-600">
+                      {nearestByLocation.length} result{nearestByLocation.length === 1 ? '' : 's'}
+                    </span>
+                  </div>
+                  <div className="mt-3 overflow-x-auto">
+                    <table className="min-w-full divide-y divide-blue-100 text-xs md:text-sm">
+                      <thead className="bg-blue-100/60 text-blue-900">
+                        <tr>
+                          <th className="whitespace-nowrap px-3 py-2 text-left font-semibold">Branch</th>
+                          <th className="whitespace-nowrap px-3 py-2 text-left font-semibold">Address</th>
+                          <th className="whitespace-nowrap px-3 py-2 text-left font-semibold">Distance</th>
+                          <th className="whitespace-nowrap px-3 py-2 text-left font-semibold">Next Date</th>
+                          <th className="whitespace-nowrap px-3 py-2 text-left font-semibold">Time</th>
+                          <th className="whitespace-nowrap px-3 py-2 text-left font-semibold">Capacity</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-blue-100 text-blue-900/90">
+                        {nearestByLocation.map((item) => (
+                          <tr key={`${item.organizationBranchId}-${item.nextAvailableDate || 'na'}`}>
+                            <td className="px-3 py-2 align-top">
+                              <div className="flex flex-col">
+                                <span className="font-medium text-gray-900">{item.branchName || 'Branch'}</span>
+                                {item.organizationName && (
+                                  <span className="text-xs text-gray-500">{item.organizationName}</span>
+                                )}
+                                <span className="text-xs text-gray-400">
+                                  Lat: {formatCoordinate(item.branchLatitude)} · Lng: {formatCoordinate(item.branchLongitude)}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-3 py-2 align-top text-gray-700">
+                              {item.address || '—'}
+                            </td>
+                            <td className="px-3 py-2 align-top font-medium text-gray-900">
+                              {formatDistance(item.distanceKm)}
+                            </td>
+                            <td className="px-3 py-2 align-top text-gray-700">
+                              {formatDateDisplay(item.nextAvailableDate)}
+                            </td>
+                            <td className="px-3 py-2 align-top text-gray-700">
+                              {formatTimeDisplay(item.nextAvailableTime)}
+                            </td>
+                            <td className="px-3 py-2 align-top text-gray-700">
+                              <span className="font-medium text-gray-900">
+                                {item.remainingCapacity ?? 0}
+                              </span>
+                              <span className="text-xs text-gray-500"> / {item.dailyCapacity ?? '—'}</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : (
+                nearestLocationSearched && (
+                  <div className="rounded-lg border border-blue-100 bg-white p-4 text-sm text-blue-700">
+                    No branches with free capacity were found near the selected beneficiary.
+                  </div>
+                )
+              )}
+
+              {nearestByAvailability.length > 0 ? (
+                <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-amber-800 font-semibold">
+                      <Route className="h-4 w-4" />
+                      <span>Nearest centers by earliest availability</span>
+                    </div>
+                    <span className="text-xs font-medium text-amber-700">
+                      {nearestByAvailability.length} result{nearestByAvailability.length === 1 ? '' : 's'}
+                    </span>
+                  </div>
+                  <div className="mt-3 overflow-x-auto">
+                    <table className="min-w-full divide-y divide-amber-100 text-xs md:text-sm">
+                      <thead className="bg-amber-100/60 text-amber-900">
+                        <tr>
+                          <th className="whitespace-nowrap px-3 py-2 text-left font-semibold">Branch</th>
+                          <th className="whitespace-nowrap px-3 py-2 text-left font-semibold">Address</th>
+                          <th className="whitespace-nowrap px-3 py-2 text-left font-semibold">Distance</th>
+                          <th className="whitespace-nowrap px-3 py-2 text-left font-semibold">Next Date</th>
+                          <th className="whitespace-nowrap px-3 py-2 text-left font-semibold">Time</th>
+                          <th className="whitespace-nowrap px-3 py-2 text-left font-semibold">Capacity</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-amber-100 text-amber-900/90">
+                        {nearestByAvailability.map((item) => (
+                          <tr key={`${item.organizationBranchId}-${item.nextAvailableDate || 'na'}`}>
+                            <td className="px-3 py-2 align-top">
+                              <div className="flex flex-col">
+                                <span className="font-medium text-gray-900">{item.branchName || 'Branch'}</span>
+                                {item.organizationName && (
+                                  <span className="text-xs text-gray-500">{item.organizationName}</span>
+                                )}
+                                <span className="text-xs text-gray-400">
+                                  Lat: {formatCoordinate(item.branchLatitude)} · Lng: {formatCoordinate(item.branchLongitude)}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-3 py-2 align-top text-gray-700">
+                              {item.address || '—'}
+                            </td>
+                            <td className="px-3 py-2 align-top font-medium text-gray-900">
+                              {formatDistance(item.distanceKm)}
+                            </td>
+                            <td className="px-3 py-2 align-top text-gray-700">
+                              {formatDateDisplay(item.nextAvailableDate)}
+                            </td>
+                            <td className="px-3 py-2 align-top text-gray-700">
+                              {formatTimeDisplay(item.nextAvailableTime)}
+                            </td>
+                            <td className="px-3 py-2 align-top text-gray-700">
+                              <span className="font-medium text-gray-900">
+                                {item.remainingCapacity ?? 0}
+                              </span>
+                              <span className="text-xs text-gray-500"> / {item.dailyCapacity ?? '—'}</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : (
+                nearestAvailabilitySearched && (
+                  <div className="rounded-lg border border-amber-100 bg-white p-4 text-sm text-amber-700">
+                    No available appointment slots were found within the next 30 days.
+                  </div>
+                )
+              )}
             </div>
           )}
 
@@ -832,6 +1320,22 @@ const toggleFilters = useCallback(() => {
                     className="text-purple-600 hover:text-purple-800"
                     onClick={() => setSelectedBeneficiaryId(null)}
                     aria-label="Clear beneficiary filter"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
+              {selectedServiceTypeId && (
+                <span className="inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3 py-1 text-indigo-700">
+                  <FileText className="h-4 w-4" />
+                  <span>
+                    {serviceTypeOptions.find((opt) => opt.value === selectedServiceTypeId)?.label || 'Service'}
+                  </span>
+                  <button
+                    type="button"
+                    className="text-indigo-600 hover:text-indigo-800"
+                    onClick={() => setSelectedServiceTypeId(null)}
+                    aria-label="Clear service type filter"
                   >
                     ×
                   </button>

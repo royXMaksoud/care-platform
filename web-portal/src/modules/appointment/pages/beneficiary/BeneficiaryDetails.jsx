@@ -67,20 +67,6 @@ export default function BeneficiaryDetails() {
     { id: 'family', label: 'Family Members', icon: UsersIcon },
     { id: 'documents', label: 'Documents', icon: FileText },
   ]
-
-  const hasCoordinates =
-    beneficiary.latitude !== null &&
-    beneficiary.latitude !== undefined &&
-    beneficiary.latitude !== '' &&
-    beneficiary.longitude !== null &&
-    beneficiary.longitude !== undefined &&
-    beneficiary.longitude !== ''
-
-  const formattedLatitude = hasCoordinates ? Number(beneficiary.latitude).toFixed(6) : null
-  const formattedLongitude = hasCoordinates ? Number(beneficiary.longitude).toFixed(6) : null
-  const locationLink = hasCoordinates
-    ? `https://www.google.com/maps?q=${beneficiary.latitude},${beneficiary.longitude}`
-    : null
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
@@ -158,6 +144,20 @@ export default function BeneficiaryDetails() {
 }
 
 function PersonalInfoTab({ beneficiary }) {
+  const hasCoordinates =
+    beneficiary.latitude !== null &&
+    beneficiary.latitude !== undefined &&
+    beneficiary.latitude !== '' &&
+    beneficiary.longitude !== null &&
+    beneficiary.longitude !== undefined &&
+    beneficiary.longitude !== ''
+
+  const formattedLatitude = hasCoordinates ? Number(beneficiary.latitude).toFixed(6) : null
+  const formattedLongitude = hasCoordinates ? Number(beneficiary.longitude).toFixed(6) : null
+  const locationLink = hasCoordinates
+    ? `https://www.google.com/maps?q=${beneficiary.latitude},${beneficiary.longitude}`
+    : null
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div className="space-y-4">
