@@ -108,6 +108,30 @@ export default function App() {
   
   const { modules, isLoading, isError } = useMyModules()
   const { shortcuts } = useFastAccessShortcuts()
+  const extendedModules = useMemo(() => {
+    const extra = [
+      {
+        name: 'Warehouse Management System',
+        path: '/warehouse',
+      },
+    ]
+    return [...modules, ...extra]
+  }, [modules])
+
+  const systemModules = useMemo(() => {
+    const unique = new Map()
+
+    extendedModules.forEach((module) => {
+      if (!module?.path) return
+      const normalizedPath = module.path.replace(/\/+$/, '') || '/'
+      if (normalizedPath === '/') return
+      if (!unique.has(normalizedPath)) {
+        unique.set(normalizedPath, { ...module, path: normalizedPath })
+      }
+    })
+
+    return Array.from(unique.values())
+  }, [extendedModules])
   
 
   if (isLoading) return <div className="p-6">Loading…</div>
@@ -165,16 +189,45 @@ export default function App() {
             )}
           </div>
           <nav className="flex items-center gap-3">
-            {modules.map((m, idx) => (
-              <Link
-                key={m.path || `${m.name}-${idx}`}
-                to={m.path}
-                className="group relative text-sm font-medium text-slate-600 transition-all duration-200 hover:text-slate-900 hover:-translate-y-0.5"
+            <div className="relative group">
+              <button
+                type="button"
+                className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 shadow-sm transition-all duration-200 hover:bg-slate-100 hover:-translate-y-0.5"
               >
-                {m.name}
-                <span className="pointer-events-none absolute left-1/2 top-full h-0.5 w-0 bg-blue-500 transition-all duration-200 group-hover:left-0 group-hover:w-full" />
-              </Link>
-            ))}
+                Systems
+                <svg
+                  className="h-3.5 w-3.5 text-slate-500 transition-transform group-hover:rotate-180"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  strokeWidth={2.5}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              <div className="invisible absolute left-0 top-full z-30 mt-2 w-56 origin-top-right scale-95 transform rounded-xl border border-slate-200 bg-white/95 p-2 shadow-xl ring-1 ring-black/5 transition-all duration-150 ease-out group-hover:visible group-hover:scale-100">
+                <div className="max-h-80 space-y-1 overflow-y-auto pr-1">
+                  {systemModules.map((m, idx) => (
+                    <Link
+                      key={m.path || `${m.name}-${idx}`}
+                      to={m.path}
+                      className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
+                    >
+                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500">
+                        {(m.name || '').slice(0, 2).toUpperCase()}
+                      </span>
+                      <span className="truncate">{m.name}</span>
+                    </Link>
+                  ))}
+                  {systemModules.length === 0 && (
+                    <div className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-500">
+                      No systems available
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
             <Link
               to="/"
               className="group relative text-sm font-medium text-slate-600 transition-all duration-200 hover:text-slate-900 hover:-translate-y-0.5"
@@ -254,7 +307,7 @@ export default function App() {
             }
           />
 
-          {modules
+          {extendedModules
           .filter(m => m.path !== '/cms' && m.path !== '/das' && m.path !== '/appointment' && m.path !== '/appointments')
           .map((m, idx) => (
             <Route

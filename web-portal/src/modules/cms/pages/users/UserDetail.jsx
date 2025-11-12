@@ -32,6 +32,38 @@ export default function UserDetail() {
     rowVersion: undefined
   })
   
+  const getInitials = (value) => {
+    if (!value) return 'U'
+    const parts = value.trim().split(/\s+/)
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+  }
+  
+  const Avatar = ({ size = 'lg', src, name }) => {
+    const dimension = size === 'lg' ? 'w-32 h-32' : 'w-16 h-16'
+    const initials = getInitials(name)
+    if (src) {
+      return (
+        <img
+          src={src}
+          alt={name}
+          className={`${dimension} rounded-full object-cover border-4 border-white shadow-lg`}
+          onError={(e) => {
+            e.currentTarget.onerror = null
+            e.currentTarget.style.display = 'none'
+          }}
+        />
+      )
+    }
+    return (
+      <div
+        className={`${dimension} rounded-full bg-gradient-to-br from-sky-500 to-indigo-500 flex items-center justify-center text-white text-3xl font-semibold shadow-lg`}
+      >
+        {initials}
+      </div>
+    )
+  }
+  
   // Helper to format ISO instant to datetime-local input
   const formatDatetimeLocal = (isoString) => {
     if (!isoString) return ''
@@ -415,188 +447,320 @@ export default function UserDetail() {
     )
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
-      <div className="container mx-auto px-6 py-6 max-w-7xl">
-        {/* Breadcrumb */}
-        <div className="mb-4">
-        <CMSBreadcrumb currentPageLabel={u?.fullName || t('cms.users')} />
-      </div>
+  const displayName = form.fullName || u.fullName || form.emailAddress || u.emailAddress || 'Unnamed User'
+  const emailValue = form.emailAddress || u.emailAddress || ''
+  const avatarSource = form.profileImageUrl || u.profileImageUrl || ''
+  const tenantName =
+    tenants.find((tenant) => String(tenant.id) === String(form.tenantId))?.name || null
+  const organizationName =
+    organizations.find((org) => String(org.id) === String(form.organizationId))?.name || null
+  const branchName =
+    branches.find((branch) => String(branch.id) === String(form.organizationBranchId))?.name || null
 
-        {/* Modern Header */}
-        <div className="mb-6">
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-6 shadow-lg text-white">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-          <button 
-            onClick={() => navigate(-1)}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white/20 hover:bg-white/30 transition text-white font-bold"
-                    aria-label="Back"
-                    title="Back"
-          >
-                    ←
-          </button>
-                  <h1 className="text-3xl font-bold">
-              {u.fullName || u.emailAddress}
-            </h1>
-                </div>
-                <p className="text-blue-100 mt-2 flex items-center gap-3 flex-wrap">
-                  <span className="bg-white/20 px-3 py-1 rounded-full text-sm font-semibold">
-                    {u.emailAddress}
-                  </span>
-                  {u.profileImageUrl && (
-                    <img 
-                      src={u.profileImageUrl} 
-                      alt={u.fullName}
-                      className="w-8 h-8 rounded-full border-2 border-white/30"
-                      onError={(e) => { e.target.style.display = 'none' }}
-                    />
-                  )}
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                    u.enabled 
-                      ? 'bg-green-500/80 text-white' 
-                      : 'bg-gray-500/80 text-white'
-                  }`}>
-                    {u.enabled ? '✅ Active' : '❌ Inactive'}
-                  </span>
-                  {u.isEmailVerified && (
-                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/80 text-white">
-                      ✓ Email Verified
-                    </span>
-                  )}
-                </p>
-              </div>
-              <div className="text-6xl opacity-20">👤</div>
-            </div>
-          </div>
+  const formatDisplayDateTime = (value) => {
+    if (!value) return null
+    try {
+      return new Date(value).toLocaleString()
+    } catch {
+      return value
+    }
+  }
+
+  const formatDisplayDate = (value) => {
+    if (!value) return null
+    try {
+      return new Date(value).toLocaleDateString()
+    } catch {
+      return value
+    }
+  }
+
+  const statusBadges = [
+    {
+      id: 'enabled',
+      label: form.enabled ? 'Active Account' : 'Inactive Account',
+      tone: form.enabled ? 'success' : 'muted',
+    },
+    form.isEmailVerified
+      ? { id: 'email', label: 'Email Verified', tone: 'info' }
+      : { id: 'email', label: 'Email Not Verified', tone: 'warning' },
+    form.mustChangePassword
+      ? { id: 'password', label: 'Must Change Password', tone: 'warning' }
+      : null,
+  ].filter(Boolean)
+
+  const contactItems = [
+    emailValue
+      ? {
+          id: 'email',
+          label: 'Email',
+          value: emailValue,
+          href: `mailto:${emailValue}`,
+        }
+      : null,
+    form.language
+      ? {
+          id: 'language',
+          label: 'Language',
+          value: form.language.toUpperCase(),
+        }
+      : null,
+    tenantName
+      ? { id: 'tenant', label: 'Tenant', value: tenantName }
+      : null,
+  ].filter(Boolean)
+
+  const organizationItems = [
+    organizationName
+      ? { id: 'organization', label: 'Organization', value: organizationName }
+      : null,
+    branchName
+      ? { id: 'branch', label: 'Branch', value: branchName }
+      : null,
+    form.accountKind
+      ? { id: 'accountKind', label: 'Account Type', value: form.accountKind }
+      : null,
+    form.type
+      ? { id: 'userType', label: 'User Role', value: form.type }
+      : null,
+    form.authMethod
+      ? { id: 'authMethod', label: 'Auth Method', value: form.authMethod || 'LOCAL' }
+      : null,
+  ].filter(Boolean)
+
+  const timingItems = [
+    form.validFrom ? { id: 'validFrom', label: 'Valid From', value: formatDisplayDateTime(form.validFrom) } : null,
+    form.validTo ? { id: 'validTo', label: 'Valid To', value: formatDisplayDateTime(form.validTo) } : null,
+    form.mustRenewAt ? { id: 'mustRenew', label: 'Must Renew', value: formatDisplayDateTime(form.mustRenewAt) } : null,
+    form.passwordExpiresAt
+      ? { id: 'passwordExpiresAt', label: 'Password Expires', value: formatDisplayDateTime(form.passwordExpiresAt) }
+      : null,
+    form.employmentStartDate
+      ? { id: 'employmentStart', label: 'Employment Start', value: formatDisplayDate(form.employmentStartDate) }
+      : null,
+    form.employmentEndDate
+      ? { id: 'employmentEnd', label: 'Employment End', value: formatDisplayDate(form.employmentEndDate) }
+      : null,
+  ].filter(Boolean)
+
+  const ProfileField = ({ label, value }) => (
+    <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+      <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+        {label}
+      </span>
+      <span className="mt-2 block text-sm font-semibold text-slate-900 break-words">
+        {value || '—'}
+      </span>
+    </div>
+  )
+
+  const SummaryItem = ({ label, value }) => (
+    <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="mt-1 text-sm font-semibold text-slate-900 break-words">{value || '—'}</p>
+    </div>
+  )
+  
+  const tabOptions = [
+    { id: 'info', label: 'User Info' },
+    { id: 'permissions', label: 'Permissions' },
+    { id: 'roles', label: 'System Roles' },
+  ]
+  
+  const badgeToneClass = (tone) => {
+    switch (tone) {
+      case 'success':
+        return 'bg-emerald-50 text-emerald-600 ring-emerald-100'
+      case 'info':
+        return 'bg-sky-50 text-sky-600 ring-sky-100'
+      case 'warning':
+        return 'bg-amber-50 text-amber-600 ring-amber-100'
+      default:
+        return 'bg-slate-100 text-slate-600 ring-slate-200'
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-100">
+      <div className="mx-auto max-w-6xl px-4 py-8">
+        <div className="mb-4">
+          <CMSBreadcrumb currentPageLabel={u?.fullName || t('cms.users')} />
         </div>
 
-        {/* Modern Tabs */}
-        <div className="bg-white rounded-2xl shadow-xl border-2 border-gray-100 overflow-hidden">
-          <div className="flex border-b-2 border-gray-100 bg-gray-50">
-            <button
-              onClick={() => setTab('info')}
-              className={`px-8 py-4 font-bold transition-all relative ${
-                tab === 'info'
-                  ? 'text-blue-600 bg-white'
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              <span className="flex items-center gap-2">
-                📋 User Info
-              </span>
-              {tab === 'info' && (
-                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 to-indigo-600"></div>
-              )}
-            </button>
-          <button
-              onClick={() => setTab('permissions')}
-              className={`px-8 py-4 font-bold transition-all relative ${
-                tab === 'permissions'
-                  ? 'text-blue-600 bg-white'
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              <span className="flex items-center gap-2">
-                🔐 Permissions
-              </span>
-              {tab === 'permissions' && (
-                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 to-indigo-600"></div>
-            )}
-          </button>
-          <button
-              onClick={() => setTab('roles')}
-              className={`px-8 py-4 font-bold transition-all relative ${
-                tab === 'roles'
-                  ? 'text-blue-600 bg-white'
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              <span className="flex items-center gap-2">
-                👥 System Roles
-              </span>
-              {tab === 'roles' && (
-                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 to-indigo-600"></div>
-            )}
-          </button>
-      </div>
+        <button
+          onClick={() => navigate(-1)}
+          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm transition-colors hover:bg-slate-100"
+        >
+          ← Back
+        </button>
+
+        <div className="mt-6 overflow-hidden rounded-3xl bg-white shadow-xl ring-1 ring-slate-100">
+          <div className="bg-gradient-to-br from-white via-slate-50 to-white px-6 py-8 lg:px-10">
+            <div className="flex flex-col gap-8 lg:flex-row">
+              <div className="flex flex-col items-center gap-4 text-center lg:items-start lg:text-left">
+                <Avatar size="lg" src={avatarSource} name={displayName} />
+                <div className="flex flex-wrap justify-center gap-2 lg:justify-start">
+                  {statusBadges.map((badge) => (
+                    <span
+                      key={badge.id}
+                      className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ring-1 ${badgeToneClass(badge.tone)}`}
+                    >
+                      {badge.label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex-1 space-y-5">
+                <div>
+                  <h1 className="text-3xl font-semibold text-slate-900">{displayName}</h1>
+                  <p className="text-sm text-slate-500">
+                    {emailValue || 'No email information provided'}
+                  </p>
+                </div>
+                {contactItems.length > 0 && (
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {contactItems.map((item) => (
+                      <ProfileField key={item.id} label={item.label} value={item.value} />
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="w-full space-y-4 lg:w-72">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-5 shadow-inner">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Account Overview
+                  </p>
+                  <div className="mt-4 space-y-3">
+                    {organizationItems.length > 0 ? (
+                      organizationItems.map((item) => (
+                        <SummaryItem key={item.id} label={item.label} value={item.value} />
+                      ))
+                    ) : (
+                      <p className="text-sm text-slate-500">No organization data available.</p>
+                    )}
+                  </div>
+                </div>
+                {timingItems.length > 0 && (
+                  <div className="rounded-2xl border border-slate-200 bg-white px-5 py-5 shadow-sm">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Timeline
+                    </p>
+                    <div className="mt-4 space-y-3">
+                      {timingItems.map((item) => (
+                        <div key={item.id} className="rounded-xl bg-slate-100/70 px-4 py-3">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            {item.label}
+                          </p>
+                          <p className="mt-1 text-sm font-semibold text-slate-900">
+                            {item.value}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t border-slate-200 bg-slate-50/70 px-6 lg:px-10">
+            <nav className="flex flex-wrap gap-2 py-3">
+              {tabOptions.map((option) => {
+                const isActive = tab === option.id
+                return (
+                  <button
+                    key={option.id}
+                    onClick={() => setTab(option.id)}
+                    className={`rounded-full px-5 py-2 text-sm font-semibold transition ${
+                      isActive
+                        ? 'bg-sky-500 text-white shadow-sm shadow-sky-200'
+                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                )
+              })}
+            </nav>
+          </div>
 
       {/* Tab Content */}
-          <div className="p-8">
+          <div className="bg-white px-6 py-8 lg:px-10">
         {tab === 'info' && (
               <form onSubmit={save} className="space-y-6">
-                <fieldset className="border-2 border-blue-200 rounded-xl p-6 bg-blue-50/30">
-                  <legend className="text-base font-bold text-blue-800 px-3 bg-white rounded-md shadow-sm">
-                    👤 Personal Information
+                <fieldset className="rounded-2xl border border-slate-200 bg-slate-50 px-6 py-6">
+                  <legend className="px-2 text-base font-semibold text-slate-800">
+                    Personal Information
                   </legend>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mt-4">
+                  <div className="mt-4 grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
               <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                        First Name <span className="text-red-500">*</span>
+                      <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                        First Name <span className="text-rose-500">*</span>
                 </label>
                 <input 
                         type="text"
-                        className="w-full border-2 border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
                   value={form.firstName}
                   onChange={(e)=>setForm(f=>({...f, firstName:e.target.value}))}
                         placeholder="Enter first name"
                 />
               </div>
               <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                      <label className="mb-1.5 block text-sm font-semibold text-slate-700">
                         Father Name
                 </label>
                 <input 
                         type="text"
-                        className="w-full border-2 border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
                   value={form.fatherName}
                   onChange={(e)=>setForm(f=>({...f, fatherName:e.target.value}))}
                         placeholder="Enter father name"
                 />
               </div>
               <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                      <label className="mb-1.5 block text-sm font-semibold text-slate-700">
                   Surname
                 </label>
                 <input 
                         type="text"
-                        className="w-full border-2 border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
                   value={form.surName}
                   onChange={(e)=>setForm(f=>({...f, surName:e.target.value}))}
                         placeholder="Enter surname"
                 />
               </div>
               <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                        Full Name <span className="text-red-500">*</span>
+                      <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                        Full Name <span className="text-rose-500">*</span>
                 </label>
                 <input 
                         type="text"
-                        className="w-full border-2 border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
                   value={form.fullName}
                   onChange={(e)=>setForm(f=>({...f, fullName:e.target.value}))}
                         placeholder="Enter full name"
                 />
               </div>
               <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                        Email Address <span className="text-red-500">*</span>
+                      <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                        Email Address <span className="text-rose-500">*</span>
                 </label>
                 <input 
                   type="email"
-                        className="w-full border-2 border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
                   value={form.emailAddress}
                   onChange={(e)=>setForm(f=>({...f, emailAddress:e.target.value}))}
                         placeholder="user@example.com"
                 />
               </div>
               <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                      <label className="mb-1.5 block text-sm font-semibold text-slate-700">
                   Language
                 </label>
                 <select 
-                        className="w-full border-2 border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
                   value={form.language}
                   onChange={(e)=>setForm(f=>({...f, language:e.target.value}))}
                 >
@@ -608,17 +772,17 @@ export default function UserDetail() {
                   </div>
                 </fieldset>
 
-                <fieldset className="border-2 border-indigo-200 rounded-xl p-6 bg-indigo-50/30">
-                  <legend className="text-base font-bold text-indigo-800 px-3 bg-white rounded-md shadow-sm">
-                    ⚙️ Account Settings
+                <fieldset className="rounded-2xl border border-slate-200 bg-slate-50 px-6 py-6">
+                  <legend className="px-2 text-base font-semibold text-slate-800">
+                    Account Settings
                   </legend>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mt-4">
+                  <div className="mt-4 grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
               <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                      <label className="mb-1.5 block text-sm font-semibold text-slate-700">
                   Account Kind
                 </label>
                 <select 
-                        className="w-full border-2 border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
                   value={form.accountKind}
                   onChange={(e)=>setForm(f=>({...f, accountKind:e.target.value}))}
                 >
@@ -628,64 +792,64 @@ export default function UserDetail() {
                 </select>
               </div>
               <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                      <label className="mb-1.5 block text-sm font-semibold text-slate-700">
                   Login Method
                 </label>
                 <input 
                         type="text"
-                        className="w-full border-2 border-gray-300 rounded-lg px-4 py-2.5 bg-gray-100 text-gray-600 cursor-not-allowed"
+                        className="w-full rounded-lg border border-slate-200 bg-slate-100 px-4 py-2.5 text-sm text-slate-600"
                   value={form.authMethod || 'LOCAL'}
                   readOnly
                   disabled
                 />
               </div>
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                      <label className="mb-1.5 block text-sm font-semibold text-slate-700">
                         Status
                       </label>
-                      <div className="flex items-center gap-3 mt-2">
+                      <div className="mt-2 flex items-center gap-3">
                 <input 
                           type="checkbox"
                   id="enabled" 
-                          className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                          className="h-5 w-5 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
                   checked={!!form.enabled}
                   onChange={(e)=>setForm(f=>({...f, enabled:e.target.checked}))}
                 />
-                        <label htmlFor="enabled" className="text-sm font-semibold text-gray-700">
+                        <label htmlFor="enabled" className="text-sm font-semibold text-slate-700">
                           Account Enabled
                 </label>
               </div>
-                    </div>
+            </div>
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                      <label className="mb-1.5 block text-sm font-semibold text-slate-700">
                         Email Verification
                       </label>
-                      <div className="flex items-center gap-3 mt-2">
+                      <div className="mt-2 flex items-center gap-3">
                 <input 
                           type="checkbox"
                   id="isEmailVerified" 
-                          className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                          className="h-5 w-5 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
                   checked={!!form.isEmailVerified}
                   onChange={(e)=>setForm(f=>({...f, isEmailVerified:e.target.checked}))}
                 />
-                        <label htmlFor="isEmailVerified" className="text-sm font-semibold text-gray-700">
+                        <label htmlFor="isEmailVerified" className="text-sm font-semibold text-slate-700">
                   Email Verified
                 </label>
               </div>
             </div>
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                      <label className="mb-1.5 block text-sm font-semibold text-slate-700">
                         Must Change Password
                       </label>
-                      <div className="flex items-center gap-3 mt-2">
+                      <div className="mt-2 flex items-center gap-3">
                         <input 
                           type="checkbox"
                           id="mustChangePassword"
-                          className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                          className="h-5 w-5 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
                           checked={!!form.mustChangePassword}
                           onChange={(e)=>setForm(f=>({...f, mustChangePassword:e.target.checked}))}
                         />
-                        <label htmlFor="mustChangePassword" className="text-sm font-semibold text-gray-700">
+                        <label htmlFor="mustChangePassword" className="text-sm font-semibold text-slate-700">
                           Must Change Password
                         </label>
                       </div>
@@ -693,17 +857,17 @@ export default function UserDetail() {
                   </div>
                 </fieldset>
 
-                <fieldset className="border-2 border-gray-200 rounded-xl p-6 bg-gray-50/50">
-                  <legend className="text-base font-bold text-gray-800 px-3 bg-white rounded-md shadow-sm">
-                    🏢 Organization & Classification
+                <fieldset className="rounded-2xl border border-slate-200 bg-slate-50 px-6 py-6">
+                  <legend className="px-2 text-base font-semibold text-slate-800">
+                    Organization & Assignment
                   </legend>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
+                  <div className="mt-4 grid grid-cols-1 gap-5 md:grid-cols-2">
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                      <label className="mb-1.5 block text-sm font-semibold text-slate-700">
                         Tenant
                       </label>
                       <select
-                        className="w-full border-2 border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100 disabled:cursor-not-allowed disabled:bg-slate-100"
                         value={form.tenantId}
                         onChange={(e)=>setForm(f=>({...f, tenantId:e.target.value}))}
                         disabled={loadingDropdowns}
@@ -715,11 +879,11 @@ export default function UserDetail() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                      <label className="mb-1.5 block text-sm font-semibold text-slate-700">
                         Organization
                       </label>
                       <select
-                        className="w-full border-2 border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100 disabled:cursor-not-allowed disabled:bg-slate-100"
                         value={form.organizationId}
                         onChange={(e)=>setForm(f=>({...f, organizationId:e.target.value, organizationBranchId:''}))}
                         disabled={loadingDropdowns}
@@ -731,11 +895,11 @@ export default function UserDetail() {
                       </select>
                     </div>
                     <div className="md:col-span-2">
-                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                      <label className="mb-1.5 block text-sm font-semibold text-slate-700">
                         Branch
                       </label>
                       <select
-                        className="w-full border-2 border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100 disabled:cursor-not-allowed disabled:bg-slate-100"
                         value={form.organizationBranchId}
                         onChange={(e)=>setForm(f=>({...f, organizationBranchId:e.target.value}))}
                         disabled={!form.organizationId || branches.length === 0}
@@ -746,88 +910,88 @@ export default function UserDetail() {
                         ))}
                       </select>
                       {form.organizationId && branches.length === 0 && (
-                        <p className="text-xs text-amber-600 mt-1.5">⚠️ No branches available for this organization</p>
+                        <p className="mt-1.5 text-xs text-amber-600">No branches available for this organization</p>
                       )}
                     </div>
                   </div>
                 </fieldset>
 
-                <fieldset className="border-2 border-gray-200 rounded-xl p-6 bg-gray-50/50">
-                  <legend className="text-base font-bold text-gray-800 px-3 bg-white rounded-md shadow-sm">
-                    📅 Validity & Employment
+                <fieldset className="rounded-2xl border border-slate-200 bg-slate-50 px-6 py-6">
+                  <legend className="px-2 text-base font-semibold text-slate-800">
+                    Validity & Employment
                   </legend>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
+                  <div className="mt-4 grid grid-cols-1 gap-5 md:grid-cols-2">
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                      <label className="mb-1.5 block text-sm font-semibold text-slate-700">
                         Valid From
                       </label>
                       <input
                         type="datetime-local"
-                        className="w-full border-2 border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
                         value={form.validFrom}
                         onChange={(e)=>setForm(f=>({...f, validFrom:e.target.value}))}
                       />
-                      <p className="text-xs text-gray-500 mt-1.5">📌 Account active from this date</p>
+                      <p className="mt-1.5 text-xs text-slate-500">Account active from this date</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                      <label className="mb-1.5 block text-sm font-semibold text-slate-700">
                         Valid To
                       </label>
                       <input
                         type="datetime-local"
-                        className="w-full border-2 border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
                         value={form.validTo}
                         onChange={(e)=>setForm(f=>({...f, validTo:e.target.value}))}
                       />
-                      <p className="text-xs text-gray-500 mt-1.5">⏰ Account expires on this date (optional)</p>
+                      <p className="mt-1.5 text-xs text-slate-500">Account expires on this date (optional)</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                      <label className="mb-1.5 block text-sm font-semibold text-slate-700">
                         Must Renew At
                       </label>
                       <input
                         type="datetime-local"
-                        className="w-full border-2 border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
                         value={form.mustRenewAt}
                         onChange={(e)=>setForm(f=>({...f, mustRenewAt:e.target.value}))}
                       />
-                      <p className="text-xs text-gray-500 mt-1.5">🔄 Require account renewal (optional)</p>
+                      <p className="mt-1.5 text-xs text-slate-500">Require account renewal (optional)</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                      <label className="mb-1.5 block text-sm font-semibold text-slate-700">
                         Password Expires At
                       </label>
                       <input
                         type="datetime-local"
-                        className="w-full border-2 border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100 disabled:cursor-not-allowed disabled:bg-slate-100"
                         value={form.passwordExpiresAt}
                         onChange={(e)=>setForm(f=>({...f, passwordExpiresAt:e.target.value}))}
                         disabled={form.authMethod !== 'LOCAL'}
                       />
-                      <p className="text-xs text-gray-500 mt-1.5">
-                        {form.authMethod === 'LOCAL' 
-                          ? '🔑 Password expiry date for LOCAL users' 
-                          : '🌐 Not applicable for OAuth/AD users'}
+                      <p className="mt-1.5 text-xs text-slate-500">
+                        {form.authMethod === 'LOCAL'
+                          ? 'Password expiry date for LOCAL users'
+                          : 'Not applicable for OAuth/AD users'}
                       </p>
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                      <label className="mb-1.5 block text-sm font-semibold text-slate-700">
                         Employment Start Date
                       </label>
                       <input
                         type="date"
-                        className="w-full border-2 border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
                         value={form.employmentStartDate}
                         onChange={(e)=>setForm(f=>({...f, employmentStartDate:e.target.value}))}
                       />
                     </div>
-            <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                    <div>
+                      <label className="mb-1.5 block text-sm font-semibold text-slate-700">
                         Employment End Date
                       </label>
                       <input
                         type="date"
-                        className="w-full border-2 border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
                         value={form.employmentEndDate}
                         onChange={(e)=>setForm(f=>({...f, employmentEndDate:e.target.value}))}
                       />
@@ -835,48 +999,49 @@ export default function UserDetail() {
                   </div>
                 </fieldset>
 
-                <fieldset className="border-2 border-purple-200 rounded-xl p-6 bg-purple-50/30">
-                  <legend className="text-base font-bold text-purple-800 px-3 bg-white rounded-md shadow-sm">
-                    🖼️ Profile Image
+                <fieldset className="rounded-2xl border border-slate-200 bg-slate-50 px-6 py-6">
+                  <legend className="px-2 text-base font-semibold text-slate-800">
+                    Profile Image
                   </legend>
-                  <div className="mt-4">
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                  <div className="mt-4 space-y-3">
+                    <label className="block text-sm font-semibold text-slate-700">
                       Profile Image URL
               </label>
               <input 
                       type="url"
-                      className="w-full border-2 border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                      className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
                 value={form.profileImageUrl}
                 onChange={(e)=>setForm(f=>({...f, profileImageUrl:e.target.value}))}
                       placeholder="https://example.com/profile.jpg"
                     />
                     {form.profileImageUrl && (
-                      <div className="mt-3">
+                      <div className="mt-3 flex items-center gap-3">
                         <img 
                           src={form.profileImageUrl} 
                           alt="Profile preview"
-                          className="w-20 h-20 rounded-full border-2 border-gray-300 object-cover"
+                          className="h-20 w-20 rounded-full border-2 border-slate-200 object-cover shadow-sm"
                           onError={(e) => { e.target.style.display = 'none' }}
               />
+            <span className="text-sm text-slate-500">Preview</span>
             </div>
                     )}
                   </div>
                 </fieldset>
 
-                <div className="flex justify-end gap-3 pt-4 border-t-2 border-gray-200">
+                <div className="flex items-center justify-end gap-3 border-t border-slate-200 pt-4">
               <button 
                 type="button" 
-                    className="px-6 py-2.5 border-2 border-gray-300 rounded-lg font-semibold text-gray-700 hover:bg-gray-100 transition-colors"
+                    className="rounded-lg border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100"
                 onClick={() => navigate(-1)}
               >
                 Cancel
               </button>
               <button 
                 type="submit" 
-                    className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-bold hover:from-blue-700 hover:to-indigo-700 shadow-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                    className="rounded-lg bg-sky-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={busy}
               >
-                    {busy ? '💾 Saving...' : '💾 Save Changes'}
+                    {busy ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
           </form>
@@ -884,20 +1049,14 @@ export default function UserDetail() {
 
         {tab === 'permissions' && (
               <div className="space-y-6">
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border-2 border-blue-100 shadow-sm">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h2 className="text-2xl font-bold text-gray-800 mb-2 flex items-center gap-3">
-                        <span className="text-3xl">🔐</span>
-                        User Permissions
-                      </h2>
-                      <p className="text-gray-600">
-                        Manage permissions for <span className="font-bold text-blue-600">{u.fullName || u.emailAddress}</span>
-                      </p>
-                    </div>
-                  </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-6 py-6">
+                  <h2 className="text-xl font-semibold text-slate-900">User Permissions</h2>
+                  <p className="mt-2 text-sm text-slate-500">
+                    Manage permission sets assigned to{' '}
+                    <span className="font-semibold text-slate-800">{u.fullName || u.emailAddress}</span>.
+                  </p>
                 </div>
-                <div className="bg-white rounded-xl border-2 border-gray-100 shadow-sm overflow-hidden">
+                <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
                   <UserPermissionsTab userId={userId} tenantId={u?.tenantId || null} />
                 </div>
               </div>
@@ -905,20 +1064,14 @@ export default function UserDetail() {
 
             {tab === 'roles' && (
               <div className="space-y-6">
-                <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6 border-2 border-purple-100 shadow-sm">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h2 className="text-2xl font-bold text-gray-800 mb-2 flex items-center gap-3">
-                        <span className="text-3xl">👥</span>
-                        System Roles
-                      </h2>
-                      <p className="text-gray-600">
-                        Manage system roles assigned to <span className="font-bold text-purple-600">{u.fullName || u.emailAddress}</span>
-                      </p>
-                    </div>
-                  </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-6 py-6">
+                  <h2 className="text-xl font-semibold text-slate-900">System Roles</h2>
+                  <p className="mt-2 text-sm text-slate-500">
+                    Control system roles for{' '}
+                    <span className="font-semibold text-slate-800">{u.fullName || u.emailAddress}</span>.
+                  </p>
                 </div>
-                <div className="bg-white rounded-xl border-2 border-gray-100 shadow-sm overflow-hidden">
+                <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
                   <UserRolesTab userId={userId} tenantId={null} />
                 </div>
               </div>

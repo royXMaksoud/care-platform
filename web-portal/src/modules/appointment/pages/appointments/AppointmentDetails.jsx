@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { api } from '@/lib/axios'
 import { toast } from 'sonner'
@@ -14,6 +14,7 @@ import {
   XCircle,
   RefreshCw,
   Trash2,
+  Download,
 } from 'lucide-react'
 
 export default function AppointmentDetails() {
@@ -137,6 +138,7 @@ export default function AppointmentDetails() {
   
   const tabs = [
     { id: 'info', label: 'Appointment Info', icon: FileText },
+    { id: 'documents', label: 'Documents', icon: Download },
     { id: 'history', label: 'History', icon: RefreshCw },
   ]
   
@@ -217,6 +219,9 @@ export default function AppointmentDetails() {
               beneficiariesMap={beneficiariesMap}
               serviceTypesMap={serviceTypesMap}
             />
+          )}
+          {activeTab === 'documents' && (
+            <AppointmentDocumentsTab beneficiaryId={appointment.beneficiaryId} />
           )}
           {activeTab === 'history' && (
             <AppointmentHistoryTab appointmentId={appointmentId} />
@@ -550,6 +555,145 @@ function AppointmentHistoryTab({ appointmentId }) {
           </div>
         </div>
       ))}
+    </div>
+  )
+}
+
+function AppointmentDocumentsTab({ beneficiaryId }) {
+  const [loading, setLoading] = useState(true)
+  const [documents, setDocuments] = useState([])
+  const [documentTypes, setDocumentTypes] = useState([])
+
+  useEffect(() => {
+    loadDocumentTypes()
+  }, [])
+
+  useEffect(() => {
+    if (!beneficiaryId) {
+      setDocuments([])
+      setLoading(false)
+      return
+    }
+    loadDocuments()
+  }, [beneficiaryId])
+
+  const loadDocumentTypes = async () => {
+    try {
+      const { data } = await api.get('/access/api/cascade-dropdowns/access.code-table-values-by-table', {
+        params: { codeTableId: '947d6fff-9b01-405d-b8fb-285e4df9a419' },
+      })
+      setDocumentTypes(data || [])
+    } catch (error) {
+      console.error('Failed to load document types:', error)
+      toast.error('Failed to load document types')
+    }
+  }
+
+  const documentTypeMap = useMemo(() => {
+    const map = {}
+    documentTypes.forEach((item) => {
+      if (!item?.value) return
+      map[item.value] = item.label || item.name || item.code || '—'
+    })
+    return map
+  }, [documentTypes])
+
+  const loadDocuments = async () => {
+    try {
+      setLoading(true)
+      const response = await api.get(
+        `/appointment-service/api/beneficiary-documents/beneficiary/${beneficiaryId}`
+      )
+      setDocuments(response.data || [])
+    } catch (error) {
+      console.error('Failed to load documents:', error)
+      toast.error('Failed to load documents')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const formatSize = (size) => {
+    if (!size || Number.isNaN(size)) return '—'
+    if (size < 1024) return `${size} B`
+    if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`
+    return `${(size / (1024 * 1024)).toFixed(2)} MB`
+  }
+
+  if (!beneficiaryId) {
+    return (
+      <div className="text-center py-10 text-gray-500">
+        No beneficiary is linked to this appointment.
+      </div>
+    )
+  }
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-8">
+        <Loader2 className="w-6 h-6 animate-spin text-pink-500" />
+      </div>
+    )
+  }
+
+  if (documents.length === 0) {
+    return (
+      <div className="text-center py-10 text-gray-500">
+        No documents uploaded for this beneficiary yet.
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      {documents.map((doc) => {
+        const typeLabel = documentTypeMap[doc.documentTypeId] || doc.documentTypeCode || '—'
+        return (
+          <div
+            key={doc.documentId}
+            className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-pink-400 to-rose-400 flex items-center justify-center">
+                  <FileText className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-gray-900">{doc.documentName}</h4>
+                  <p className="text-sm text-gray-600">{typeLabel}</p>
+                  {doc.documentDescription && (
+                    <p className="text-sm text-gray-500 mt-1">{doc.documentDescription}</p>
+                  )}
+                  <p className="text-xs text-gray-400 mt-1">
+                    {doc.fileName} • {formatSize(doc.fileSizeBytes)} • {doc.mimeType || 'unknown'}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Uploaded by: <span className="font-mono">{doc.createdById || '—'}</span>
+                    {doc.createdAt && ` • ${new Date(doc.createdAt).toLocaleString()}`}
+                  </p>
+                  {doc.updatedAt && (
+                    <p className="text-xs text-gray-400">
+                      Updated by: <span className="font-mono">{doc.updatedById || '—'}</span> •{' '}
+                      {new Date(doc.updatedAt).toLocaleString()}
+                    </p>
+                  )}
+                </div>
+              </div>
+              {doc.downloadUrl && (
+                <a
+                  href={doc.downloadUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 px-3 py-2 text-xs font-semibold text-pink-600 hover:text-pink-800"
+                >
+                  <Download className="w-3 h-3" />
+                  Download
+                </a>
+              )}
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }

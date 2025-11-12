@@ -2,6 +2,52 @@ import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import CrudPage from '@/features/crud/CrudPage'
 import { Users, Mail, Phone, BarChart3, Download } from 'lucide-react'
+import { api } from '@/lib/axios'
+
+const resolvePhotoUrl = (rawUrl, beneficiaryId) => {
+  if (!rawUrl) return null
+  if (/^https?:\/\//i.test(rawUrl) || rawUrl.startsWith('data:')) {
+    return rawUrl
+  }
+  const baseUrl = api.defaults?.baseURL ?? ''
+  const normalized = rawUrl.startsWith('/')
+    ? rawUrl
+    : `/appointment-service/api/admin/beneficiaries/${beneficiaryId}/profile-photo`
+  return `${baseUrl}${normalized}`
+}
+
+const AvatarCell = ({ row }) => {
+  const record = row.original || {}
+  const photoUrl = resolvePhotoUrl(record.profilePhotoUrl, record.beneficiaryId)
+  const initials = record.fullName
+    ? record.fullName
+        .split(' ')
+        .slice(0, 2)
+        .map((part) => part.charAt(0).toUpperCase())
+        .join('')
+    : '—'
+
+  if (photoUrl) {
+    return (
+      <div className="flex items-center justify-center">
+        <img
+          src={photoUrl}
+          alt={record.fullName || 'Beneficiary'}
+          className="h-10 w-10 rounded-full object-cover border border-slate-200 shadow-sm"
+          onError={(e) => {
+            e.currentTarget.style.display = 'none'
+          }}
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-700">
+      {initials}
+    </div>
+  )
+}
 
 export default function BeneficiaryList() {
   const navigate = useNavigate()
@@ -10,6 +56,15 @@ export default function BeneficiaryList() {
     navigate(`/appointment/beneficiaries/${row.beneficiaryId}`)
   }
   const beneficiaryColumns = [
+    {
+      id: 'avatar',
+      accessorKey: 'profilePhotoUrl',
+      header: '',
+      cell: (info) => <AvatarCell row={info.row} />,
+      enableSorting: false,
+      enableColumnFilter: false,
+      size: 64,
+    },
     {
       id: 'fullName',
       accessorKey: 'fullName',
