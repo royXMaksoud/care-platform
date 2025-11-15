@@ -1,8 +1,11 @@
-import React from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import CrudPage from '@/features/crud/CrudPage'
 import { Users, Mail, Phone, BarChart3, Download } from 'lucide-react'
 import { api } from '@/lib/axios'
+import AppointmentBreadcrumb from '@/modules/appointment/components/AppointmentBreadcrumb'
+
+const PHONE_REGEX = /^\+?[1-9]\d{1,14}$/
 
 const resolvePhotoUrl = (rawUrl, beneficiaryId) => {
   if (!rawUrl) return null
@@ -49,12 +52,73 @@ const AvatarCell = ({ row }) => {
   )
 }
 
+const GENDER_TABLE_ID = '8969b32a-2ff5-4004-9dca-ad6a2425d762'
+const LANGUAGE_TABLE_ID = 'fa8c4fd4-8c3a-477a-afbb-dd95472fc913'
+
 export default function BeneficiaryList() {
   const navigate = useNavigate()
+  const [genderOptions, setGenderOptions] = useState([])
+  const [languageOptions, setLanguageOptions] = useState([])
+
+  useEffect(() => {
+    const mapDropdownItems = (items = []) =>
+      items.map((item) => ({
+        value: item.id ?? item.value ?? item.codeTableValueId ?? item.code,
+        label: item.label || item.name || item.description || item.code || '—',
+      })).filter((opt) => opt.value)
+
+    const fetchGenderOptions = async () => {
+      try {
+        const { data } = await api.get(
+          '/access/api/cascade-dropdowns/access.code-table-values-by-table',
+          { params: { codeTableId: GENDER_TABLE_ID } }
+        )
+        setGenderOptions(mapDropdownItems(data))
+      } catch (error) {
+        console.error('Failed to load gender options', error)
+      }
+    }
+
+    const fetchLanguageOptions = async () => {
+      try {
+        const response = await api.get('/access/api/cascade-dropdowns/access.code-table-values-by-table', {
+          params: { codeTableId: LANGUAGE_TABLE_ID },
+        })
+        setLanguageOptions(mapDropdownItems(response?.data || []))
+      } catch (error) {
+        console.error('Failed to load preferred language options', error)
+      }
+    }
+
+    fetchGenderOptions()
+    fetchLanguageOptions()
+  }, [])
   
   const handleRowClick = (row) => {
     navigate(`/appointment/beneficiaries/${row.beneficiaryId}`)
   }
+  const genderLabelMap = useMemo(
+    () =>
+      genderOptions.reduce((acc, option) => {
+        acc[option.value] = option.label
+        return acc
+      }, {}),
+    [genderOptions]
+  )
+
+  const formatAge = (dateString) => {
+    if (!dateString) return '—'
+    const birthDate = new Date(dateString)
+    if (Number.isNaN(birthDate.getTime())) return '—'
+    const today = new Date()
+    let age = today.getFullYear() - birthDate.getFullYear()
+    const m = today.getMonth() - birthDate.getMonth()
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--
+    }
+    return age >= 0 && Number.isFinite(age) ? age : '—'
+  }
+
   const beneficiaryColumns = [
     {
       id: 'avatar',
@@ -99,6 +163,19 @@ export default function BeneficiaryList() {
       meta: { type: 'string', filterKey: 'mobileNumber', operators: ['EQUAL', 'STARTS_WITH'] },
     },
     {
+      id: 'gender',
+      accessorKey: 'genderCodeValueId',
+      header: 'Gender',
+      cell: ({ getValue }) => genderLabelMap[getValue()] || getValue() || '—',
+      meta: { type: 'string', filterKey: 'genderCodeValueId', operators: ['EQUAL'] },
+    },
+    {
+      id: 'age',
+      header: 'Age',
+      cell: ({ row }) => formatAge(row.original?.dateOfBirth),
+      meta: { type: 'number' },
+    },
+    {
       id: 'email',
       accessorKey: 'email',
       header: 'Email',
@@ -140,38 +217,40 @@ export default function BeneficiaryList() {
     },
   ]
 
-  const beneficiaryFields = [
+  const beneficiaryFields = useMemo(() => [
     { type: 'text', name: 'nationalId', label: 'National ID', required: false, maxLength: 50 },
     { type: 'text', name: 'fullName', label: 'Full Name', required: true, maxLength: 200 },
     { type: 'text', name: 'motherName', label: 'Mother Name', maxLength: 200 },
-    { 
-      type: 'text', 
-      name: 'mobileNumber', 
-      label: 'Mobile Number', 
-      required: true, 
+    {
+      type: 'text',
+      name: 'mobileNumber',
+      label: 'Mobile Number',
+      required: true,
       maxLength: 20,
       placeholder: '+963912345678',
       pattern: '^\\+?[1-9]\\d{1,14}$',
     },
     { type: 'email', name: 'email', label: 'Email', maxLength: 100 },
-    { type: 'textarea', name: 'address', label: 'Address', maxLength: 1000, rows: 3 },
-    { 
-      type: 'number', 
-      name: 'latitude', 
-      label: 'Latitude', 
+    { type: 'textarea', name: 'address', label: 'Address', maxLength: 1000, rows: 3, required: true },
+    {
+      type: 'number',
+      name: 'latitude',
+      label: 'Latitude',
       step: '0.000001',
       min: -90,
       max: 90,
-      placeholder: '33.5138'
+      placeholder: '33.5138',
+      required: true,
     },
-    { 
-      type: 'number', 
-      name: 'longitude', 
-      label: 'Longitude', 
+    {
+      type: 'number',
+      name: 'longitude',
+      label: 'Longitude',
       step: '0.000001',
       min: -180,
       max: 180,
-      placeholder: '36.2765'
+      placeholder: '36.2765',
+      required: true,
     },
     {
       type: 'map',
@@ -181,16 +260,13 @@ export default function BeneficiaryList() {
       latName: 'latitude',
       lngName: 'longitude',
     },
-    { type: 'date', name: 'dateOfBirth', label: 'Date of Birth' },
-    { 
+    { type: 'date', name: 'dateOfBirth', label: 'Date of Birth', required: true },
+    {
       type: 'select',
       name: 'genderCodeValueId',
       label: 'Gender',
-      options: [
-        { value: '', label: 'Select Gender' },
-        { value: 'MALE', label: 'Male' },
-        { value: 'FEMALE', label: 'Female' },
-      ],
+      required: true,
+      options: [{ value: '', label: 'Select Gender' }, ...genderOptions],
     },
     { type: 'text', name: 'profilePhotoUrl', label: 'Profile Photo URL', maxLength: 500 },
     { 
@@ -203,61 +279,91 @@ export default function BeneficiaryList() {
         { value: 'COMPLETE', label: 'Complete Registration' },
       ],
     },
-    { 
+    {
       type: 'select',
       name: 'preferredLanguageCodeValueId',
       label: 'Preferred Language',
-      options: [
-        { value: '', label: 'Select Language' },
-        { value: 'AR', label: 'Arabic' },
-        { value: 'EN', label: 'English' },
-        { value: 'TR', label: 'Turkish' },
-        { value: 'KU', label: 'Kurdish' },
-      ],
+      required: true,
+      options: [{ value: '', label: 'Select Language' }, ...languageOptions],
     },
     { type: 'checkbox', name: 'isActive', label: 'Active', defaultValue: true },
-  ]
+  ], [genderOptions, languageOptions])
 
   const toNullableFloat = (value) =>
     value === '' || value === null || value === undefined ? null : parseFloat(value)
 
-  const toCreatePayload = (formData) => ({
-    nationalId: formData.nationalId || null,
-    fullName: formData.fullName,
-    motherName: formData.motherName || null,
-    mobileNumber: formData.mobileNumber,
-    email: formData.email || null,
-    address: formData.address || null,
-    latitude: toNullableFloat(formData.latitude),
-    longitude: toNullableFloat(formData.longitude),
-    dateOfBirth: formData.dateOfBirth || null,
-    genderCodeValueId: formData.genderCodeValueId || null,
-    profilePhotoUrl: formData.profilePhotoUrl || null,
-    registrationStatusCodeValueId: formData.registrationStatusCodeValueId || null,
-    preferredLanguageCodeValueId: formData.preferredLanguageCodeValueId || null,
-    isActive: formData.isActive !== false,
-  })
+  const buildBeneficiaryPayload = (formData) => {
+    const missingFields = []
 
-  const toUpdatePayload = (formData) => ({
-    nationalId: formData.nationalId || null,
-    fullName: formData.fullName,
-    motherName: formData.motherName || null,
-    mobileNumber: formData.mobileNumber,
-    email: formData.email || null,
-    address: formData.address || null,
-    latitude: toNullableFloat(formData.latitude),
-    longitude: toNullableFloat(formData.longitude),
-    dateOfBirth: formData.dateOfBirth || null,
-    genderCodeValueId: formData.genderCodeValueId || null,
-    profilePhotoUrl: formData.profilePhotoUrl || null,
-    registrationStatusCodeValueId: formData.registrationStatusCodeValueId || null,
-    preferredLanguageCodeValueId: formData.preferredLanguageCodeValueId || null,
-    isActive: formData.isActive !== false,
-  })
+    const normalizedFullName = formData.fullName?.trim()
+    if (!normalizedFullName) missingFields.push('Full Name')
+
+    const normalizedMobile = formData.mobileNumber?.trim()
+    if (!normalizedMobile) {
+      missingFields.push('Mobile Number')
+    } else if (!PHONE_REGEX.test(normalizedMobile)) {
+      throw new Error('Mobile number must use the international format, e.g. +963912345678')
+    }
+
+    const normalizedAddress = formData.address?.trim()
+    if (!normalizedAddress) missingFields.push('Address')
+
+    const latitude = toNullableFloat(formData.latitude)
+    if (latitude === null || Number.isNaN(latitude)) missingFields.push('Latitude')
+
+    const longitude = toNullableFloat(formData.longitude)
+    if (longitude === null || Number.isNaN(longitude)) missingFields.push('Longitude')
+
+    if (!formData.dateOfBirth) {
+      missingFields.push('Date of Birth')
+    } else {
+      const dob = new Date(formData.dateOfBirth)
+      if (Number.isNaN(dob.getTime())) {
+        throw new Error('Date of Birth is invalid')
+      }
+      if (dob > new Date()) {
+        throw new Error('Date of Birth must be in the past')
+      }
+    }
+
+    if (!formData.genderCodeValueId) {
+      missingFields.push('Gender')
+    }
+
+    if (!formData.preferredLanguageCodeValueId) {
+      missingFields.push('Preferred Language')
+    }
+
+    if (missingFields.length > 0) {
+      throw new Error(`Please fill in the required fields: ${missingFields.join(', ')}`)
+    }
+
+    return {
+      nationalId: formData.nationalId?.trim() || null,
+      fullName: normalizedFullName,
+      motherName: formData.motherName?.trim() || null,
+      mobileNumber: normalizedMobile,
+      email: formData.email?.trim() || null,
+      address: normalizedAddress,
+      latitude,
+      longitude,
+      dateOfBirth: formData.dateOfBirth,
+      genderCodeValueId: formData.genderCodeValueId,
+      profilePhotoUrl: formData.profilePhotoUrl?.trim() || null,
+      registrationStatusCodeValueId: formData.registrationStatusCodeValueId || null,
+      preferredLanguageCodeValueId: formData.preferredLanguageCodeValueId,
+      isActive: formData.isActive !== false,
+    }
+  }
+
+  const toCreatePayload = (formData) => buildBeneficiaryPayload(formData)
+
+  const toUpdatePayload = (formData) => buildBeneficiaryPayload(formData)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
       <div className="container mx-auto px-4 py-8">
+        <AppointmentBreadcrumb />
         <div className="mb-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg">

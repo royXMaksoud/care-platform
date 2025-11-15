@@ -6,6 +6,7 @@ const PERM_CACHE_KEY = 'portal:perm_cache'
 const TENANT_LOGO_KEY = 'portal:tenant_logo'
 const SESSION_TIMEOUT_KEY = 'portal:session_timeout_minutes'
 const SESSION_START_TIME_KEY = 'portal:session_start_time'
+const SESSION_PERMS_FLAG = 'perms_loaded'
 
 const authStorage = {
   getToken: () => localStorage.getItem(TOKEN_KEY),
@@ -28,6 +29,16 @@ const authStorage = {
   getPermsCache: () => { try { return JSON.parse(localStorage.getItem(PERM_CACHE_KEY)) } catch { return null } },
   setPermsCache: (d) => localStorage.setItem(PERM_CACHE_KEY, JSON.stringify(d)),
   clearPermsCache: () => localStorage.removeItem(PERM_CACHE_KEY),
+
+  clearPermissionsData: () => {
+    localStorage.removeItem(PERM_ETAG_KEY)
+    localStorage.removeItem(PERM_CACHE_KEY)
+    try {
+      sessionStorage.removeItem(SESSION_PERMS_FLAG)
+    } catch (error) {
+      // sessionStorage might be unavailable (e.g., SSR); ignore.
+    }
+  },
 
   // Tenant Logo
   getTenantLogo: () => localStorage.getItem(TENANT_LOGO_KEY),
@@ -84,11 +95,13 @@ const authStorage = {
     localStorage.removeItem(TOKEN_KEY)
     localStorage.removeItem(USER_KEY)
     localStorage.removeItem(USER_ID_KEY)
-    localStorage.removeItem(PERM_ETAG_KEY)
-    localStorage.removeItem(PERM_CACHE_KEY)
+    authStorage.clearPermissionsData()
     localStorage.removeItem(TENANT_LOGO_KEY)
     localStorage.removeItem(SESSION_TIMEOUT_KEY)
     localStorage.removeItem(SESSION_START_TIME_KEY)
+    try {
+      sessionStorage.removeItem(SESSION_PERMS_FLAG)
+    } catch {}
   }
 }
 

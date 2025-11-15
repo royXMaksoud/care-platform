@@ -61,7 +61,7 @@ export default function CodeTableList() {
         const tableId = raw.codeTableId ?? raw.id
         return (
           <button
-            className="text-blue-600 hover:underline"
+            className="text-left text-blue-600 hover:underline whitespace-normal break-words min-w-[14rem]"
             onClick={(e) => {
               e.stopPropagation()
               navigate(`${tableId}`) // relative to /cms/codeTable
@@ -72,7 +72,12 @@ export default function CodeTableList() {
           </button>
         )
       },
-      meta: { type: 'string', filterKey: 'name', operators: ['LIKE', 'EQUAL', 'STARTS_WITH', 'ENDS_WITH', 'IN'] },
+      size: 260,
+      meta: {
+        type: 'string',
+        filterKey: 'name',
+        operators: ['LIKE', 'EQUAL', 'STARTS_WITH', 'ENDS_WITH', 'IN'],
+      },
     },
     {
       id: 'description',

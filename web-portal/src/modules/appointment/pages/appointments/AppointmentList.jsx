@@ -6,6 +6,9 @@ import SearchableSelect from '@/components/SearchableSelect'
 import { toast } from 'sonner'
 import AppointmentFormModal from './AppointmentFormModal'
 import AppointmentCalendar from '@/modules/appointment/pages/appointments/AppointmentCalendar'
+import AppointmentBreadcrumb from '@/modules/appointment/components/AppointmentBreadcrumb'
+import { SYSTEM_SECTIONS } from '@/config/systemSectionConstants'
+import { useSystemSectionScopes } from '@/modules/appointment/hooks/useSystemSectionScopes'
 import {
   Calendar,
   Clock,
@@ -27,6 +30,10 @@ import {
 
 export default function AppointmentList() {
   const navigate = useNavigate()
+
+  // Get scopeValueIds from APPOINTMENT_SCHEDULING section only
+  const { scopeValueIds, isLoading: isLoadingScopes, error: scopesError } = useSystemSectionScopes(SYSTEM_SECTIONS.APPOINTMENT_SCHEDULING)
+
   const [branchesMap, setBranchesMap] = useState({})
   const [beneficiariesMap, setBeneficiariesMap] = useState({})
   const [serviceTypesMap, setServiceTypesMap] = useState({})
@@ -41,10 +48,12 @@ export default function AppointmentList() {
   const [serviceTypeTree, setServiceTypeTree] = useState([])
 const [statusOptions, setStatusOptions] = useState([])
 const [organizationOptions, setOrganizationOptions] = useState([])
+const [allOrganizations, setAllOrganizations] = useState([])
 const [showCreateModal, setShowCreateModal] = useState(false)
 const [showEditModal, setShowEditModal] = useState(false)
 const [showFilters, setShowFilters] = useState(true)
 const [activeTab, setActiveTab] = useState('list')
+const [canCreateAppointment, setCanCreateAppointment] = useState(false)
 const [selectedDateFilter, setSelectedDateFilter] = useState(null)
 const [selectedBeneficiaryId, setSelectedBeneficiaryId] = useState(null)
 const [selectedServiceTypeId, setSelectedServiceTypeId] = useState(null)
@@ -313,6 +322,35 @@ const toggleFilters = useCallback(() => {
 
         if (!isActive) return
 
+        // Check permissions for CREATE action (by systemSectionActionId)
+        const APPOINTMENT_CREATE_ACTION_ID = 'd707da02-4127-4a86-8e5d-f619e9473b94'
+        let hasCreatePermission = false
+
+        if (permissionsRes?.data) {
+          const permData = permissionsRes.data
+          const systems = Array.isArray(permData?.systems) ? permData.systems : []
+
+          // Search for the action with specific systemSectionActionId
+          for (const system of systems) {
+            const sections = Array.isArray(system?.sections) ? system.sections : []
+            for (const section of sections) {
+              const actions = Array.isArray(section?.actions) ? section.actions : []
+              for (const action of actions) {
+                if (action?.systemSectionActionId === APPOINTMENT_CREATE_ACTION_ID && action?.effect === 'ALLOW') {
+                  hasCreatePermission = true
+                  break
+                }
+              }
+              if (hasCreatePermission) break
+            }
+            if (hasCreatePermission) break
+          }
+        }
+
+        if (isActive) {
+          setCanCreateAppointment(hasCreatePermission)
+        }
+
         const branchData = branchesRes?.data
         const branchItems = Array.isArray(branchData)
           ? branchData
@@ -373,56 +411,10 @@ const toggleFilters = useCallback(() => {
           : Array.isArray(organizationsData?.content)
           ? organizationsData.content
           : []
-        const orgMap = {}
-        const orgOptionList = []
+        setAllOrganizations(organizationItems)
 
-        const ensureOrgOption = (orgId, labelCandidate) => {
-          if (!orgId) return
-          if (orgMap[orgId]) return
-          const label = labelCandidate || orgId || 'Organization'
-          orgMap[orgId] = label
-          orgOptionList.push({ value: orgId, label })
-        }
-
-        organizationItems.forEach((org) => {
-          const orgId = org.organizationId || org.id
-          const label =
-            org.organizationName ||
-            org.name ||
-            org.code ||
-            orgId
-          ensureOrgOption(orgId, label)
-        })
-
-        branchItems.forEach((branch) => {
-          const orgId = branch.organizationId
-          const label =
-            branch.organizationName ||
-            branch.organization?.name ||
-            branch.organizationCode ||
-            branch.name ||
-            orgId
-          ensureOrgOption(orgId, label)
-        })
-
-        setOrganizationOptions(orgOptionList)
-
-        const permissionsData = permissionsRes?.data
-        const authorizedIds = new Set()
-        if (permissionsData?.systems) {
-          permissionsData.systems.forEach((system) => {
-            system.sections?.forEach((section) => {
-              section.actions?.forEach((action) => {
-                action.scopes?.forEach((scope) => {
-                  if (scope.effect === 'ALLOW' && scope.scopeValueId) {
-                    authorizedIds.add(scope.scopeValueId)
-                  }
-                })
-              })
-            })
-          })
-        }
-        setAuthorizedBranchIds(Array.from(authorizedIds))
+        // authorizedBranchIds will be set from useSystemSectionScopes hook
+        // which extracts scopes from APPOINTMENT_DAILY_ENTRY section only
       } catch (err) {
         if (isActive) {
           console.error('Failed to load lookups:', err)
@@ -444,6 +436,15 @@ const toggleFilters = useCallback(() => {
       isActive = false
     }
   }, [uiLang, buildServiceTypeOptions])
+
+  // Update authorized branch IDs from section-specific scopes
+  useEffect(() => {
+    if (scopeValueIds && scopeValueIds.length > 0) {
+      setAuthorizedBranchIds(scopeValueIds)
+    } else {
+      setAuthorizedBranchIds([])
+    }
+  }, [scopeValueIds])
 
   useEffect(() => {
     if (!selectedOrganizationId) return
@@ -518,6 +519,54 @@ const toggleFilters = useCallback(() => {
     setNearestAvailabilitySearched(false)
     setNearestError(null)
   }, [selectedBeneficiaryId, selectedServiceTypeId])
+
+  useEffect(() => {
+    const orgMap = {}
+    const options = []
+    const authorizedSet = new Set(authorizedBranchIds || [])
+    const hasScopeFilter = authorizedSet.size > 0
+    const allowedOrgIds = new Set()
+
+    if (hasScopeFilter) {
+      allOrganizationBranches.forEach((branch) => {
+        if (authorizedSet.has(branch.organizationBranchId) && branch.organizationId) {
+          allowedOrgIds.add(branch.organizationId)
+        }
+      })
+    }
+
+    const canUseOrg = (orgId) => {
+      if (!orgId) return false
+      if (!hasScopeFilter) return true
+      return allowedOrgIds.has(orgId)
+    }
+
+    const ensureOrgOption = (orgId, labelCandidate) => {
+      if (!orgId || orgMap[orgId] || !canUseOrg(orgId)) return
+      const label = labelCandidate || orgId || 'Organization'
+      orgMap[orgId] = label
+      options.push({ value: orgId, label })
+    }
+
+    allOrganizations.forEach((org) => {
+      const orgId = org.organizationId || org.id
+      const label = org.organizationName || org.name || org.code || orgId
+      ensureOrgOption(orgId, label)
+    })
+
+    allOrganizationBranches.forEach((branch) => {
+      const orgId = branch.organizationId
+      const label =
+        branch.organizationName ||
+        branch.organization?.name ||
+        branch.organizationCode ||
+        branch.name ||
+        orgId
+      ensureOrgOption(orgId, label)
+    })
+
+    setOrganizationOptions(options)
+  }, [allOrganizations, allOrganizationBranches, authorizedBranchIds])
 
   const branchOptions = useMemo(() => {
     return allOrganizationBranches
@@ -655,6 +704,17 @@ const toggleFilters = useCallback(() => {
   }, [statusOptions])
 
   const appointmentColumns = [
+    {
+      id: 'appointmentCode',
+      accessorKey: 'appointmentCode',
+      header: 'Code',
+      cell: ({ getValue }) => (
+        <span className="font-mono text-sm font-semibold text-gray-900">
+          {getValue() || '—'}
+        </span>
+      ),
+      meta: { type: 'string', filterKey: 'appointmentCode', operators: ['EQUAL', 'LIKE', 'STARTS_WITH'] },
+    },
     {
       id: 'beneficiaryId',
       accessorKey: 'beneficiaryId',
@@ -890,29 +950,33 @@ const toggleFilters = useCallback(() => {
               <Eye className="h-3.5 w-3.5" />
               View
             </button>
-            <button
-              type="button"
-              className="inline-flex items-center gap-1 rounded border border-blue-500 px-2 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50"
-              onClick={(e) => {
-                e.stopPropagation()
-                handleOpenEdit(appointment)
-              }}
-            >
-              <Edit3 className="h-3.5 w-3.5" />
-              Edit
-            </button>
-            <button
-              type="button"
-              className="inline-flex items-center gap-1 rounded border border-red-500 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
-              onClick={(e) => {
-                e.stopPropagation()
-                handleDelete(appointment)
-              }}
-              disabled={deletingId === appointmentId}
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-              {deletingId === appointmentId ? 'Deleting…' : 'Delete'}
-            </button>
+            {canCreateAppointment && (
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 rounded border border-blue-500 px-2 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleOpenEdit(appointment)
+                }}
+              >
+                <Edit3 className="h-3.5 w-3.5" />
+                Edit
+              </button>
+            )}
+            {canCreateAppointment && (
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 rounded border border-red-500 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleDelete(appointment)
+                }}
+                disabled={deletingId === appointmentId}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                {deletingId === appointmentId ? 'Deleting…' : 'Delete'}
+              </button>
+            )}
           </div>
         )
       },
@@ -923,6 +987,7 @@ const toggleFilters = useCallback(() => {
     <>
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-rose-50">
       <div className="container mx-auto px-4 py-8">
+        <AppointmentBreadcrumb />
         <div className="mb-6 flex items-center gap-3">
           <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center shadow-lg">
             <Calendar className="h-6 w-6 text-white" strokeWidth={2.5} />
@@ -974,15 +1039,17 @@ const toggleFilters = useCallback(() => {
               <Filter className="h-4 w-4" />
               Filters
             </button>
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 shadow-sm transition-colors"
-              onClick={handleOpenCreate}
-              disabled={loadingLookups}
-            >
-              <PlusCircle className="h-4 w-4" />
-              Add Appointment
-            </button>
+            {canCreateAppointment && (
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 shadow-sm transition-colors"
+                onClick={handleOpenCreate}
+                disabled={loadingLookups}
+              >
+                <PlusCircle className="h-4 w-4" />
+                Add Appointment
+              </button>
+            )}
             <button
               type="button"
               className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 bg-white hover:bg-gray-50 transition-colors"

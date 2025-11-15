@@ -1,9 +1,12 @@
-import React, { useMemo, useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import CrudPage from '@/features/crud/CrudPage'
 import ScheduleFormModal from './ScheduleFormModal'
 import ScheduleCalendar from './ScheduleCalendar'
 import { api } from '@/lib/axios'
 import { Clock, Calendar, List } from 'lucide-react'
+import AppointmentBreadcrumb from '@/modules/appointment/components/AppointmentBreadcrumb'
+import { SYSTEM_SECTIONS } from '@/config/systemSectionConstants'
+import { useSystemSectionScopes } from '@/modules/appointment/hooks/useSystemSectionScopes'
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 const DAY_NAMES_AR = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
@@ -18,9 +21,12 @@ export default function ScheduleList() {
   // Current UI language; fallback to 'en'
   const uiLang = (typeof navigator !== 'undefined' && (navigator.language || '').startsWith('ar')) ? 'ar' : 'en'
 
-  // Load branches map for display in table AND extract authorized branch IDs from permissions
+  // Get scopeValueIds from APPOINTMENT_SCHEDULING section only
+  const { scopeValueIds, isLoading: isLoadingScopes, error: scopesError } = useSystemSectionScopes(SYSTEM_SECTIONS.APPOINTMENT_SCHEDULING)
+
+  // Load branches map for display in table
   useEffect(() => {
-    const loadBranchesMapAndPermissions = async () => {
+    const loadBranchesMap = async () => {
       try {
         // Load all organization branches to populate the map
         const res = await api.post('/access/api/organization-branches/filter', {
@@ -41,57 +47,33 @@ export default function ScheduleList() {
           }
         })
         setBranchesMap(map)
-
-        // Extract authorized branch IDs from user permissions
-        try {
-          const permRes = await api.get('/auth/me/permissions')
-          const permissionsData = permRes?.data || {}
-          const authorizedBranchIds = new Set()
-
-          // Traverse permissions structure: systems -> sections -> actions -> scopes
-          // Extract ALL scopeValueIds from ALL sections (not just Schedule)
-          if (permissionsData?.systems) {
-            permissionsData.systems.forEach(system => {
-              system.sections?.forEach(section => {
-                section.actions?.forEach(action => {
-                  action.scopes?.forEach(scope => {
-                    // Only include ALLOW scopes with valid scopeValueId
-                    if (scope.effect === 'ALLOW' && scope.scopeValueId) {
-                      authorizedBranchIds.add(scope.scopeValueId)
-                    }
-                  })
-                })
-              })
-            })
-          }
-
-          const branchIdArray = Array.from(authorizedBranchIds)
-
-          if (branchIdArray.length > 0) {
-            // Send branch IDs as fixed filter in POST body (will be merged with user filters)
-            setFixedFilters([
-              {
-                key: 'organizationBranchId',
-                operator: 'IN',
-                value: branchIdArray,
-                dataType: 'UUID'
-              }
-            ])
-          } else {
-            setFixedFilters([])
-          }
-        } catch (err) {
-          setFixedFilters([])
-        }
       } catch (err) {
-        setFixedFilters([])
-      } finally {
-        setIsReady(true)
+        console.error('Error loading branches map:', err)
       }
     }
 
-    loadBranchesMapAndPermissions()
+    loadBranchesMap()
   }, [uiLang])
+
+  // Update fixed filters when scopes are loaded
+  useEffect(() => {
+    if (scopeValueIds && scopeValueIds.length > 0) {
+      // Send branch IDs as fixed filter in POST body (will be merged with user filters)
+      setFixedFilters([
+        {
+          key: 'organizationBranchId',
+          operator: 'IN',
+          value: scopeValueIds,
+          dataType: 'UUID'
+        }
+      ])
+    } else {
+      setFixedFilters([])
+    }
+
+    // Mark as ready once we've processed scopes
+    setIsReady(true)
+  }, [scopeValueIds])
 
   const scheduleColumns = [
     {
@@ -233,6 +215,7 @@ export default function ScheduleList() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
       <div className="container mx-auto px-4 py-8">
+        <AppointmentBreadcrumb />
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-3">

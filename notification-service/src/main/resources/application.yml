@@ -1,0 +1,241 @@
+spring:
+  application:
+    name: notification-service
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  datasource:
+    url: jdbc:postgresql://localhost:5432/notification_service_db
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+
+  # Mail Configuration for Email Notifications
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:your-email@gmail.com}
+    password: ${MAIL_PASSWORD:your-app-password}
+    from: ${MAIL_FROM:noreply@caremanagement.org}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
+  # Kafka Configuration for Async Notifications
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      acks: all  # Wait for all replicas to acknowledge
+      retries: 3
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        linger.ms: 10  # Batch messages for better throughput
+        batch.size: 32768  # 32KB batch size
+    consumer:
+      bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+      group-id: notification-service-group
+      auto-offset-reset: earliest  # Start from beginning if no offset exists
+      max-poll-records: 100  # Fetch 100 messages at a time
+      max-poll-interval-ms: 300000  # 5 minutes max processing time
+      session-timeout-ms: 30000
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.type.mapping: "notificationEvent:com.care.notification.infrastructure.kafka.NotificationEvent"
+    listener:
+      ack-mode: MANUAL_IMMEDIATE  # Manual commit after successful processing
+      poll-timeout: 3000  # Timeout for poll operation
+      concurrency: 3  # 3 concurrent consumers per partition
+    properties:
+      reconnect.backoff.ms: 50
+      reconnect.backoff.max.ms: 1000
+      request.timeout.ms: 30000
+
+  # Security Configuration
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${JWT_ISSUER_URI:http://localhost:6061}
+          jwk-set-uri: ${JWT_JWK_SET_URI:http://localhost:6061/oauth2/jwks}
+
+  # Jackson Configuration
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+
+# Eureka Client Configuration
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
+    healthcheck:
+      enabled: true
+  instance:
+    prefer-ip-address: true
+    ip-address: ${INSTANCE_IP:localhost}
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30
+
+# Server Configuration
+server:
+  port: ${SERVER_PORT:6067}
+  servlet:
+    context-path: /
+
+# Logging Configuration
+logging:
+  level:
+    root: INFO
+    com.care.notification: DEBUG
+    org.springframework.web: WARN
+    org.springframework.security: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# Application-Specific Configuration
+app:
+  notification:
+    default-channel: SMS
+    multi-channel-enabled: true
+    email:
+      enabled: true
+    sms:
+      enabled: false  # Set to true when SMS provider is configured
+      provider: twilio
+    push:
+      enabled: false  # Set to true when Firebase/APNs is configured
+      provider: firebase
+    # Rate limiting configuration
+    rate-limiter:
+      enabled: true
+      requests-per-second: 100  # 100 notifications per second per instance
+      burst-capacity: 200  # Allow burst up to 200
+    # Retry configuration
+    retry:
+      initial-delay-ms: 100
+      backoff-multiplier: 1.5
+      max-retries: 3
+    # Kafka configuration
+    kafka:
+      enabled: true
+      producer-timeout-ms: 5000
+
+# Twilio SMS Configuration (Phase 4)
+twilio:
+  account-sid: ${TWILIO_ACCOUNT_SID:#{null}}
+  auth-token: ${TWILIO_AUTH_TOKEN:#{null}}
+  phone-number: ${TWILIO_PHONE_NUMBER:#{null}}
+  retry:
+    max-attempts: 3
+    backoff-multiplier: 2
+
+# Firebase Cloud Messaging Configuration (Phase 4)
+firebase:
+  credentials-path: ${FIREBASE_CREDENTIALS_PATH:classpath:firebase-service-account.json}
+  database-url: ${FIREBASE_DATABASE_URL:#{null}}
+  push:
+    timeout-seconds: 10
+    retry-attempts: 3
+
+# Webhook Configuration (Phase 4)
+webhook:
+  secret-key: ${WEBHOOK_SECRET_KEY:your-webhook-secret-key}
+  timeout-seconds: 30
+  max-retries: 5
+  retry:
+    scheduler-interval: 300000  # 5 minutes
+    backoff-multiplier: 2
+
+# SpringDoc OpenAPI Configuration
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+
+# Resilience4j Configuration
+resilience4j:
+  ratelimiter:
+    instances:
+      notificationServiceLimiter:
+        registerHealthIndicator: true
+        limitRefreshPeriod: 1s
+        limitForPeriod: 100  # 100 per second
+        timeoutDuration: 5s
+
+---
+
+# Docker Profile
+spring:
+  config:
+    activate:
+      on-profile: docker
+  datasource:
+    url: jdbc:postgresql://postgres:5432/notification_service_db
+    username: postgres
+    password: postgres
+  kafka:
+    bootstrap-servers: kafka:29092
+
+eureka:
+  instance:
+    ip-address: notification-service
+
+---
+
+# Production Profile
+spring:
+  config:
+    activate:
+      on-profile: prod
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USER}
+    password: ${DATABASE_PASSWORD}
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    producer:
+      retries: 5  # More retries in production
+    consumer:
+      max-poll-records: 500  # Larger batches in production
+
+logging:
+  level:
+    root: WARN
+    com.care.notification: INFO
+
+server:
+  port: 6067
+
+# Production rate limiting
+app:
+  notification:
+    rate-limiter:
+      requests-per-second: 500  # Higher in production
+      burst-capacity: 1000

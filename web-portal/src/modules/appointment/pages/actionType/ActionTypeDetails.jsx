@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import { ChevronLeft } from 'lucide-react'
 import CrudPage from '@/features/crud/CrudPage'
 import { api } from '@/lib/axios'
+import AppointmentBreadcrumb from '@/modules/appointment/components/AppointmentBreadcrumb'
 
 const languageColumns = [
   {
@@ -168,6 +169,11 @@ export default function ActionTypeDetails() {
     isDeleted: false,
   })
 
+  const formatBreadcrumbLabel = (value) => {
+    if (!value) return 'Action Type Details'
+    return value.name || value.code || 'Action Type Details'
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-white to-red-50">
@@ -180,9 +186,12 @@ export default function ActionTypeDetails() {
     return null
   }
 
+  const breadcrumbLabel = formatBreadcrumbLabel(actionType)
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50">
       <div className="container mx-auto px-4 py-8">
+        <AppointmentBreadcrumb currentPageLabel={breadcrumbLabel} />
         <button
           onClick={() => navigate(-1)}
           className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"

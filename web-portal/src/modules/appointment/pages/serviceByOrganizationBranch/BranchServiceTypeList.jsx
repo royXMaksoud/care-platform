@@ -14,7 +14,9 @@ import {
   CheckCircle2,
   Circle,
 } from 'lucide-react'
-import { usePermissionCheck } from '@/contexts/PermissionsContext'
+import { SYSTEM_SECTIONS } from '@/config/systemSectionConstants'
+import { useSystemSectionScopes } from '@/modules/appointment/hooks/useSystemSectionScopes'
+import AppointmentBreadcrumb from '@/modules/appointment/components/AppointmentBreadcrumb'
 
 export default function BranchServiceTypeList() {
   const queryClient = useQueryClient()
@@ -25,7 +27,9 @@ export default function BranchServiceTypeList() {
   const [loadingScopedBranches, setLoadingScopedBranches] = useState(false)
 
   const lastScopeFetchKeyRef = useRef(null)
-  const { getSectionPermissions, permissionsData } = usePermissionCheck()
+
+  // Get scopeValueIds from APPOINTMENT_SETUP_AND_CONFIGURATION section only
+  const { scopeValueIds, isLoading: isLoadingScopes } = useSystemSectionScopes(SYSTEM_SECTIONS.Appointment_SETUP_AND_CONFIGURATION)
 
   const { data: summaries = [], isLoading } = useQuery({
     queryKey: ['branch-service-types'],
@@ -83,32 +87,12 @@ export default function BranchServiceTypeList() {
     }
   }
 
-  const extractScopeValueIds = () => {
-    let sectionPerms = getSectionPermissions('Appointment Schedule Mangement', 'Appointments')
-    if (!sectionPerms?.actions?.length && !sectionPerms?.allActions?.length) {
-      sectionPerms = getSectionPermissions('Appointment Schedule Mangement')
-    }
-
-    const actions = sectionPerms?.allActions ?? sectionPerms?.actions ?? []
-    const ids = new Set()
-    actions.forEach((action) => {
-      ;(action.scopes ?? []).forEach((scope) => {
-        if (scope.effect === 'ALLOW' && scope.scopeValueId) {
-          ids.add(scope.scopeValueId)
-        }
-      })
-    })
-
-    return Array.from(ids)
-  }
-
   useEffect(() => {
     let isActive = true
     const loadScopedBranches = async () => {
       try {
         setLoadingScopedBranches(true)
-        const scopeValueIds = extractScopeValueIds()
-        const scopeKey = JSON.stringify(scopeValueIds.sort())
+        const scopeKey = JSON.stringify((scopeValueIds ?? []).sort())
 
         if (!scopeValueIds.length) {
           lastScopeFetchKeyRef.current = scopeKey
@@ -153,8 +137,7 @@ export default function BranchServiceTypeList() {
     return () => {
       isActive = false
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [permissionsData])
+  }, [scopeValueIds])
 
   const organizations = useMemo(() => {
     const seen = new Set()
@@ -289,6 +272,7 @@ export default function BranchServiceTypeList() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
       <div className="container mx-auto px-4 py-8">
+        <AppointmentBreadcrumb />
         <div className="mb-6 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-slate-600 to-slate-800 flex items-center justify-center shadow-lg">

@@ -1,0 +1,114 @@
+.training-page {
+  padding: 24px;
+  background-color: #f5f5f5;
+  min-height: 100vh;
+}
+
+.training-page .ant-card {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.progress-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 24px;
+}
+
+.progress-card .ant-steps-item-title {
+  color: white;
+}
+
+.progress-card .ant-steps-item-description {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.timeline-card {
+  background-color: #fafafa;
+  border-radius: 8px;
+}
+
+.timeline-card h3 {
+  margin-bottom: 20px;
+  font-size: 18px;
+  color: #1890ff;
+  font-weight: 600;
+}
+
+.result-card {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: white;
+  border: none;
+  text-align: center;
+}
+
+.result-card .ant-statistic-title {
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 600;
+}
+
+.result-card .ant-statistic-content {
+  font-size: 32px;
+  font-weight: bold;
+}
+
+/* RTL Support */
+[dir='rtl'] .training-page {
+  direction: rtl;
+}
+
+[dir='rtl'] .ant-form-item-label {
+  text-align: right;
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  .training-page {
+    background-color: #141414;
+  }
+
+  .timeline-card {
+    background-color: #1f1f1f;
+  }
+
+  .timeline-card h3 {
+    color: #1890ff;
+  }
+}
+
+/* Animations */
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(24, 144, 255, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(24, 144, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(24, 144, 255, 0);
+  }
+}
+
+.training-page .ant-button-primary {
+  transition: all 0.3s ease;
+}
+
+.training-page .ant-button-primary:hover {
+  animation: pulse 2s infinite;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .training-page {
+    padding: 12px;
+  }
+
+  .progress-card {
+    padding: 16px;
+  }
+
+  .result-card {
+    margin-bottom: 12px;
+  }
+}

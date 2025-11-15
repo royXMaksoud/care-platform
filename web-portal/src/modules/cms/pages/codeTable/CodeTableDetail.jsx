@@ -46,113 +46,192 @@ export default function CodeTableDetail() {
     loadCodeTableInfo()
   }, [codeTableId])
 
+  const displayName = loadingInfo
+    ? 'Loading…'
+    : codeTableInfo?.name || t('cms.codeTable')
+
+  const description = codeTableInfo?.description || codeTableInfo?.remarks || null
+
+  const createdByRaw =
+    codeTableInfo?.createdByName ||
+    codeTableInfo?.createdByDisplayName ||
+    codeTableInfo?.createdBy ||
+    codeTableInfo?.createdById
+
+  const createdByValue =
+    typeof createdByRaw === 'string' && /^[0-9a-fA-F-]{36}$/.test(createdByRaw)
+      ? null
+      : createdByRaw
+
+  const detailItems = [
+    codeTableInfo?.codeTableKey
+      ? { id: 'key', label: 'Table Key', value: codeTableInfo.codeTableKey }
+      : null,
+    codeTableInfo?.codeTableType
+      ? { id: 'type', label: 'Table Type', value: codeTableInfo.codeTableType }
+      : null,
+    codeTableInfo?.createdAt
+      ? {
+          id: 'created',
+          label: 'Created At',
+          value: new Date(codeTableInfo.createdAt).toLocaleString(),
+        }
+      : null,
+    createdByValue
+      ? { id: 'createdBy', label: 'Created By', value: createdByValue }
+      : null,
+    codeTableInfo?.updatedAt
+      ? {
+          id: 'updated',
+          label: 'Updated At',
+          value: new Date(codeTableInfo.updatedAt).toLocaleString(),
+        }
+      : null,
+  ].filter(Boolean)
+
+  const statusBadges = [
+    shortId ? { id: 'shortId', label: shortId, tone: 'muted' } : null,
+    codeTableInfo?.isActive != null
+      ? {
+          id: 'status',
+          label: codeTableInfo.isActive ? 'Active' : 'Inactive',
+          tone: codeTableInfo.isActive ? 'success' : 'muted',
+        }
+      : null,
+  ].filter(Boolean)
+
+  const tabs = [
+    { key: 'languages', label: 'Languages' },
+    { key: 'values', label: 'Values & Languages' },
+  ]
+
+  const badgeToneClass = (tone) => {
+    switch (tone) {
+      case 'success':
+        return 'bg-emerald-50 text-emerald-600 ring-emerald-100'
+      default:
+        return 'bg-slate-100 text-slate-600 ring-slate-200'
+    }
+  }
+
+  const SummaryItem = ({ label, value }) => (
+    <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="mt-1 text-sm font-semibold text-slate-900 break-words">{value || '—'}</p>
+    </div>
+  )
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50">
-      <div className="container mx-auto px-6 py-6 max-w-7xl">
-        {/* Breadcrumb */}
+    <div className="min-h-screen bg-slate-100">
+      <div className="mx-auto max-w-6xl px-4 py-8">
         <div className="mb-4">
-        <CMSBreadcrumb currentPageLabel={codeTableInfo?.name || t('cms.codeTable')} />
-      </div>
+          <CMSBreadcrumb currentPageLabel={displayName} />
+        </div>
 
-        {/* Modern Header */}
-        <div className="mb-6">
-          <div className="bg-gradient-to-r from-emerald-600 to-teal-600 rounded-2xl p-6 shadow-lg text-white">
-        <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-            <button
-              onClick={() => navigate(-1)}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white/20 hover:bg-white/30 transition text-white font-bold"
-              aria-label="Back"
-              title="Back"
-            >
-              ←
-            </button>
-                  <h1 className="text-3xl font-bold">
-                {loadingInfo ? 'Loading...' : (codeTableInfo?.name || 'Code Table')}
-                  </h1>
-            </div>
-                <p className="text-emerald-100 mt-2 flex items-center gap-3 flex-wrap">
-                  <span className="bg-white/20 px-3 py-1 rounded-full text-sm font-semibold">
-                {shortId}
-              </span>
-                  {codeTableId && (
-              <button
-                onClick={copyId}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-white/20 hover:bg-white/30 px-3 py-1.5 text-sm font-medium transition"
-                title="Copy full CodeTableId"
-              >
-                      <span className="inline-block h-4 w-4">⧉</span>
-                      {copied ? 'Copied!' : 'Copy ID'}
-              </button>
-                  )}
-                  {codeTableInfo?.parentId && (
-                    <span className="flex items-center gap-2 text-sm">
-                      <span className="text-emerald-200">Parent:</span>
-                      <ParentCodeTableLink parentId={codeTableInfo.parentId} />
-                    </span>
-                  )}
-                </p>
-              </div>
-              <div className="text-6xl opacity-20">📊</div>
-            </div>
-          </div>
-      </div>
+        <button
+          onClick={() => navigate(-1)}
+          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm transition-colors hover:bg-slate-100"
+        >
+          ← Back
+        </button>
 
-        {/* Modern Tabs */}
-        <div className="bg-white rounded-2xl shadow-xl border-2 border-gray-100 overflow-hidden">
-          <div className="flex border-b-2 border-gray-100 bg-gray-50">
-          {[
-              { key: 'languages', label: '🌐 Languages', icon: '🌐' },
-              { key: 'values', label: '🗂️ Values & Languages', icon: '🗂️' },
-          ].map(t => (
-            <button
-              key={t.key}
-              role="tab"
-              onClick={() => setTab(t.key)}
-                className={`px-8 py-4 font-bold transition-all relative ${
-                tab === t.key 
-                    ? 'text-emerald-600 bg-white'
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                }`}
-              aria-selected={tab === t.key}
-            >
-                <span className="flex items-center gap-2">
-              {t.label}
-                </span>
-                {tab === t.key && (
-                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-600 to-teal-600"></div>
-                )}
-            </button>
-          ))}
-      </div>
-
-          {/* Tab Content */}
-          <div className="p-8">
-        {tab === 'languages' && (
-              <div className="space-y-6">
-                <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-6 border-2 border-emerald-100 shadow-sm">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h2 className="text-2xl font-bold text-gray-800 mb-2 flex items-center gap-3">
-                        <span className="text-3xl">🌐</span>
-                        Table Languages
-                      </h2>
-                      <p className="text-gray-600">
-                        Manage languages for <span className="font-bold text-emerald-600">{codeTableInfo?.name || 'this code table'}</span>
-                      </p>
-                    </div>
+        <div className="mt-6 overflow-hidden rounded-3xl bg-white shadow-xl ring-1 ring-slate-100">
+          <div className="bg-gradient-to-br from-white via-slate-50 to-white px-6 py-8 lg:px-10">
+            <div className="flex flex-col gap-8 lg:flex-row">
+              <div className="flex w-full flex-col gap-4">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div>
+                    <h1 className="text-3xl font-semibold text-slate-900">{displayName}</h1>
+                    {description && (
+                      <p className="mt-2 max-w-2xl text-sm text-slate-500">{description}</p>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {statusBadges.map((badge) => (
+                      <span
+                        key={badge.id}
+                        className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ring-1 ${badgeToneClass(
+                          badge.tone,
+                        )}`}
+                      >
+                        {badge.label}
+                      </span>
+                    ))}
+                    {codeTableId && (
+                      <button
+                        onClick={copyId}
+                        title="Copy Code Table ID"
+                        className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm hover:bg-slate-100"
+                      >
+                        <span className="inline-block h-3 w-3">⧉</span>
+                        {copied ? 'Copied' : 'Copy ID'}
+                      </button>
+                    )}
                   </div>
                 </div>
-                <div className="bg-white rounded-xl border-2 border-gray-100 shadow-sm overflow-hidden">
-            <CodeTableLanguages key={`tableLang-${codeTableId}`} codeTableId={codeTableId} />
-                </div>
-          </div>
-        )}
 
-        {tab !== 'languages' && (
-          <CodeTableValuesAndLanguages key={`valuesTab-${codeTableId}`} codeTableId={codeTableId} />
-        )}
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {detailItems.length > 0 ? (
+                    detailItems.map((item) => (
+                      <SummaryItem key={item.id} label={item.label} value={item.value} />
+                    ))
+                  ) : (
+                    <SummaryItem label="Table ID" value={codeTableId} />
+                  )}
+                </div>
+
+                {codeTableInfo?.parentId && (
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 shadow-inner">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Parent Table
+                    </p>
+                    <div className="mt-3 flex flex-wrap items-center gap-3">
+                      <ParentCodeTableLink parentId={codeTableInfo.parentId} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t border-slate-200 bg-slate-50/70 px-6 lg:px-10">
+            <nav className="flex flex-wrap gap-2 py-3">
+              {tabs.map((item) => {
+                const isActive = tab === item.key
+                return (
+                  <button
+                    key={item.key}
+                    onClick={() => setTab(item.key)}
+                    className={`rounded-full px-5 py-2 text-sm font-semibold transition ${
+                      isActive
+                        ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-200'
+                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                )
+              })}
+            </nav>
+          </div>
+
+          <div className="bg-white px-6 py-8 lg:px-10">
+            {tab === 'languages' ? (
+              <div className="space-y-6">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-6 py-6">
+                  <h2 className="text-xl font-semibold text-slate-900">Table Languages</h2>
+                  <p className="mt-2 text-sm text-slate-500">
+                    Manage the localized names and descriptions for this code table to ensure
+                    multilingual support.
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+                  <CodeTableLanguages key={`tableLang-${codeTableId}`} codeTableId={codeTableId} />
+                </div>
+              </div>
+            ) : (
+              <CodeTableValuesAndLanguages key={`valuesTab-${codeTableId}`} codeTableId={codeTableId} />
+            )}
           </div>
         </div>
       </div>
@@ -303,11 +382,21 @@ function CodeTableValuesAndLanguages({ codeTableId }) {
       )
     },
     {
+      id: 'parentName',
+      header: 'Parent',
+      accessorKey: 'parentName',
+      cell: ({ row }) => (
+        <span className="text-gray-700">
+          {row.original.parentName || row.original.parentId || '—'}
+        </span>
+      )
+    },
+    {
       id: 'select',
       header: '',
       cell: ({ row }) => (
         <button
-          className="rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-1.5 text-sm font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all transform hover:scale-105 shadow-sm"
+          className="rounded-lg border border-slate-200 bg-slate-900 text-white px-4 py-1.5 text-sm font-semibold shadow-sm transition hover:bg-slate-700"
           onClick={(e) => { e.stopPropagation(); setSelectedValue(row.original) }}
           title="Select value to manage its languages"
         >
@@ -331,29 +420,24 @@ function CodeTableValuesAndLanguages({ codeTableId }) {
 
   return (
     <div className="space-y-6">
-      <div className="bg-gradient-to-r from-teal-50 to-cyan-50 rounded-xl p-6 border-2 border-teal-100 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-2 flex items-center gap-3">
-              <span className="text-3xl">🗂️</span>
-              Values & Languages
-            </h2>
-            <p className="text-gray-600">
-              Manage values and their translations for <span className="font-bold text-teal-600">this code table</span>
-            </p>
-          </div>
-        </div>
+      <div className="rounded-2xl border border-slate-200 bg-slate-50 px-6 py-6">
+        <h2 className="text-xl font-semibold text-slate-900">Values & Languages</h2>
+        <p className="mt-2 text-sm text-slate-500">
+          Manage the list of available values and maintain localized labels for each entry.
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       {/* LEFT: Values */}
-        <div className="bg-white rounded-xl border-2 border-gray-100 shadow-sm overflow-hidden">
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b-2 border-blue-100 px-6 py-4">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-200 px-6 py-4">
             <div className="flex items-center gap-3">
-              <span className="text-2xl">🗂️</span>
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-100 text-sky-600">
+                •
+              </div>
             <div>
-                <div className="text-lg font-bold text-gray-800">Values</div>
-                <div className="text-sm text-gray-600">Code table values</div>
+                <div className="text-lg font-semibold text-slate-900">Values</div>
+                <div className="text-sm text-slate-500">Base entries for this code table</div>
               </div>
             </div>
           </div>
@@ -391,14 +475,16 @@ function CodeTableValuesAndLanguages({ codeTableId }) {
       </div>
 
       {/* RIGHT: Value Languages */}
-        <div className="bg-white rounded-xl border-2 border-gray-100 shadow-sm overflow-hidden">
-          <div className="bg-gradient-to-r from-purple-50 to-pink-50 border-b-2 border-purple-100 px-6 py-4">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-200 px-6 py-4">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
-                <span className="text-2xl flex-shrink-0">🈯</span>
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-600">
+                  •
+                </div>
             <div className="min-w-0">
-                  <div className="text-lg font-bold text-gray-800">Value Languages</div>
-                  <div className="text-sm text-gray-600 truncate">
+                  <div className="text-lg font-semibold text-slate-900">Value Languages</div>
+                  <div className="text-sm text-slate-500 truncate">
                 {selectedValue
                   ? `Translations: ${selectedValue?.shortCode || selectedValue?.name}`
                   : 'Select a value to manage translations'}
@@ -407,7 +493,7 @@ function CodeTableValuesAndLanguages({ codeTableId }) {
           </div>
           {selectedValue && (
             <button
-                  className="flex-shrink-0 rounded-lg border-2 border-purple-300 bg-white px-3 py-1.5 text-sm font-semibold text-purple-700 hover:bg-purple-50 transition"
+                  className="flex-shrink-0 rounded-lg border border-violet-200 bg-white px-3 py-1.5 text-sm font-semibold text-violet-600 shadow-sm transition hover:bg-violet-50"
               onClick={() => setSelectedValue(null)}
             >
               Clear
@@ -441,7 +527,7 @@ function CodeTableValueLanguages({ valueId /* codeTableId not needed for filteri
       accessorKey: 'language', 
       header: 'Lang', 
       cell: (i) => (
-        <span className="font-mono text-sm font-bold text-purple-600 bg-purple-50 px-2 py-1 rounded">
+        <span className="font-mono text-sm font-semibold text-violet-600 bg-violet-50 px-2 py-1 rounded">
           {i.getValue()}
         </span>
       )
@@ -528,14 +614,14 @@ function CodeTableValueLanguages({ valueId /* codeTableId not needed for filteri
 
 function EmptyState() {
   return (
-    <div className="h-full flex flex-col items-center justify-center gap-4 px-6 py-12 text-center">
-      <div className="text-6xl opacity-50">🈯</div>
-      <div>
-        <h4 className="text-lg font-bold text-gray-800 mb-2">No value selected</h4>
-        <p className="max-w-xs text-sm text-gray-600">
-          Choose a value from the left panel to view and manage its translations.
-      </p>
+    <div className="flex h-full flex-col items-center justify-center gap-4 px-6 py-12 text-center">
+      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+        •
       </div>
+      <h4 className="text-lg font-semibold text-slate-900">No value selected</h4>
+      <p className="max-w-xs text-sm text-slate-500">
+        Choose a value from the left panel to view and manage its translations.
+      </p>
     </div>
   )
 }
@@ -571,10 +657,10 @@ function ParentCodeTableLink({ parentId }) {
   return (
     <button
       onClick={() => navigate(`/cms/codeTable/${parentId}`)}
-      className="bg-white/30 hover:bg-white/40 px-3 py-1 rounded-lg text-sm font-semibold text-white transition hover:shadow-md"
+      className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-100"
       title="Navigate to parent table"
     >
-      {parentName} →
+      {parentName}
     </button>
   )
 }

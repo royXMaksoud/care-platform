@@ -118,3 +118,5 @@ Thumbs.db
 **/.dockerignore.local
 docker-data/
 nul 
+*.md
+

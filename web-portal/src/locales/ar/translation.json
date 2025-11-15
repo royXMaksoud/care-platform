@@ -170,6 +170,84 @@
     "warning": "لسا هون؟ رح نسجل خروجك خلال {{minutes}} دقيقة بسبب عدم النشاط.",
     "extend": "متابعة الجلسة",
     "timeout": "تم تسجيل خروجك بسبب عدم النشاط."
+  },
+  "appointment": {
+    "home": {
+      "searchLabel": "البحث عن الوحدات",
+      "searchPlaceholder": "ابحث باسم الوحدة أو الوصف...",
+      "quickFilters": "مرشحات سريعة",
+      "filters": {
+        "all": "الكل",
+        "analytics": "التحليلات",
+        "operations": "العمليات",
+        "users": "المستخدمون",
+        "reference": "البيانات المرجعية",
+        "planning": "التخطيط",
+        "configuration": "الإعدادات"
+      },
+      "categories": {
+        "analytics": "التقارير والتحليلات",
+        "operations": "سير العمل اليومي",
+        "users": "المستخدمون والملفات",
+        "reference": "البيانات المرجعية",
+        "planning": "أدوات التخطيط",
+        "configuration": "الإعداد والتكوين"
+      },
+      "noResults": "لا توجد وحدات مطابقة لبحثك الحالي.",
+      "moduleSingular": "وحدة",
+      "modulePlural": "وحدات",
+      "addShortcut": "إضافة إلى الوصول السريع",
+      "removeShortcut": "إزالة من الوصول السريع",
+      "manageCta": "إدارة"
+    },
+    "reports": {
+      "excel": {
+        "title": "التقارير الإحصائية",
+        "description": "قم بإنشاء وتنزيل تقارير المواعيد التحليلية بصيغة Excel",
+        "comingSoon": "واجهة تقارير Excel ستكون متاحة قريباً. يرجى العودة لاحقاً للاطلاع على التحديثات."
+      },
+      "dashboard": {
+        "title": "لوحة مراقبة الإحالات",
+        "subtitle": "تحليلات وتقارير احترافية لإدارة الإحالات",
+        "error": "حدث خطأ أثناء تحميل لوحة التحكم",
+        "loading": "جاري تحميل مؤشرات لوحة التحكم...",
+        "filtersApplied": "تم تطبيق الفلاتر بنجاح",
+        "filtersCleared": "تمت إعادة تعيين الفلاتر",
+        "filtersGeoError": "تعذر تحميل بيانات المراكز الجغرافية",
+        "kpiSection": "المؤشرات الرئيسية للأداء",
+        "charts": {
+          "statusDistribution": "توزيع حالات الإحالات",
+          "serviceTypeDistribution": "أكثر أنواع الخدمات استخداماً",
+          "trendAnalysis": "تحليل اتجاه الإحالات",
+          "ageDistribution": "توزيع المستفيدين حسب الفئة العمرية",
+          "genderDistribution": "توزيع المستفيدين حسب الجنس",
+          "priorityDistribution": "أولويات الإحالات"
+        },
+        "map": {
+          "title": "خريطة المراكز التفاعلية في سوريا",
+          "summaryTitle": "ملخص الإحصائيات حسب المركز",
+          "tableHeaders": {
+            "center": "المركز",
+            "governorate": "المحافظة",
+            "referrals": "الإحالات",
+            "completed": "مكتملة",
+            "inProgress": "قيد المعالجة"
+          }
+        },
+        "centerPerformance": {
+          "title": "مؤشرات أداء المراكز",
+          "headers": {
+            "centerName": "اسم المركز",
+            "governorate": "المحافظة",
+            "total": "الإجمالي",
+            "completed": "المكتملة",
+            "completionRate": "نسبة الإنجاز",
+            "noShowRate": "نسبة عدم الحضور",
+            "cancellationRate": "نسبة الإلغاء"
+          }
+        }
+      }
+    }
   }
 }
 

@@ -170,6 +170,92 @@
     "warning": "Still there? We’ll sign you out in {{minutes}} minute(s) because of inactivity.",
     "extend": "Stay signed in",
     "timeout": "You were signed out because of inactivity."
+  },
+  "appointment": {
+    "home": {
+      "searchLabel": "Search modules",
+      "searchPlaceholder": "Search by module name or description...",
+      "quickFilters": "Quick filters",
+      "filters": {
+        "all": "All",
+        "analytics": "Analytics",
+        "operations": "Operations",
+        "users": "Users",
+        "reference": "Reference",
+        "scheduling": "Scheduling",
+        "configuration": "Configuration"
+      },
+      "categories": {
+        "analytics": "Reports & Analytics",
+        "operations": "Daily Workflows",
+        "users": "People & Profiles",
+        "reference": "Reference Data",
+        "scheduling": "Scheduling & Calendars",
+        "configuration": "Setup & Configuration"
+      },
+      "categoryDescriptions": {
+        "analytics": "Insights and reporting dashboards",
+        "operations": "Daily scheduling and workflow tools",
+        "users": "Beneficiaries and stakeholder management",
+        "reference": "Standards, lookups, and governance",
+        "scheduling": "Availability, holidays, and working calendars",
+        "configuration": "Global parameters and system tailoring"
+      },
+      "noResults": "No modules match your current search.",
+      "moduleSingular": "module",
+      "modulePlural": "modules",
+      "addShortcut": "Add to fast access",
+      "removeShortcut": "Remove from fast access",
+      "manageCta": "Manage"
+    },
+    "reports": {
+      "excel": {
+        "title": "Excel Reports",
+        "description": "Generate and download Excel-based appointment analytics reports",
+        "comingSoon": "The Excel reporting interface is coming soon. Please check back later."
+      },
+      "dashboard": {
+        "title": "Appointment Dashboard",
+        "subtitle": "Professional analytics and reporting for appointment management",
+        "error": "Error loading dashboard",
+        "loading": "Loading dashboard metrics...",
+        "filtersApplied": "Filters applied successfully",
+        "filtersCleared": "Filters cleared",
+        "filtersGeoError": "Unable to load geographic center data",
+        "kpiSection": "Key Performance Indicators",
+        "charts": {
+          "statusDistribution": "Appointment Status Distribution",
+          "serviceTypeDistribution": "Top Service Types",
+          "trendAnalysis": "Appointment Trend Analysis",
+          "ageDistribution": "Beneficiary Age Distribution",
+          "genderDistribution": "Beneficiary Gender Distribution",
+          "priorityDistribution": "Appointment Priority"
+        },
+        "map": {
+          "title": "Interactive Centers Map in Syria",
+          "summaryTitle": "Center statistics summary",
+          "tableHeaders": {
+            "center": "Center",
+            "governorate": "Governorate",
+            "referrals": "Referrals",
+            "completed": "Completed",
+            "inProgress": "In progress"
+          }
+        },
+        "centerPerformance": {
+          "title": "Center Performance Metrics",
+          "headers": {
+            "centerName": "Center Name",
+            "governorate": "Governorate",
+            "total": "Total",
+            "completed": "Completed",
+            "completionRate": "Completion %",
+            "noShowRate": "No-Show %",
+            "cancellationRate": "Cancelled %"
+          }
+        }
+      }
+    }
   }
 }
 

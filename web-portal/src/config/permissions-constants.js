@@ -324,6 +324,14 @@ export const CMS_MENU_ITEMS = [
     requiredPermission: 'List',
   },
   {
+    id: 'location-ocha',
+    to: 'location-ocha',
+    label: 'Location Syria OCHA',
+    sectionName: CMS_SECTIONS.CODE_TABLE,
+    systemName: SYSTEMS.CMS,
+    requiredPermission: 'List',
+  },
+  {
     id: 'operations',
     to: 'operations',
     label: 'Operations',

@@ -2,6 +2,7 @@ import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import CrudPage from '@/features/crud/CrudPage'
 import { Shield, Languages } from 'lucide-react'
+import AppointmentBreadcrumb from '@/modules/appointment/components/AppointmentBreadcrumb'
 
 export default function ActionTypeList() {
   const navigate = useNavigate()
@@ -134,6 +135,7 @@ export default function ActionTypeList() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50">
       <div className="container mx-auto px-4 py-8">
+        <AppointmentBreadcrumb />
         <div className="mb-6 flex items-center gap-3">
           <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center shadow-lg">
             <Shield className="h-6 w-6 text-white" strokeWidth={2.5} />

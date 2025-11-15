@@ -32,6 +32,9 @@
 		},
 		{
 			"path": "shared-libs/core-shared-lib/core-shared-lib"
+		},
+		{
+			"path": "notification-service"
 		}
 	],
 	"settings": {

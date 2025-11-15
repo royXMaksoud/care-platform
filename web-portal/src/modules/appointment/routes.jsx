@@ -21,6 +21,8 @@ import BeneficiaryBulkUpdate from './pages/beneficiary/BeneficiaryBulkUpdate'
 import AppointmentList from './pages/appointments/AppointmentList'
 import AppointmentDetails from './pages/appointments/AppointmentDetails'
 import BranchServiceTypeList from './pages/serviceByOrganizationBranch/BranchServiceTypeList'
+import { AppointmentDashboard, ExcelReports } from '@/modules/appointment/pages/reports'
+import QuickPredictionPage from '@/modules/appointment/pages/ai/QuickPredictionPage'
 
 export const basePath = '/appointment'
 
@@ -60,6 +62,13 @@ export default function AppointmentRoutes() {
 
         {/* Branch Service Types */}
         <Route path="branch-services" element={<BranchServiceTypeList />} />
+
+        {/* Reports */}
+        <Route path="reports/dashboard" element={<AppointmentDashboard />} />
+        <Route path="reports/excel" element={<ExcelReports />} />
+
+        {/* AI & Predictions */}
+        <Route path="ai/quick-prediction" element={<QuickPredictionPage />} />
       </Routes>
     </Suspense>
   )

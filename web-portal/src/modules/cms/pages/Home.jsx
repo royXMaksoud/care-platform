@@ -90,6 +90,11 @@ const SECTION_ICONS = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
     </svg>
   ),
+  'location-ocha': (
+    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 2a10 10 0 00-3.516 19.367c.555.101.758-.241.758-.536 0-.264-.01-1.115-.016-2.023-3.086.671-3.738-1.489-3.738-1.489-.505-1.282-1.233-1.624-1.233-1.624-1.008-.689.077-.676.077-.676 1.115.079 1.702 1.162 1.702 1.162.992 1.699 2.603 1.208 3.238.924.101-.718.389-1.208.708-1.486-2.463-.281-5.052-1.232-5.052-5.486 0-1.212.433-2.204 1.142-2.98-.114-.282-.495-1.418.108-2.956 0 0 .93-.297 3.05 1.137a10.514 10.514 0 015.552 0c2.118-1.434 3.047-1.137 3.047-1.137.605 1.538.224 2.674.11 2.956.711.776 1.14 1.768 1.14 2.98 0 4.266-2.593 5.202-5.064 5.477.4.344.757 1.016.757 2.048 0 1.48-.014 2.674-.014 3.037 0 .298.2.643.766.534A10 10 0 0012 2z" />
+    </svg>
+  ),
   'auditLog': (
     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -113,6 +118,7 @@ const SECTION_GRADIENTS = {
   'duty-stations': 'from-blue-300 to-blue-400',
   'operations': 'from-blue-300 to-blue-400',
   'location': 'from-slate-400 to-slate-500',
+  'location-ocha': 'from-slate-400 to-slate-500',
   'auditLog': 'from-blue-300 to-blue-400',
 }
 
@@ -146,7 +152,7 @@ const CATEGORIES = {
     bgGradient: 'from-blue-50/20 to-blue-100/15 dark:from-blue-900/15 dark:to-blue-800/8',
     borderColor: 'border-blue-200 dark:border-blue-800',
     accentColor: 'text-blue-500 dark:text-blue-400',
-    items: ['codeTable', 'codeCountry', 'location', 'organizations', 'organization-branches', 'duty-stations', 'operations']
+    items: ['codeTable', 'codeCountry', 'location', 'location-ocha', 'organizations', 'organization-branches', 'duty-stations', 'operations']
   },
   'userManagement': {
     title: 'User Management',
@@ -195,6 +201,7 @@ export default function CMSHome() {
     { to: 'organizations', label: 'Organizations' },
     { to: 'organization-branches', label: 'Organization Branches' },
     { to: 'duty-stations', label: 'Duty Stations' },
+    { to: 'location-ocha', label: 'Location Syria OCHA' },
     { to: 'tenants', label: 'Tenants' },
     { to: 'users', label: 'Users' },
     { to: 'system-roles', label: 'System Roles' },

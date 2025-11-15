@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react'
+import React, { useMemo, useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import CrudPage from '@/features/crud/CrudPage'
 import { usePermissionCheck } from '@/contexts/PermissionsContext'
@@ -7,6 +7,7 @@ import { api } from '@/lib/axios'
 import { useBranchTypes } from '@/hooks/useBranchTypes'
 import CMSBreadcrumb from '../../components/CMSBreadcrumb'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 
 function OrganizationBranchCreateModal({ open, onClose, onSuccess, organizations, countries, locations, branchTypes }) {
   const [busy, setBusy] = useState(false)
@@ -358,6 +359,10 @@ export default function OrganizationBranchListPage() {
   )
 
   const [locations, setLocations] = useState([])
+  const [uploading, setUploading] = useState(false)
+  const [bulkResult, setBulkResult] = useState(null)
+  const fileInputRef = useRef(null)
+  const bulkRefreshRef = useRef(null)
   
   // Get branch types from hook
   const { branchTypes, loading: typesLoading } = useBranchTypes('en')
@@ -512,6 +517,112 @@ export default function OrganizationBranchListPage() {
   const handleRowClick = (branch) => {
     navigate(`/cms/organization-branches/${branch.organizationBranchId}`)
   }
+  
+  const bulkErrors = bulkResult?.errors ?? []
+  const bulkSkipped = bulkResult
+    ? bulkResult.skippedCount ?? Math.max(0, (bulkResult.totalRows || 0) - (bulkResult.importedCount || 0))
+    : 0
+  
+  const handleDownloadTemplate = async () => {
+    try {
+      const response = await api.get('/access/api/organization-branches/bulk/template', {
+        responseType: 'blob'
+      })
+      const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' })
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'organization-branch-template.csv'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+      toast.success('Template downloaded')
+    } catch (error) {
+      console.error('Template download failed', error)
+      toast.error('Failed to download template')
+    }
+  }
+  
+  const uploadBranches = async (file, refreshCallback) => {
+    if (!file) {
+      toast.error('Please choose a CSV file first')
+      return
+    }
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      toast.error('Only CSV files are supported')
+      return
+    }
+    
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const response = await api.post('/access/api/organization-branches/bulk/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+      
+      const data = response.data || {}
+      setBulkResult(data)
+      
+      const imported = data.importedCount || 0
+      const errors = (data.errors || []).length
+      
+      if (imported > 0) {
+        toast.success(`Imported ${imported} branch${imported === 1 ? '' : 'es'}`)
+        refreshCallback?.()
+      } else {
+        toast.info('File processed. No branches were imported.')
+      }
+      
+      if (errors > 0) {
+        toast.warning(`${errors} row${errors === 1 ? '' : 's'} failed. See summary below.`)
+      }
+    } catch (error) {
+      console.error('Bulk upload failed', error)
+      const message = error?.response?.data?.message || error.message || 'Bulk upload failed'
+      toast.error(message)
+    } finally {
+      setUploading(false)
+    }
+  }
+  
+  const handleFileSelected = async (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    await uploadBranches(file, bulkRefreshRef.current)
+    event.target.value = ''
+  }
+  
+  const renderHeaderActions = ({ refresh }) => {
+    bulkRefreshRef.current = refresh
+    return (
+      <div className="flex items-center gap-2">
+        <input
+          type="file"
+          ref={fileInputRef}
+          accept=".csv"
+          className="hidden"
+          onChange={handleFileSelected}
+        />
+        <button
+          type="button"
+          onClick={handleDownloadTemplate}
+          className="px-3 py-2 text-sm font-medium border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+        >
+          Download Template
+        </button>
+        <button
+          type="button"
+          disabled={uploading}
+          onClick={() => fileInputRef.current?.click()}
+          className={`px-3 py-2 text-sm font-medium rounded-lg text-white ${uploading ? 'bg-blue-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
+        >
+          {uploading ? 'Uploading...' : 'Bulk Upload'}
+        </button>
+      </div>
+    )
+  }
 
   const toCreatePayload = (formData) => ({
     code: formData.code,
@@ -555,6 +666,7 @@ export default function OrganizationBranchListPage() {
         idKey="organizationBranchId"
         columns={organizationBranchColumns}
         formFields={organizationBranchFields}
+        renderHeaderRight={renderHeaderActions}
         enableCreate={canCreate}
         enableEdit={canUpdate}
         enableDelete={canDelete}
@@ -574,6 +686,56 @@ export default function OrganizationBranchListPage() {
           />
         )}
       />
+      {bulkResult && (
+        <div className="px-6 py-4 bg-gradient-to-r from-slate-50 to-white border-t">
+          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-semibold text-gray-900">Bulk upload summary</h3>
+                <p className="text-sm text-gray-500">Processed {bulkResult.totalRows || 0} rows</p>
+              </div>
+              <button
+                type="button"
+                className="text-sm text-gray-500 hover:text-gray-700"
+                onClick={() => setBulkResult(null)}
+              >
+                Clear
+              </button>
+            </div>
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div>
+                <div className="text-2xl font-bold text-green-600">{bulkResult.importedCount || 0}</div>
+                <div className="text-xs uppercase text-gray-500">Imported</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-amber-600">{bulkSkipped}</div>
+                <div className="text-xs uppercase text-gray-500">Skipped</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-red-600">{bulkErrors.length}</div>
+                <div className="text-xs uppercase text-gray-500">Errors</div>
+              </div>
+            </div>
+            {bulkErrors.length > 0 && (
+              <div className="border-t border-gray-100 pt-3">
+                <div className="text-sm font-semibold text-gray-800 mb-2">First {Math.min(5, bulkErrors.length)} errors</div>
+                <ul className="space-y-1 text-sm text-red-600 max-h-40 overflow-auto pr-1">
+                  {bulkErrors.slice(0, 5).map((err, idx) => (
+                    <li key={`${err.line}-${err.code}-${idx}`}>
+                      Line {err.line}: {err.message} ({err.code})
+                    </li>
+                  ))}
+                </ul>
+                {bulkErrors.length > 5 && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    Showing first 5 errors. Download the original CSV to review and fix the highlighted rows.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

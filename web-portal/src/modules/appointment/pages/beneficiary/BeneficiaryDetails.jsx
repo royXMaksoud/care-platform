@@ -2,23 +2,26 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { api } from '@/lib/axios'
 import { toast } from 'sonner'
-import { 
-  User, 
-  Users as UsersIcon, 
-  FileText, 
-  Calendar, 
-  Mail, 
-  Phone, 
+import {
+  User,
+  Users as UsersIcon,
+  FileText,
+  Mail,
+  Phone,
   MapPin,
   ArrowLeft,
   Loader2,
-  Download,
   ExternalLink,
   History,
-  RotateCw,
   ImagePlus,
   Trash2,
 } from 'lucide-react'
+import AppointmentBreadcrumb from '@/modules/appointment/components/AppointmentBreadcrumb'
+import BeneficiaryPersonalInfoTab from './tabs/BeneficiaryPersonalInfoTab'
+import BeneficiaryFamilyTab from './tabs/BeneficiaryFamilyTab'
+import BeneficiaryDocumentsTab from './tabs/BeneficiaryDocumentsTab'
+import BeneficiaryAppointmentsTab from './tabs/BeneficiaryAppointmentsTab'
+import MapPickerModal from '@/components/MapPickerModal'
 
 export default function BeneficiaryDetails() {
   const { beneficiaryId } = useParams()
@@ -28,6 +31,39 @@ export default function BeneficiaryDetails() {
   const [activeTab, setActiveTab] = useState('info')
   const [photoUploading, setPhotoUploading] = useState(false)
   const fileInputRef = useRef(null)
+  const [genderOptions, setGenderOptions] = useState([])
+  const [languageOptions, setLanguageOptions] = useState([])
+  const GENDER_TABLE_ID = '8969b32a-2ff5-4004-9dca-ad6a2425d762'
+  const LANGUAGE_TABLE_ID = 'fa8c4fd4-8c3a-477a-afbb-dd95472fc913'
+  const toInputCoordinate = (value) =>
+    value === null || value === undefined || value === '' ? '' : String(value)
+  const parseCoordinateOrFallback = (value, fallback) => {
+    if (value === null || value === undefined || value === '') {
+      return fallback ?? null
+    }
+    const parsed = typeof value === 'number' ? value : parseFloat(value)
+    return Number.isFinite(parsed) ? parsed : fallback ?? null
+  }
+
+  const [isEditingPersonalInfo, setIsEditingPersonalInfo] = useState(false)
+  const [personalInfoForm, setPersonalInfoForm] = useState({
+    fullName: '',
+    motherName: '',
+    nationalId: '',
+    genderCodeValueId: '',
+    dateOfBirth: '',
+    mobileNumber: '',
+    email: '',
+    address: '',
+    preferredLanguageCodeValueId: '',
+    registrationStatusCodeValueId: '',
+    isActive: true,
+    latitude: '',
+    longitude: '',
+  })
+  const [personalInfoErrors, setPersonalInfoErrors] = useState({})
+  const [savingPersonalInfo, setSavingPersonalInfo] = useState(false)
+  const [showMapPicker, setShowMapPicker] = useState(false)
 
   const resolvedProfilePhotoUrl = useMemo(() => {
     const url = beneficiary?.profilePhotoUrl
@@ -45,6 +81,68 @@ export default function BeneficiaryDetails() {
   useEffect(() => {
     loadBeneficiary()
   }, [beneficiaryId])
+
+  useEffect(() => {
+    const loadGenderOptions = async () => {
+      try {
+        const { data } = await api.get(
+          '/access/api/cascade-dropdowns/access.code-table-values-by-table',
+          { params: { codeTableId: GENDER_TABLE_ID } }
+        )
+        const mapped =
+          (data || []).map((item) => ({
+            value: item.id ?? item.value ?? item.codeTableValueId ?? item.code,
+            label: item.label || item.name || item.description || item.code || '—',
+          })).filter((opt) => opt.value) || []
+        setGenderOptions(mapped)
+      } catch (error) {
+        console.error('Failed to load gender code table values', error)
+      }
+    }
+    loadGenderOptions()
+  }, [])
+
+  useEffect(() => {
+    const mapDropdownItems = (items = []) =>
+      items
+        .map((item) => ({
+          value: item.id ?? item.value ?? item.codeTableValueId ?? item.code,
+          label: item.label || item.name || item.description || item.code || '—',
+        }))
+        .filter((opt) => opt.value)
+
+    const loadLanguageOptions = async () => {
+      try {
+        const response = await api.get('/access/api/cascade-dropdowns/access.code-table-values-by-table', {
+          params: { codeTableId: LANGUAGE_TABLE_ID },
+        })
+        setLanguageOptions(mapDropdownItems(response?.data || []))
+      } catch (error) {
+        console.error('Failed to load preferred language options', error)
+      }
+    }
+
+    loadLanguageOptions()
+  }, [])
+
+  useEffect(() => {
+    if (!beneficiary) return
+    setPersonalInfoForm({
+      fullName: beneficiary.fullName || '',
+      motherName: beneficiary.motherName || '',
+      nationalId: beneficiary.nationalId || '',
+      genderCodeValueId: beneficiary.genderCodeValueId || '',
+      dateOfBirth: beneficiary.dateOfBirth ? beneficiary.dateOfBirth.split('T')[0] : '',
+      mobileNumber: beneficiary.mobileNumber || '',
+      email: beneficiary.email || '',
+      address: beneficiary.address || '',
+      preferredLanguageCodeValueId: beneficiary.preferredLanguageCodeValueId || '',
+      registrationStatusCodeValueId: beneficiary.registrationStatusCodeValueId || '',
+      isActive: beneficiary.isActive !== false,
+      latitude: toInputCoordinate(beneficiary.latitude),
+      longitude: toInputCoordinate(beneficiary.longitude),
+    })
+  }, [beneficiary])
   
   const loadBeneficiary = async () => {
     try {
@@ -120,7 +218,175 @@ export default function BeneficiaryDetails() {
       setPhotoUploading(false)
     }
   }, [beneficiary?.profilePhotoUrl, beneficiaryId, photoUploading])
+
+  const handlePersonalInfoChange = (field, value) => {
+    setPersonalInfoForm(prev => ({ ...prev, [field]: value }))
+    setPersonalInfoErrors(prev => ({ ...prev, [field]: undefined }))
+  }
+
+  const validatePersonalInfo = () => {
+    const errors = {}
+    if (!personalInfoForm.fullName?.trim()) {
+      errors.fullName = 'Full name is required'
+    }
+    if (!personalInfoForm.mobileNumber?.trim()) {
+      errors.mobileNumber = 'Mobile number is required'
+    }
+    if (!personalInfoForm.address?.trim()) {
+      errors.address = 'Address is required'
+    }
+    if (
+      personalInfoForm.latitude === '' ||
+      personalInfoForm.latitude === null ||
+      Number.isNaN(Number(personalInfoForm.latitude))
+    ) {
+      errors.latitude = 'Latitude is required'
+    }
+    if (
+      personalInfoForm.longitude === '' ||
+      personalInfoForm.longitude === null ||
+      Number.isNaN(Number(personalInfoForm.longitude))
+    ) {
+      errors.longitude = 'Longitude is required'
+    }
+    if (!personalInfoForm.preferredLanguageCodeValueId) {
+      errors.preferredLanguageCodeValueId = 'Preferred language is required'
+    }
+    if (!personalInfoForm.dateOfBirth) {
+      errors.dateOfBirth = 'Date of birth is required'
+    }
+    if (personalInfoForm.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(personalInfoForm.email)) {
+      errors.email = 'Invalid email format'
+    }
+    setPersonalInfoErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
+  const buildUpdatePayload = () => {
+    const fallbackString = (value, fallback) => {
+      if (value === '' || value === undefined || value === null) {
+        return fallback ?? null
+      }
+      return value
+    }
+
+    const fallbackTrimmed = (value, fallback) => {
+      const normalized = value?.trim()
+      if (!normalized) {
+        return fallback ?? null
+      }
+      return normalized
+    }
+
+    const fallbackDate = (value, fallback) => {
+      if (!value) {
+        return fallback ?? null
+      }
+      return value
+    }
+
+    return {
+      nationalId: fallbackTrimmed(personalInfoForm.nationalId, beneficiary?.nationalId),
+      fullName: fallbackTrimmed(personalInfoForm.fullName, beneficiary?.fullName),
+      motherName: fallbackTrimmed(personalInfoForm.motherName, beneficiary?.motherName),
+      mobileNumber: fallbackTrimmed(personalInfoForm.mobileNumber, beneficiary?.mobileNumber),
+      email: fallbackTrimmed(personalInfoForm.email, beneficiary?.email),
+      address: fallbackTrimmed(personalInfoForm.address, beneficiary?.address),
+      latitude: parseCoordinateOrFallback(personalInfoForm.latitude, beneficiary?.latitude ?? null),
+      longitude: parseCoordinateOrFallback(personalInfoForm.longitude, beneficiary?.longitude ?? null),
+      dateOfBirth: fallbackDate(personalInfoForm.dateOfBirth, beneficiary?.dateOfBirth?.split('T')[0]),
+      genderCodeValueId: fallbackString(personalInfoForm.genderCodeValueId, beneficiary?.genderCodeValueId),
+      profilePhotoUrl: beneficiary?.profilePhotoUrl ?? null,
+      registrationStatusCodeValueId: fallbackString(
+        personalInfoForm.registrationStatusCodeValueId,
+        beneficiary?.registrationStatusCodeValueId
+      ),
+      preferredLanguageCodeValueId: fallbackString(
+        personalInfoForm.preferredLanguageCodeValueId,
+        beneficiary?.preferredLanguageCodeValueId
+      ),
+      isActive: Boolean(personalInfoForm.isActive),
+    }
+  }
+
+  const handleSavePersonalInfo = async () => {
+    if (!validatePersonalInfo()) return
+    try {
+      setSavingPersonalInfo(true)
+      const payload = buildUpdatePayload()
+      const { data } = await api.put(
+        `/appointment-service/api/admin/beneficiaries/${beneficiaryId}`,
+        payload
+      )
+      await loadBeneficiary()
+      if (!data) {
+        // ensure local state reflects persisted change even if API returned no body
+        setBeneficiary(prev => (prev ? { ...prev } : prev))
+      }
+      toast.success('Personal information updated successfully')
+      setIsEditingPersonalInfo(false)
+    } catch (error) {
+      console.error('Failed to update beneficiary info:', error)
+      toast.error(
+        error.response?.data?.message || 'Failed to update personal information'
+      )
+    } finally {
+      setSavingPersonalInfo(false)
+    }
+  }
+
+  const handleCancelEdit = () => {
+    setIsEditingPersonalInfo(false)
+    if (beneficiary) {
+      setPersonalInfoForm({
+        fullName: beneficiary.fullName || '',
+        motherName: beneficiary.motherName || '',
+        nationalId: beneficiary.nationalId || '',
+        genderCodeValueId: beneficiary.genderCodeValueId || '',
+        dateOfBirth: beneficiary.dateOfBirth ? beneficiary.dateOfBirth.split('T')[0] : '',
+        mobileNumber: beneficiary.mobileNumber || '',
+        email: beneficiary.email || '',
+        address: beneficiary.address || '',
+        preferredLanguageCodeValueId: beneficiary.preferredLanguageCodeValueId || '',
+        registrationStatusCodeValueId: beneficiary.registrationStatusCodeValueId || '',
+        isActive: beneficiary.isActive !== false,
+        latitude: toInputCoordinate(beneficiary.latitude),
+        longitude: toInputCoordinate(beneficiary.longitude),
+      })
+    }
+    setPersonalInfoErrors({})
+  }
+  const handleMapPick = ({ latitude, longitude }) => {
+    if (latitude !== undefined) {
+      handlePersonalInfoChange('latitude', latitude.toFixed(6))
+    }
+    if (longitude !== undefined) {
+      handlePersonalInfoChange('longitude', longitude.toFixed(6))
+    }
+  }
   
+  const genderLabelMap = useMemo(
+    () =>
+      genderOptions.reduce((acc, option) => {
+        acc[option.value] = option.label
+        return acc
+      }, {}),
+    [genderOptions]
+  )
+
+  const languageLabelMap = useMemo(
+    () =>
+      languageOptions.reduce((acc, option) => {
+        acc[option.value] = option.label
+        return acc
+      }, {}),
+    [languageOptions]
+  )
+
+  const breadcrumbLabel = useMemo(() => {
+    return beneficiary?.fullName || beneficiary?.nationalId || 'Beneficiary Details'
+  }, [beneficiary])
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -149,11 +415,12 @@ export default function BeneficiaryDetails() {
     const sizeClasses = size === 'lg' ? 'w-28 h-28' : 'w-20 h-20'
     const iconSize = size === 'lg' ? 'w-14 h-14' : 'w-10 h-10'
     const [imageError, setImageError] = useState(false)
+    const effectiveUrl = photoUrl ?? resolvedProfilePhotoUrl ?? beneficiary?.profilePhotoUrl ?? null
     
-    if (photoUrl && !imageError) {
+    if (effectiveUrl && !imageError) {
       return (
         <img
-          src={photoUrl}
+          src={effectiveUrl}
           alt={beneficiary.fullName}
           className={`${sizeClasses} rounded-full object-cover border-4 border-white shadow-lg`}
           onError={() => setImageError(true)}
@@ -208,7 +475,14 @@ export default function BeneficiaryDetails() {
   }
 
   const heroFields = [
-    { id: 'gender', label: 'Gender', value: beneficiary.genderCodeValueId || '—' },
+    {
+      id: 'gender',
+      label: 'Gender',
+      value:
+        genderLabelMap[beneficiary.genderCodeValueId] ||
+        beneficiary.genderCodeValueId ||
+        '—',
+    },
     {
       id: 'birth',
       label: 'Date of Birth',
@@ -234,7 +508,10 @@ export default function BeneficiaryDetails() {
     {
       id: 'language',
       label: 'Preferred Language',
-      value: beneficiary.preferredLanguageCodeValueId || '—',
+      value:
+        languageLabelMap[beneficiary.preferredLanguageCodeValueId] ||
+        beneficiary.preferredLanguageCodeValueId ||
+        '—',
     },
     {
       id: 'registration',
@@ -265,13 +542,13 @@ export default function BeneficiaryDetails() {
     : null
 
   const ProfileField = ({ label, value, mono = false }) => (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
-      <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+    <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm shadow-slate-100/70">
+      <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
         {label}
       </span>
       <span
-        className={`mt-2 block text-sm font-semibold text-slate-900 ${
-          mono ? 'font-mono' : ''
+        className={`mt-2 block text-base font-semibold text-slate-900 ${
+          mono ? 'font-mono tracking-tight' : ''
         }`}
       >
         {value && value !== '' ? value : '—'}
@@ -282,6 +559,7 @@ export default function BeneficiaryDetails() {
   return (
     <div className="min-h-screen bg-slate-100">
       <div className="mx-auto flex max-w-6xl flex-col px-4 py-10">
+        <AppointmentBreadcrumb currentPageLabel={breadcrumbLabel} />
         <button
           onClick={() => navigate('/appointment/beneficiaries')}
           className="flex w-fit items-center gap-2 text-sm font-semibold text-sky-600 transition-colors hover:text-sky-700"
@@ -296,7 +574,7 @@ export default function BeneficiaryDetails() {
               <div className="flex flex-col items-center gap-5 lg:w-64 lg:items-start">
                 <div className="relative">
                   <div className="overflow-hidden rounded-full border-4 border-white shadow-xl ring-4 ring-sky-100/80">
-                    <Avatar size="lg" />
+                    <Avatar size="lg" photoUrl={resolvedProfilePhotoUrl} />
                   </div>
                   <span
                     className={`absolute bottom-3 right-3 h-3 w-3 rounded-full border-2 border-white ${
@@ -304,6 +582,35 @@ export default function BeneficiaryDetails() {
                     }`}
                   />
                 </div>
+
+                <div className="flex w-full flex-col items-stretch gap-2">
+                  <button
+                    onClick={triggerProfilePhotoInput}
+                    disabled={photoUploading}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-sky-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    <ImagePlus className={`h-4 w-4 ${photoUploading ? 'animate-pulse' : ''}`} />
+                    {photoUploading ? 'Uploading...' : 'Upload Photo'}
+                  </button>
+                  {beneficiary?.profilePhotoUrl && (
+                    <button
+                      onClick={handleRemoveProfilePhoto}
+                      disabled={photoUploading}
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-rose-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-70"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Remove Photo
+                    </button>
+                  )}
+                </div>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleProfilePhotoUpload}
+                />
 
                 <div className="flex w-full flex-col gap-3">
                   {contactItems.map((item) => {
@@ -320,18 +627,20 @@ export default function BeneficiaryDetails() {
                     )
 
                     return (
-                      <div
+                      <article
                         key={item.id}
-                        className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm"
+                        className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white/90 px-4 py-3 shadow-sm shadow-slate-200/60"
                       >
-                        <Icon className="h-5 w-5 text-slate-400" />
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+                          <Icon className="h-4.5 w-4.5" />
+                        </div>
                         <div className="flex flex-col">
-                          <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                          <span className="text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-500">
                             {item.label}
                           </span>
                           {content}
                         </div>
-                      </div>
+                      </article>
                     )
                   })}
 
@@ -387,10 +696,213 @@ export default function BeneficiaryDetails() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                   {heroFields.map((field) => (
                     <ProfileField key={field.id} label={field.label} value={field.value} mono={field.mono} />
                   ))}
+                </div>
+
+                <div className="mt-6 rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <h2 className="text-lg font-semibold text-slate-900">Personal Information</h2>
+                      <p className="text-sm text-slate-500">Update identity, contact, and demographic data</p>
+                    </div>
+                    {!isEditingPersonalInfo ? (
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingPersonalInfo(true)}
+                        className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-sky-300 hover:text-sky-600"
+                      >
+                        Edit Info
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={handleSavePersonalInfo}
+                          disabled={savingPersonalInfo}
+                          className="rounded-full bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-70"
+                        >
+                          {savingPersonalInfo ? 'Saving...' : 'Save'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleCancelEdit}
+                          disabled={savingPersonalInfo}
+                          className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {isEditingPersonalInfo && (
+                    <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <PersonalInfoField
+                        label="Full Name"
+                        required
+                        value={personalInfoForm.fullName}
+                        error={personalInfoErrors.fullName}
+                        onChange={(value) => handlePersonalInfoChange('fullName', value)}
+                      />
+                      <PersonalInfoField
+                        label="Mother Name"
+                        value={personalInfoForm.motherName}
+                        onChange={(value) => handlePersonalInfoChange('motherName', value)}
+                      />
+                      <PersonalInfoField
+                        label="National ID"
+                        value={personalInfoForm.nationalId}
+                        onChange={(value) => handlePersonalInfoChange('nationalId', value)}
+                      />
+                      <div>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                          Gender
+                        </label>
+                        <select
+                          value={personalInfoForm.genderCodeValueId}
+                          onChange={(event) => handlePersonalInfoChange('genderCodeValueId', event.target.value)}
+                          className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                        >
+                          <option value="">Select gender</option>
+                          {genderOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                          Date of Birth
+                        </label>
+                        <input
+                          type="date"
+                          value={personalInfoForm.dateOfBirth}
+                          onChange={(event) => handlePersonalInfoChange('dateOfBirth', event.target.value)}
+                          className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                        />
+                        {personalInfoErrors.dateOfBirth && (
+                          <p className="mt-1 text-xs font-medium text-rose-500">{personalInfoErrors.dateOfBirth}</p>
+                        )}
+                      </div>
+                      <PersonalInfoField
+                        label="Mobile Number"
+                        required
+                        value={personalInfoForm.mobileNumber}
+                        error={personalInfoErrors.mobileNumber}
+                        onChange={(value) => handlePersonalInfoChange('mobileNumber', value)}
+                      />
+                      <PersonalInfoField
+                        label="Email"
+                        value={personalInfoForm.email}
+                        error={personalInfoErrors.email}
+                        onChange={(value) => handlePersonalInfoChange('email', value)}
+                      />
+                      <div className="md:col-span-2">
+                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                          Address
+                        </label>
+                        <textarea
+                          value={personalInfoForm.address}
+                          onChange={(event) => handlePersonalInfoChange('address', event.target.value)}
+                          className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                          rows={3}
+                        />
+                        {personalInfoErrors.address && (
+                          <p className="mt-1 text-xs font-medium text-rose-500">{personalInfoErrors.address}</p>
+                        )}
+                      </div>
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                            Latitude
+                          </label>
+                          <button
+                            type="button"
+                            className="text-xs font-semibold text-sky-600 hover:text-sky-500"
+                            onClick={() => setShowMapPicker(true)}
+                          >
+                            Choose on map
+                          </button>
+                        </div>
+                        <input
+                          type="number"
+                          step="0.000001"
+                          value={personalInfoForm.latitude}
+                          onChange={(event) => handlePersonalInfoChange('latitude', event.target.value)}
+                          className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                        />
+                        {personalInfoErrors.latitude && (
+                          <p className="mt-1 text-xs font-medium text-rose-500">{personalInfoErrors.latitude}</p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                          Longitude
+                        </label>
+                        <input
+                          type="number"
+                          step="0.000001"
+                          value={personalInfoForm.longitude}
+                          onChange={(event) => handlePersonalInfoChange('longitude', event.target.value)}
+                          className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                        />
+                        {personalInfoErrors.longitude && (
+                          <p className="mt-1 text-xs font-medium text-rose-500">{personalInfoErrors.longitude}</p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                          Preferred Language
+                        </label>
+                        <select
+                          value={personalInfoForm.preferredLanguageCodeValueId}
+                          onChange={(event) => handlePersonalInfoChange('preferredLanguageCodeValueId', event.target.value)}
+                          className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                        >
+                          <option value="">Select language</option>
+                          {languageOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                        {personalInfoErrors.preferredLanguageCodeValueId && (
+                          <p className="mt-1 text-xs font-medium text-rose-500">
+                            {personalInfoErrors.preferredLanguageCodeValueId}
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                          Registration Status
+                        </label>
+                        <select
+                          value={personalInfoForm.registrationStatusCodeValueId}
+                          onChange={(event) => handlePersonalInfoChange('registrationStatusCodeValueId', event.target.value)}
+                          className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                        >
+                          <option value="">Select status</option>
+                          <option value="QUICK">Quick Registration</option>
+                          <option value="COMPLETE">Complete Registration</option>
+                        </select>
+                      </div>
+                      <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                        <label className="text-sm font-semibold text-slate-700">
+                          Active Beneficiary
+                        </label>
+                        <input
+                          type="checkbox"
+                          checked={personalInfoForm.isActive}
+                          onChange={(event) => handlePersonalInfoChange('isActive', event.target.checked)}
+                          className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -420,1141 +932,41 @@ export default function BeneficiaryDetails() {
           </div>
 
           <div className="bg-white px-6 py-8 lg:px-10">
-            {activeTab === 'info' && <PersonalInfoTab beneficiary={beneficiary} />}
-            {activeTab === 'family' && <FamilyMembersTab beneficiaryId={beneficiaryId} />}
-            {activeTab === 'documents' && <DocumentsTab beneficiaryId={beneficiaryId} />}
-            {activeTab === 'appointments' && <AppointmentsTab beneficiaryId={beneficiaryId} />}
+            {activeTab === 'info' && <BeneficiaryPersonalInfoTab beneficiary={beneficiary} />}
+            {activeTab === 'family' && <BeneficiaryFamilyTab beneficiaryId={beneficiaryId} />}
+            {activeTab === 'documents' && <BeneficiaryDocumentsTab beneficiaryId={beneficiaryId} />}
+            {activeTab === 'appointments' && <BeneficiaryAppointmentsTab beneficiaryId={beneficiaryId} />}
           </div>
         </div>
       </div>
+      <MapPickerModal
+        open={showMapPicker}
+        onClose={() => setShowMapPicker(false)}
+        initialLat={parseCoordinateOrFallback(personalInfoForm.latitude, beneficiary.latitude ?? 33.5138)}
+        initialLng={parseCoordinateOrFallback(personalInfoForm.longitude, beneficiary.longitude ?? 36.2765)}
+        onPick={handleMapPick}
+      />
     </div>
   )
 }
 
-function PersonalInfoTab({ beneficiary }) {
-  const hasCoordinates =
-    beneficiary.latitude !== null &&
-    beneficiary.latitude !== undefined &&
-    beneficiary.latitude !== '' &&
-    beneficiary.longitude !== null &&
-    beneficiary.longitude !== undefined &&
-    beneficiary.longitude !== ''
-
-  const formattedLatitude = hasCoordinates ? Number(beneficiary.latitude).toFixed(6) : null
-  const formattedLongitude = hasCoordinates ? Number(beneficiary.longitude).toFixed(6) : null
-  const locationLink = hasCoordinates
-    ? `https://www.google.com/maps?q=${beneficiary.latitude},${beneficiary.longitude}`
-    : null
-  const locationEmbedUrl = hasCoordinates
-    ? `https://www.google.com/maps?q=${beneficiary.latitude},${beneficiary.longitude}&z=15&output=embed`
-    : null
-
+function PersonalInfoField({ label, required = false, value, onChange, error }) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h3>
-        
-        <div className="flex items-start gap-3">
-          <User className="w-5 h-5 text-gray-400 mt-0.5" />
-          <div>
-            <p className="text-xs text-gray-500">Full Name</p>
-            <p className="font-medium">{beneficiary.fullName}</p>
-          </div>
-        </div>
-        
-        <div className="flex items-start gap-3">
-          <User className="w-5 h-5 text-gray-400 mt-0.5" />
-          <div>
-            <p className="text-xs text-gray-500">Mother Name</p>
-            <p className="font-medium">{beneficiary.motherName || '-'}</p>
-          </div>
-        </div>
-        
-        <div className="flex items-start gap-3">
-          <Calendar className="w-5 h-5 text-gray-400 mt-0.5" />
-          <div>
-            <p className="text-xs text-gray-500">Date of Birth</p>
-            <p className="font-medium">
-              {beneficiary.dateOfBirth 
-                ? new Date(beneficiary.dateOfBirth).toLocaleDateString()
-                : '-'
-              }
-            </p>
-          </div>
-        </div>
-        
-        <div className="flex items-start gap-3">
-          <User className="w-5 h-5 text-gray-400 mt-0.5" />
-          <div>
-            <p className="text-xs text-gray-500">National ID</p>
-            <p className="font-medium font-mono text-sm">{beneficiary.nationalId || '-'}</p>
-          </div>
-        </div>
-        
-        <div className="flex items-start gap-3">
-          <User className="w-5 h-5 text-gray-400 mt-0.5" />
-          <div>
-            <p className="text-xs text-gray-500">Gender</p>
-            <p className="font-medium">{beneficiary.genderCodeValueId || '-'}</p>
-          </div>
-        </div>
-      </div>
-      
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Contact Information</h3>
-        
-        <div className="flex items-start gap-3">
-          <Phone className="w-5 h-5 text-gray-400 mt-0.5" />
-          <div>
-            <p className="text-xs text-gray-500">Mobile</p>
-            <p className="font-medium font-mono">{beneficiary.mobileNumber}</p>
-          </div>
-        </div>
-        
-        <div className="flex items-start gap-3">
-          <Mail className="w-5 h-5 text-gray-400 mt-0.5" />
-          <div>
-            <p className="text-xs text-gray-500">Email</p>
-            <p className="font-medium">{beneficiary.email || '-'}</p>
-          </div>
-        </div>
-        
-        <div className="flex items-start gap-3">
-          <MapPin className="w-5 h-5 text-gray-400 mt-0.5" />
-          <div>
-            <p className="text-xs text-gray-500">Address</p>
-            <p className="font-medium">{beneficiary.address || '-'}</p>
-          </div>
-        </div>
-        
-        {hasCoordinates && (
-          <div className="flex items-start gap-3">
-            <MapPin className="w-5 h-5 text-gray-400 mt-0.5" />
-            <div>
-              <p className="text-xs text-gray-500">Location</p>
-              <p className="font-medium text-sm font-mono">
-                {formattedLatitude}, {formattedLongitude}
-              </p>
-              {locationLink && (
-                <a
-                  href={locationLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-800"
-                >
-                  <ExternalLink className="w-3 h-3" />
-                  Open in Maps
-                </a>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-      
-      <div className="md:col-span-2 border-t pt-6 mt-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Additional Information</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <p className="text-xs text-gray-500">Preferred Language</p>
-            <p className="font-medium">{beneficiary.preferredLanguageCodeValueId || '-'}</p>
-          </div>
-          <div>
-            <p className="text-xs text-gray-500">Registration Status</p>
-            <p className="font-medium">{beneficiary.registrationStatusCodeValueId || '-'}</p>
-          </div>
-          <div>
-            <p className="text-xs text-gray-500">Created At</p>
-            <p className="font-medium text-sm">
-              {beneficiary.createdAt 
-                ? new Date(beneficiary.createdAt).toLocaleString()
-                : '-'
-              }
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {hasCoordinates && locationEmbedUrl && (
-        <div className="md:col-span-2 border-t pt-6 mt-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Location Map</h3>
-          <div className="rounded-lg overflow-hidden border border-gray-200 shadow-sm">
-            <iframe
-              title="Beneficiary Location Map"
-              src={locationEmbedUrl}
-              className="w-full h-80"
-              loading="lazy"
-              allowFullScreen
-              referrerPolicy="no-referrer-when-downgrade"
-            />
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function FamilyMembersTab({ beneficiaryId }) {
-  const [loading, setLoading] = useState(true)
-  const [members, setMembers] = useState([])
-  const [showAddForm, setShowAddForm] = useState(false)
-  
-  useEffect(() => {
-    loadMembers()
-  }, [beneficiaryId])
-  
-  const loadMembers = async () => {
-    try {
-      setLoading(true)
-      const response = await api.get(
-        `/appointment-service/api/family-members/beneficiary/${beneficiaryId}`
-      )
-      setMembers(response.data || [])
-    } catch (error) {
-      console.error('Failed to load family members:', error)
-      toast.error('Failed to load family members')
-    } finally {
-      setLoading(false)
-    }
-  }
-  
-  const handleDelete = async (familyMemberId) => {
-    if (!confirm('Are you sure you want to delete this family member?')) return
-    
-    try {
-      await api.delete(`/appointment-service/api/family-members/${familyMemberId}`)
-      toast.success('Family member deleted successfully')
-      loadMembers()
-    } catch (error) {
-      console.error('Failed to delete family member:', error)
-      toast.error('Failed to delete family member')
-    }
-  }
-  
-  if (loading) {
-    return (
-      <div className="flex justify-center py-8">
-        <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
-      </div>
-    )
-  }
-  
-  return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold text-gray-900">
-          Family Members ({members.length})
-        </h3>
-        <button
-          onClick={() => setShowAddForm(true)}
-          className="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 flex items-center gap-2"
-        >
-          <UsersIcon className="w-4 h-4" />
-          Add Family Member
-        </button>
-      </div>
-      
-      {showAddForm && (
-        <FamilyMemberForm
-          beneficiaryId={beneficiaryId}
-          onCancel={() => setShowAddForm(false)}
-          onSuccess={() => {
-            setShowAddForm(false)
-            loadMembers()
-          }}
-        />
-      )}
-      
-      {members.length === 0 && !showAddForm && (
-        <div className="text-center py-12">
-          <UsersIcon className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-          <p className="text-gray-600">No family members found</p>
-        </div>
-      )}
-      
-      {members.map((member) => (
-        <div
-          key={member.familyMemberId}
-          className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
-        >
-          <div className="flex items-start justify-between">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-purple-400 flex items-center justify-center">
-                <User className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h4 className="font-semibold text-gray-900">{member.fullName}</h4>
-                <p className="text-sm text-gray-600">
-                  {member.relationType}
-                  {member.relationDescription && ` - ${member.relationDescription}`}
-                </p>
-                {member.mobileNumber && (
-                  <p className="text-sm text-gray-500 font-mono">{member.mobileNumber}</p>
-                )}
-                {member.email && (
-                  <p className="text-sm text-gray-500">{member.email}</p>
-                )}
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {member.isEmergencyContact && (
-                <span className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded-full">
-                  Emergency Contact
-                </span>
-              )}
-              <span className={`px-2 py-1 text-xs rounded-full ${
-                member.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-              }`}>
-                {member.isActive ? 'Active' : 'Inactive'}
-              </span>
-              <button
-                onClick={() => handleDelete(member.familyMemberId)}
-                className="px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function FamilyMemberForm({ beneficiaryId, onCancel, onSuccess }) {
-  const [form, setForm] = useState({
-    beneficiaryId,
-    fullName: '',
-    motherName: '',
-    nationalId: '',
-    dateOfBirth: '',
-    relationType: '',
-    relationDescription: '',
-    mobileNumber: '',
-    email: '',
-    genderCodeValueId: '',
-    isEmergencyContact: false,
-    canBookAppointments: false,
-  })
-  const [busy, setBusy] = useState(false)
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setBusy(true)
-    try {
-      await api.post('/appointment-service/api/family-members', form)
-      toast.success('Family member added successfully')
-      onSuccess()
-    } catch (error) {
-      console.error('Failed to create family member:', error)
-      toast.error(error.response?.data?.message || 'Failed to create family member')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <div className="border border-indigo-200 rounded-lg p-4 bg-indigo-50">
-      <h4 className="font-semibold text-gray-900 mb-4">Add Family Member</h4>
-      <form onSubmit={handleSubmit} className="space-y-3">
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Full Name *</label>
-            <input
-              type="text"
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-              value={form.fullName}
-              onChange={e => setForm({...form, fullName: e.target.value})}
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Relation Type *</label>
-            <select
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-              value={form.relationType}
-              onChange={e => setForm({...form, relationType: e.target.value})}
-            >
-              <option value="">Select</option>
-              <option value="SPOUSE">Spouse</option>
-              <option value="CHILD">Child</option>
-              <option value="PARENT">Parent</option>
-              <option value="SIBLING">Sibling</option>
-              <option value="OTHER">Other</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Date of Birth</label>
-            <input
-              type="date"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-              value={form.dateOfBirth}
-              onChange={e => setForm({...form, dateOfBirth: e.target.value})}
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Mobile</label>
-            <input
-              type="text"
-              placeholder="+963912345678"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm font-mono"
-              value={form.mobileNumber}
-              onChange={e => setForm({...form, mobileNumber: e.target.value})}
-            />
-          </div>
-        </div>
-        {form.relationType === 'OTHER' && (
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Relation Description</label>
-            <input
-              type="text"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-              value={form.relationDescription}
-              onChange={e => setForm({...form, relationDescription: e.target.value})}
-            />
-          </div>
-        )}
-        <div className="flex items-center gap-4">
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={form.isEmergencyContact}
-              onChange={e => setForm({...form, isEmergencyContact: e.target.checked})}
-            />
-            Emergency Contact
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={form.canBookAppointments}
-              onChange={e => setForm({...form, canBookAppointments: e.target.checked})}
-            />
-            Can Book Appointments
-          </label>
-        </div>
-        <div className="flex gap-2">
-          <button
-            type="submit"
-            disabled={busy}
-            className="px-4 py-2 bg-indigo-500 text-white rounded-md hover:bg-indigo-600 disabled:opacity-50"
-          >
-            {busy ? 'Adding...' : 'Add Member'}
-          </button>
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={busy}
-            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
-          >
-            Cancel
-          </button>
-        </div>
-      </form>
-    </div>
-  )
-}
-
-function DocumentsTab({ beneficiaryId }) {
-  const [loading, setLoading] = useState(true)
-  const [documents, setDocuments] = useState([])
-  const [showAddForm, setShowAddForm] = useState(false)
-  const [documentTypes, setDocumentTypes] = useState([])
-  const [loadingTypes, setLoadingTypes] = useState(false)
-
-  useEffect(() => {
-    loadDocuments()
-  }, [beneficiaryId])
-
-  useEffect(() => {
-    loadDocumentTypes()
-  }, [])
-
-  const loadDocumentTypes = async () => {
-    try {
-      setLoadingTypes(true)
-      const { data } = await api.get('/access/api/cascade-dropdowns/access.code-table-values-by-table', {
-        params: { codeTableId: '947d6fff-9b01-405d-b8fb-285e4df9a419' },
-      })
-      const unique = []
-      const seenIds = new Set()
-      const seenLabels = new Set()
-      ;(data || []).forEach((item) => {
-        const typeId = item?.value ?? item?.id ?? item?.code
-        const label = (item?.label || item?.name || item?.code || item?.description || '—').trim()
-        const labelKey = label.toLocaleLowerCase()
-        if (!typeId || seenIds.has(typeId) || seenLabels.has(labelKey)) return
-        seenIds.add(typeId)
-        seenLabels.add(labelKey)
-        unique.push({ ...item, id: typeId, label })
-      })
-      setDocumentTypes(unique)
-    } catch (error) {
-      console.error('Failed to load document types:', error)
-      toast.error('Failed to load document types')
-    } finally {
-      setLoadingTypes(false)
-    }
-  }
-
-  const documentTypeMap = useMemo(() => {
-    const map = {}
-    documentTypes.forEach((item) => {
-      if (!item?.id) return
-      map[item.id] = {
-        label: item.label || item.name || item.code || '—',
-        code: item.code,
-      }
-    })
-    return map
-  }, [documentTypes])
-
-  const loadDocuments = async () => {
-    try {
-      setLoading(true)
-      const response = await api.get(
-        `/appointment-service/api/beneficiary-documents/beneficiary/${beneficiaryId}`
-      )
-      setDocuments(response.data || [])
-    } catch (error) {
-      console.error('Failed to load documents:', error)
-      toast.error('Failed to load documents')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleDelete = async (documentId) => {
-    if (!confirm('Are you sure you want to delete this document?')) return
-
-    try {
-      await api.delete(`/appointment-service/api/beneficiary-documents/${documentId}`)
-      toast.success('Document deleted successfully')
-      loadDocuments()
-    } catch (error) {
-      console.error('Failed to delete document:', error)
-      toast.error(error.response?.data?.message || 'Failed to delete document')
-    }
-  }
-
-  const formatSize = (size) => {
-    if (!size || Number.isNaN(size)) return '—'
-    if (size < 1024) return `${size} B`
-    if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`
-    return `${(size / (1024 * 1024)).toFixed(2)} MB`
-  }
-
-  if (loading) {
-    return (
-      <div className="flex justify-center py-8">
-        <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold text-gray-900">
-          Documents ({documents.length})
-        </h3>
-        <button
-          onClick={() => setShowAddForm(true)}
-          className="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 flex items-center gap-2"
-        >
-          <FileText className="w-4 h-4" />
-          Upload Document
-        </button>
-      </div>
-
-      {showAddForm && (
-        <DocumentForm
-          beneficiaryId={beneficiaryId}
-          documentTypes={documentTypes}
-          loadingTypes={loadingTypes}
-          onCancel={() => setShowAddForm(false)}
-          onSuccess={() => {
-            setShowAddForm(false)
-            loadDocuments()
-          }}
-        />
-      )}
-
-      {documents.length === 0 && !showAddForm && (
-        <div className="text-center py-12">
-          <FileText className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-          <p className="text-gray-600">No documents found</p>
-        </div>
-      )}
-
-      {documents.map((doc) => {
-        const typeMeta = documentTypeMap[doc.documentTypeId]
-        const typeLabel = typeMeta?.label || doc.documentTypeCode || '—'
-
-        return (
-          <div
-            key={doc.documentId}
-            className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-green-400 to-blue-400 flex items-center justify-center">
-                  <FileText className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900">{doc.documentName}</h4>
-                  <p className="text-sm text-gray-600">{typeLabel}</p>
-                  {doc.documentDescription && (
-                    <p className="text-sm text-gray-500 mt-1">{doc.documentDescription}</p>
-                  )}
-                  <p className="text-xs text-gray-400 mt-1">
-                    {doc.fileName} • {formatSize(doc.fileSizeBytes)} • {doc.mimeType || 'unknown'}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    Uploaded by: <span className="font-mono">{doc.createdById || '—'}</span>
-                    {doc.createdAt && ` • ${new Date(doc.createdAt).toLocaleString()}`}
-                  </p>
-                  {doc.updatedAt && (
-                    <p className="text-xs text-gray-400">
-                      Updated by: <span className="font-mono">{doc.updatedById || '—'}</span> •{' '}
-                      {new Date(doc.updatedAt).toLocaleString()}
-                    </p>
-                  )}
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span
-                  className={`px-2 py-1 text-xs rounded-full ${
-                    doc.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                  }`}
-                >
-                  {doc.isActive ? 'Active' : 'Inactive'}
-                </span>
-                {doc.downloadUrl && (
-                  <a
-                    href={doc.downloadUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 px-2 py-1 text-xs text-indigo-600 hover:text-indigo-800"
-                  >
-                    <Download className="w-3 h-3" />
-                    Download
-                  </a>
-                )}
-                <button
-                  onClick={() => handleDelete(doc.documentId)}
-                  className="px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
-function DocumentForm({ beneficiaryId, documentTypes, loadingTypes, onCancel, onSuccess }) {
-  const [form, setForm] = useState({
-    documentName: '',
-    documentTypeId: '',
-    documentDescription: '',
-    file: null,
-  })
-  const [busy, setBusy] = useState(false)
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-
-    if (!form.documentTypeId) {
-      toast.error('Please select a document type')
-      return
-    }
-    if (!form.file) {
-      toast.error('Please choose a file to upload')
-      return
-    }
-
-    const selectedType = documentTypes.find((item) => item?.id === form.documentTypeId)
-    const documentName = form.documentName?.trim() || selectedType?.label || form.file.name
-
-    const payload = new FormData()
-    payload.append('beneficiaryId', beneficiaryId)
-    payload.append('documentTypeId', form.documentTypeId)
-    if (selectedType?.code) {
-      payload.append('documentTypeCode', selectedType.code)
-    }
-    payload.append('documentName', documentName)
-    if (form.documentDescription?.trim()) {
-      payload.append('documentDescription', form.documentDescription.trim())
-    }
-    payload.append('file', form.file)
-
-    setBusy(true)
-    try {
-      await api.post('/appointment-service/api/beneficiary-documents', payload, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
-      toast.success('Document uploaded successfully')
-      setForm({
-        documentName: '',
-        documentTypeId: '',
-        documentDescription: '',
-        file: null,
-      })
-      onSuccess()
-    } catch (error) {
-      console.error('Failed to upload document:', error)
-      toast.error(error.response?.data?.message || 'Failed to upload document')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <div className="border border-green-200 rounded-lg p-4 bg-green-50">
-      <h4 className="font-semibold text-gray-900 mb-4">Upload Document</h4>
-      <form onSubmit={handleSubmit} className="space-y-3">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Document Type *</label>
-            <select
-              required
-              disabled={loadingTypes}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
-              value={form.documentTypeId}
-              onChange={(e) => setForm({ ...form, documentTypeId: e.target.value })}
-            >
-              <option key="placeholder" value="">
-                Select
-              </option>
-              {documentTypes.map((type, idx) => {
-                const optionValue = type?.id ?? ''
-                const optionKey = optionValue || `option-${idx}`
-                return (
-                  <option key={optionKey} value={optionValue}>
-                    {type.label || type.name || type.code}
-                  </option>
-                )
-              })}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Document Name</label>
-            <input
-              type="text"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-              value={form.documentName}
-              onChange={(e) => setForm({ ...form, documentName: e.target.value })}
-              placeholder="Leave empty to use the file name"
-            />
-          </div>
-          <div className="md:col-span-2">
-            <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
-            <textarea
-              rows="2"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-              value={form.documentDescription}
-              onChange={(e) => setForm({ ...form, documentDescription: e.target.value })}
-              placeholder="Optional notes about this document"
-            />
-          </div>
-          <div className="md:col-span-2">
-            <label className="block text-xs font-medium text-gray-700 mb-1">File *</label>
-            <input
-              type="file"
-              required
-              accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
-              className="w-full text-sm"
-              onChange={(e) => setForm({ ...form, file: e.target.files?.[0] || null })}
-            />
-            <p className="mt-1 text-xs text-gray-500">
-              Accepted: JPG, PNG, PDF, DOC, DOCX — up to 10MB.
-            </p>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <button
-            type="submit"
-            disabled={busy}
-            className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 disabled:opacity-50"
-          >
-            {busy ? 'Uploading...' : 'Upload Document'}
-          </button>
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={busy}
-            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
-          >
-            Cancel
-          </button>
-        </div>
-      </form>
-    </div>
-  )
-}
-
-function AppointmentsTab({ beneficiaryId }) {
-  const [loading, setLoading] = useState(true)
-  const [appointments, setAppointments] = useState([])
-  const [page, setPage] = useState(0)
-  const [pageSize, setPageSize] = useState(10)
-  const [totalElements, setTotalElements] = useState(0)
-  const [totalPages, setTotalPages] = useState(0)
-  const [sort, setSort] = useState({ field: 'appointmentDate', direction: 'desc' })
-  const [error, setError] = useState(null)
-  const [refreshCounter, setRefreshCounter] = useState(0)
-
-  useEffect(() => {
-    setPage(0)
-  }, [beneficiaryId])
-
-  useEffect(() => {
-    let isMounted = true
-
-    const fetchAppointments = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-        const sortParam = `${sort.field},${sort.direction}`
-        const sortParams =
-          sort.field === 'appointmentDate'
-            ? [sortParam, 'appointmentTime,desc']
-            : [sortParam]
-
-        const { data } = await api.get(
-          `/appointment-service/api/admin/beneficiaries/${beneficiaryId}/appointments`,
-          {
-            params: {
-              page,
-              size: pageSize,
-              sort: sortParams,
-            },
-          }
-        )
-
-        if (!isMounted) return
-
-        setAppointments(data?.content || [])
-        setTotalElements(data?.totalElements ?? 0)
-        setTotalPages(data?.totalPages ?? 0)
-      } catch (error) {
-        if (!isMounted) return
-        console.error('Failed to load appointments:', error)
-        setError(error)
-        toast.error(error.response?.data?.message || 'Failed to load appointments')
-      } finally {
-        if (isMounted) {
-          setLoading(false)
-        }
-      }
-    }
-
-    fetchAppointments()
-
-    return () => {
-      isMounted = false
-    }
-  }, [beneficiaryId, page, pageSize, sort.field, sort.direction, refreshCounter])
-
-  const handlePageChange = (nextPage) => {
-    const effectiveTotalPages =
-      totalPages || (totalElements > 0 ? Math.ceil(totalElements / pageSize) : 0)
-
-    if (nextPage < 0) return
-    if (effectiveTotalPages > 0 && nextPage >= effectiveTotalPages) return
-    setPage(nextPage)
-  }
-
-  const handlePageSizeChange = (event) => {
-    setPageSize(Number(event.target.value))
-    setPage(0)
-  }
-
-  const handleSort = (field) => {
-    setSort((prev) => {
-      const isSameField = prev.field === field
-      const direction = isSameField && prev.direction === 'desc' ? 'asc' : 'desc'
-      return { field, direction }
-    })
-    setPage(0)
-  }
-
-  const handleRefresh = () => {
-    setRefreshCounter((count) => count + 1)
-  }
-
-  const effectiveTotalPages =
-    totalPages || (totalElements > 0 ? Math.ceil(totalElements / pageSize) : 0)
-  const isFirstPage = page === 0
-  const isLastPage = effectiveTotalPages === 0 ? true : page >= effectiveTotalPages - 1
-
-  const formatDate = (value) => {
-    if (!value) return '—'
-    try {
-      return new Date(value).toLocaleDateString()
-    } catch {
-      return value
-    }
-  }
-
-  const formatTime = (value) => {
-    if (!value) return '—'
-    return value.slice(0, 5)
-  }
-
-  const formatId = (value) => {
-    if (!value) return '—'
-    return `${value.slice(0, 8)}…`
-  }
-
-  const renderStatusBadge = (status) => {
-    if (!status) {
-      return (
-        <span className="inline-flex px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-600">
-          Unknown
-        </span>
-      )
-    }
-    const normalized = status.toLowerCase()
-    const styles =
-      normalized === 'completed'
-        ? 'bg-green-100 text-green-800'
-        : normalized === 'cancelled' || normalized === 'canceled'
-        ? 'bg-red-100 text-red-700'
-        : normalized === 'scheduled'
-        ? 'bg-indigo-100 text-indigo-700'
-        : 'bg-gray-100 text-gray-700'
-
-    return (
-      <span className={`inline-flex px-2 py-1 text-xs rounded-full ${styles}`}>
-        {status}
-      </span>
-    )
-  }
-
-  const renderSortIndicator = (field) => {
-    if (sort.field !== field) return null
-    return (
-      <span className="text-xs font-semibold text-gray-500">
-        {sort.direction === 'desc' ? '↓' : '↑'}
-      </span>
-    )
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
-        <div className="flex-1">
-          <h3 className="text-lg font-semibold text-gray-900">Appointments History</h3>
-          <p className="text-sm text-gray-500">
-            Review all appointments booked for this beneficiary with latest updates.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-600">
-            Page Size:
-            <select
-              value={pageSize}
-              onChange={handlePageSizeChange}
-              className="ml-2 px-2 py-1 border border-gray-300 rounded-md text-sm"
-            >
-              {[10, 20, 50].map((size) => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button
-            onClick={handleRefresh}
-            disabled={loading}
-            className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            <RotateCw
-              className={`w-4 h-4 ${loading ? 'animate-spin text-indigo-500' : 'text-gray-600'}`}
-              aria-hidden="true"
-            />
-            Refresh
-          </button>
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="flex justify-center py-10">
-          <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
-        </div>
-      ) : error ? (
-        <div className="border border-red-200 bg-red-50 text-red-700 rounded-lg p-6">
-          <p className="font-medium mb-2">Unable to load appointments</p>
-          <p className="text-sm">
-            {error.response?.data?.message || error.message || 'Please try again later.'}
-          </p>
-          <button
-            onClick={handleRefresh}
-            className="mt-3 inline-flex items-center gap-2 px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-          >
-            Retry
-          </button>
-        </div>
-      ) : appointments.length === 0 ? (
-        <div className="text-center py-12 border border-dashed border-gray-200 rounded-lg">
-          <Calendar className="w-12 h-12 mx-auto text-gray-300 mb-4" />
-          <p className="text-gray-600">No appointments found for this beneficiary.</p>
-        </div>
-      ) : (
-        <>
-          <div className="overflow-x-auto border border-gray-200 rounded-lg">
-            <table className="min-w-full divide-y divide-gray-200 text-sm">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-600 uppercase tracking-wider">
-                    <button
-                      type="button"
-                      onClick={() => handleSort('appointmentDate')}
-                      className="inline-flex items-center gap-1 text-gray-600 hover:text-gray-900"
-                    >
-                      Appointment
-                      {renderSortIndicator('appointmentDate')}
-                    </button>
-                  </th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-600 uppercase tracking-wider">
-                    Service
-                  </th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-600 uppercase tracking-wider">
-                    Branch
-                  </th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-600 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-600 uppercase tracking-wider">
-                    Priority
-                  </th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-600 uppercase tracking-wider">
-                    <button
-                      type="button"
-                      onClick={() => handleSort('createdAt')}
-                      className="inline-flex items-center gap-1 text-gray-600 hover:text-gray-900"
-                    >
-                      Created
-                      {renderSortIndicator('createdAt')}
-                    </button>
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {appointments.map((appointment) => (
-                  <tr key={appointment.appointmentId} className="hover:bg-gray-50">
-                    <td className="px-4 py-3">
-                      <div className="flex flex-col gap-0.5">
-                        <span className="font-medium text-gray-900">
-                          {formatDate(appointment.appointmentDate)} •{' '}
-                          {formatTime(appointment.appointmentTime)}
-                        </span>
-                        <span className="text-xs text-gray-500 font-mono">
-                          {formatId(appointment.appointmentId)}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-col gap-0.5">
-                        <span className="font-medium text-gray-900">
-                          {appointment.serviceTypeName || '—'}
-                        </span>
-                        <span className="text-xs text-gray-500 font-mono">
-                          {appointment.serviceTypeId || '—'}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-col gap-0.5">
-                        <span className="font-medium text-gray-900">
-                          {appointment.branchName || '—'}
-                        </span>
-                        <span className="text-xs text-gray-500 font-mono">
-                          {appointment.organizationBranchId || '—'}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      {renderStatusBadge(appointment.appointmentStatus)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex px-2 py-1 text-xs rounded-full ${
-                          appointment.priority === 'URGENT'
-                            ? 'bg-red-100 text-red-700'
-                            : 'bg-blue-100 text-blue-700'
-                        }`}
-                      >
-                        {appointment.priority || 'NORMAL'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-sm text-gray-900">
-                          {appointment.createdAt
-                            ? new Date(appointment.createdAt).toLocaleString()
-                            : '—'}
-                        </span>
-                        {appointment.createdById && (
-                          <span className="text-xs text-gray-500 font-mono">
-                            {appointment.createdById}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
-            <div className="text-sm text-gray-600">
-              Showing{' '}
-              <span className="font-medium text-gray-900">
-                {appointments.length}
-              </span>{' '}
-              of{' '}
-              <span className="font-medium text-gray-900">{totalElements}</span> appointments
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => handlePageChange(page - 1)}
-                disabled={isFirstPage}
-                className={`px-3 py-2 rounded-md text-sm ${
-                  isFirstPage
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                Previous
-              </button>
-              <span className="text-sm text-gray-600">
-                Page{' '}
-                <span className="font-medium text-gray-900">{page + 1}</span> of{' '}
-                <span className="font-medium text-gray-900">
-                  {effectiveTotalPages > 0 ? effectiveTotalPages : 1}
-                </span>
-              </span>
-              <button
-                onClick={() => handlePageChange(page + 1)}
-                disabled={isLastPage}
-                className={`px-3 py-2 rounded-md text-sm ${
-                  isLastPage
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        </>
-      )}
+    <div>
+      <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        {label} {required && <span className="text-rose-500">*</span>}
+      </label>
+      <input
+        type="text"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className={`mt-2 w-full rounded-lg border px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 ${
+          error
+            ? 'border-rose-300 bg-white text-slate-900 focus:border-rose-400 focus:ring-rose-100'
+            : 'border-slate-200 bg-white text-slate-900 focus:border-sky-400 focus:ring-sky-100'
+        }`}
+      />
+      {error && <p className="mt-1 text-xs font-medium text-rose-500">{error}</p>}
     </div>
   )
 }

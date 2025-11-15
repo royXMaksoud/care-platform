@@ -1,0 +1,186 @@
+package com.care.notification.application.service;
+
+import com.care.notification.application.dto.AppointmentQRDTO;
+import com.care.notification.application.dto.NotificationRequest;
+import com.care.notification.application.dto.NotificationResult;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Professional Notification Service
+ *
+ * Handles multi-channel notifications:
+ * - SMS (via third-party provider)
+ * - Email (SMTP)
+ * - Push Notifications (via Firebase/APNs)
+ *
+ * Smart notification selection based on user preferences and device status
+ */
+@Service
+@Slf4j
+@RequiredArgsConstructor
+public class NotificationService {
+
+    private final EmailService emailService;
+    private final SMSService smsService;
+    private final PushNotificationService pushNotificationService;
+
+    @Value("${app.notification.default-channel:SMS}")
+    private String defaultChannel;
+
+    @Value("${app.notification.multi-channel-enabled:true}")
+    private boolean multiChannelEnabled;
+
+    /**
+     * Send appointment created notification intelligently
+     */
+    public NotificationResult notifyAppointmentCreated(NotificationRequest request) {
+        log.info("Sending appointment created notification to beneficiary: {}", request.getBeneficiaryId());
+
+        request.setNotificationType(NotificationRequest.NotificationType.APPOINTMENT_CREATED);
+        return sendNotificationIntelligently(request);
+    }
+
+    /**
+     * Send appointment reminder notification
+     */
+    public NotificationResult notifyAppointmentReminder(NotificationRequest request) {
+        log.info("Sending appointment reminder to beneficiary: {}", request.getBeneficiaryId());
+
+        request.setNotificationType(NotificationRequest.NotificationType.APPOINTMENT_REMINDER);
+        return sendNotificationIntelligently(request);
+    }
+
+    /**
+     * Send appointment cancelled notification
+     */
+    public NotificationResult notifyAppointmentCancelled(NotificationRequest request) {
+        log.info("Sending appointment cancelled notification to beneficiary: {}", request.getBeneficiaryId());
+
+        request.setNotificationType(NotificationRequest.NotificationType.APPOINTMENT_CANCELLED);
+        return sendNotificationIntelligently(request);
+    }
+
+    /**
+     * Send QR code resend notification
+     */
+    public NotificationResult resendQRCode(NotificationRequest request) {
+        log.info("Resending QR code to beneficiary: {} via {}", request.getBeneficiaryId(), request.getPreferredChannel());
+
+        request.setNotificationType(NotificationRequest.NotificationType.QR_RESEND);
+        // Force specific channel instead of intelligent routing
+        return sendNotificationViaChannel(request, request.getPreferredChannel().toUpperCase());
+    }
+
+    /**
+     * Smart notification routing based on user preferences and device status
+     */
+    private NotificationResult sendNotificationIntelligently(NotificationRequest request) {
+        List<String> channels = determineChannels(request);
+        NotificationResult lastResult = null;
+
+        for (String channel : channels) {
+            try {
+                NotificationResult result = sendNotificationViaChannel(request, channel);
+
+                if (result.isSuccess()) {
+                    log.info("Notification sent via {} for beneficiary: {}",
+                        channel, request.getBeneficiaryId());
+                    return result; // Return on first success
+                } else {
+                    log.warn("Notification failed via {}, trying next channel: {}",
+                        channel, result.getErrorMessage());
+                    lastResult = result;
+                }
+            } catch (Exception e) {
+                log.error("Error sending notification via {}: {}", channel, e.getMessage());
+                lastResult = NotificationResult.failed(channel, e.getMessage());
+            }
+        }
+
+        // All channels failed
+        if (lastResult == null) {
+            lastResult = NotificationResult.failed("ALL", "No notification channels available");
+        }
+        log.error("All notification channels failed for beneficiary: {}", request.getBeneficiaryId());
+        return lastResult;
+    }
+
+    /**
+     * Send notification via specific channel
+     */
+    private NotificationResult sendNotificationViaChannel(NotificationRequest request, String channel) {
+        switch (channel.toUpperCase()) {
+            case "PUSH":
+                if (request.isHasInstalledMobileApp() && request.getDeviceId() != null) {
+                    return pushNotificationService.sendPushNotification(request);
+                } else {
+                    return NotificationResult.failed("PUSH", "Mobile app not installed or no device ID");
+                }
+
+            case "EMAIL":
+                if (request.getEmail() != null && !request.getEmail().isEmpty()) {
+                    return emailService.sendEmailNotification(request);
+                } else {
+                    return NotificationResult.failed("EMAIL", "No email address");
+                }
+
+            case "SMS":
+                if (request.getMobileNumber() != null && !request.getMobileNumber().isEmpty()) {
+                    return smsService.sendSMSNotification(request);
+                } else {
+                    return NotificationResult.failed("SMS", "No mobile number");
+                }
+
+            default:
+                return NotificationResult.failed(channel, "Unknown channel: " + channel);
+        }
+    }
+
+    /**
+     * Determine which channels to use for notification
+     * Priority: Preferred > Installed App > Email > SMS
+     */
+    private List<String> determineChannels(NotificationRequest request) {
+        List<String> channels = new ArrayList<>();
+        String preferred = request.getPreferredChannel();
+
+        // Use preferred channel if specified
+        if (preferred != null && !preferred.isEmpty()) {
+            channels.add(preferred.toUpperCase());
+        }
+
+        // If multi-channel is enabled, add backup channels
+        if (multiChannelEnabled) {
+            if (request.isHasInstalledMobileApp() && request.getDeviceId() != null) {
+                if (preferred == null || !preferred.toUpperCase().equals("PUSH")) {
+                    channels.add("PUSH");
+                }
+            }
+
+            if (request.getEmail() != null && !request.getEmail().isEmpty()) {
+                if (preferred == null || !preferred.toUpperCase().equals("EMAIL")) {
+                    channels.add("EMAIL");
+                }
+            }
+
+            if (request.getMobileNumber() != null && !request.getMobileNumber().isEmpty()) {
+                if (preferred == null || !preferred.toUpperCase().equals("SMS")) {
+                    channels.add("SMS");
+                }
+            }
+        }
+
+        // If no channels determined, use default
+        if (channels.isEmpty()) {
+            channels.add(defaultChannel);
+        }
+
+        return channels;
+    }
+}

@@ -26,6 +26,7 @@ import OperationList from './pages/operation/OperationList'
 import OperationDetails from './pages/operation/OperationDetails'
 import LocationList from './pages/location/LocationList'
 import LocationDetails from './pages/location/LocationDetails'
+import LocationOchaList from './pages/locationOcha/LocationOchaList'
 import AuditLogList from './pages/auditlog/AuditLogList'
 import SystemRolesList from './pages/users/SystemRolesList'
 import SystemRoleDetails from './pages/users/SystemRoleDetails'
@@ -90,6 +91,7 @@ export default function CMSRoutes() {
         {/* Locations Routes */}
         <Route path="location" element={<LocationList />} />
         <Route path="location/:locationId" element={<LocationDetails />} />
+        <Route path="location-ocha" element={<LocationOchaList />} />
 
         {/* Audit Log Route */}
         <Route path="auditLog" element={<AuditLogList />} />

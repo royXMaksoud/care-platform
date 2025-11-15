@@ -138,5 +138,83 @@
     "warning": "Hîn li vir î? Em dê di {{minutes}} deqîqeyan de ji ber neçalakbûnê te derxînin.",
     "extend": "Bimîne têketî",
     "timeout": "Ji ber neçalakbûnê hatî derxistin."
+  },
+  "appointment": {
+    "home": {
+      "searchLabel": "Modulan bigere",
+      "searchPlaceholder": "Li ser nav an daxuyaniya modulê bigere...",
+      "quickFilters": "Parzûnên lez",
+      "filters": {
+        "all": "Hemû",
+        "analytics": "Analîz",
+        "operations": "Operasyon",
+        "users": "Bikarhêner",
+        "reference": "Referans",
+        "planning": "Plan kirin",
+        "configuration": "Sazkirin"
+      },
+      "categories": {
+        "analytics": "Rapor û analîz",
+        "operations": "Îşên rojane",
+        "users": "Kes û profîl",
+        "reference": "Daneyên referansê",
+        "planning": "Amûrên planê",
+        "configuration": "Sazkirin û mîheng"
+      },
+      "noResults": "Tu modul bi lêgerîna te re li hev nabê.",
+      "moduleSingular": "modul",
+      "modulePlural": "modul",
+      "addShortcut": "Li têkiliya lezî zêde bike",
+      "removeShortcut": "Ji têkiliya lezî rabike",
+      "manageCta": "Rêve bibe"
+    },
+    "reports": {
+      "excel": {
+        "title": "Raporên Excel",
+        "description": "Raporên analîtîk ên randevû bi formatê Excel çêke û dakêşe",
+        "comingSoon": "Rûpela raporên Excel ê di demek nêzîk de amade dibe. Ji kerema xwe paşê dîsa kontrol bike."
+      },
+      "dashboard": {
+        "title": "Dashborda Randevû",
+        "subtitle": "Analîz û raporên profesyonel ji bo rêveberiya randevû",
+        "error": "Çewtî di barkirina dashbordê de",
+        "loading": "Nîşaneyên dashbordê têne barkirin...",
+        "filtersApplied": "Parzûnan bi ser ketin",
+        "filtersCleared": "Parzûn hate reset kirin",
+        "filtersGeoError": "Daneyên cografî yên navendên nehatin barkirin",
+        "kpiSection": "Nîşanên performansa sereke",
+        "charts": {
+          "statusDistribution": "Belavbûna rewşa randevûyan",
+          "serviceTypeDistribution": "Cureyên xizmetê yên herî sereke",
+          "trendAnalysis": "Analîza berxa randevûyan",
+          "ageDistribution": "Belavbûna benifisyarên bi temen",
+          "genderDistribution": "Belavbûna benifisyarên bi zayend",
+          "priorityDistribution": "Pêşengiyên randevû"
+        },
+        "map": {
+          "title": "Xerîta navendên têkildar a li Sûriyê",
+          "summaryTitle": "Kurteya statistîk li gorî navendê",
+          "tableHeaders": {
+            "center": "Navend",
+            "governorate": "Parêzgeh",
+            "referrals": "Veguhastin",
+            "completed": "Qediyayî",
+            "inProgress": "Di pêvajoyê de"
+          }
+        },
+        "centerPerformance": {
+          "title": "Performansa navendan",
+          "headers": {
+            "centerName": "Navê navendê",
+            "governorate": "Parêzgeh",
+            "total": "Tevahî",
+            "completed": "Qediyayî",
+            "completionRate": "Rêjeya qediya",
+            "noShowRate": "Rêjeya nehatinê",
+            "cancellationRate": "Rêjeya betal kirinê"
+          }
+        }
+      }
+    }
   }
 }

@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import { ChevronLeft } from 'lucide-react'
 import CrudPage from '@/features/crud/CrudPage'
 import { api } from '@/lib/axios'
+import AppointmentBreadcrumb from '@/modules/appointment/components/AppointmentBreadcrumb'
 
 const languageColumns = [
   {
@@ -123,6 +124,11 @@ export default function AppointmentStatusDetails() {
     }
   }
 
+  const breadcrumbLabel = useMemo(() => {
+    if (!status) return 'Appointment Status Details'
+    return status.name || status.code || 'Appointment Status Details'
+  }, [status])
+
   const languageFixedFilters = useMemo(
     () =>
       appointmentStatusId
@@ -169,6 +175,7 @@ export default function AppointmentStatusDetails() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-orange-50">
       <div className="container mx-auto px-4 py-8">
+        <AppointmentBreadcrumb currentPageLabel={breadcrumbLabel} />
         <button
           onClick={() => navigate(-1)}
           className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"

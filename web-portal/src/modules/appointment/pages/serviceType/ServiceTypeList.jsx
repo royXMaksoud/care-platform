@@ -15,6 +15,7 @@ import {
   Loader2,
   Plus,
 } from 'lucide-react'
+import AppointmentBreadcrumb from '@/modules/appointment/components/AppointmentBreadcrumb'
 
 export default function ServiceTypeList() {
   const navigate = useNavigate()
@@ -251,6 +252,7 @@ export default function ServiceTypeList() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50">
       <div className="container mx-auto px-4 py-8">
+        <AppointmentBreadcrumb />
         <div className="mb-6 flex items-center gap-3">
           <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
             <FileText className="h-6 w-6 text-white" strokeWidth={2.5} />

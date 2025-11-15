@@ -134,6 +134,84 @@
     "warning": "Noch da? Wir melden dich in {{minutes}} Minute(n) wegen Inaktivität ab.",
     "extend": "Angemeldet bleiben",
     "timeout": "Du wurdest wegen Inaktivität abgemeldet."
+  },
+  "appointment": {
+    "home": {
+      "searchLabel": "Module durchsuchen",
+      "searchPlaceholder": "Nach Modulname oder Beschreibung suchen...",
+      "quickFilters": "Schnellfilter",
+      "filters": {
+        "all": "Alle",
+        "analytics": "Analysen",
+        "operations": "Betrieb",
+        "users": "Benutzer",
+        "reference": "Referenz",
+        "planning": "Planung",
+        "configuration": "Konfiguration"
+      },
+      "categories": {
+        "analytics": "Berichte und Analysen",
+        "operations": "Tägliche Arbeitsabläufe",
+        "users": "Personen und Profile",
+        "reference": "Referenzdaten",
+        "planning": "Planungswerkzeuge",
+        "configuration": "Einrichtung und Konfiguration"
+      },
+      "noResults": "Keine Module passen zu Ihrer aktuellen Suche.",
+      "moduleSingular": "Modul",
+      "modulePlural": "Module",
+      "addShortcut": "Zum Schnellzugriff hinzufügen",
+      "removeShortcut": "Aus Schnellzugriff entfernen",
+      "manageCta": "Verwalten"
+    },
+    "reports": {
+      "excel": {
+        "title": "Excel-Berichte",
+        "description": "Erstelle und lade terminbezogene Analyseberichte im Excel-Format herunter",
+        "comingSoon": "Die Excel-Berichtsoberfläche ist bald verfügbar. Bitte schaue später noch einmal vorbei."
+      },
+      "dashboard": {
+        "title": "Termin-Dashboard",
+        "subtitle": "Professionelle Analysen und Berichte für das Terminmanagement",
+        "error": "Fehler beim Laden des Dashboards",
+        "loading": "Dashboard-Kennzahlen werden geladen...",
+        "filtersApplied": "Filter erfolgreich angewendet",
+        "filtersCleared": "Filter zurückgesetzt",
+        "filtersGeoError": "Geografische Daten der Zentren konnten nicht geladen werden",
+        "kpiSection": "Wichtigste Leistungskennzahlen",
+        "charts": {
+          "statusDistribution": "Verteilung der Terminstatus",
+          "serviceTypeDistribution": "Wichtigste Leistungstypen",
+          "trendAnalysis": "Analyse der Termintrends",
+          "ageDistribution": "Verteilung der Begünstigten nach Alter",
+          "genderDistribution": "Verteilung der Begünstigten nach Geschlecht",
+          "priorityDistribution": "Terminprioritäten"
+        },
+        "map": {
+          "title": "Interaktive Zentrenkarte in Syrien",
+          "summaryTitle": "Statistikübersicht nach Zentrum",
+          "tableHeaders": {
+            "center": "Zentrum",
+            "governorate": "Gouvernement",
+            "referrals": "Überweisungen",
+            "completed": "Abgeschlossen",
+            "inProgress": "In Bearbeitung"
+          }
+        },
+        "centerPerformance": {
+          "title": "Leistungskennzahlen der Zentren",
+          "headers": {
+            "centerName": "Name des Zentrums",
+            "governorate": "Gouvernement",
+            "total": "Gesamt",
+            "completed": "Abgeschlossen",
+            "completionRate": "Abschlussquote",
+            "noShowRate": "No-Show-Quote",
+            "cancellationRate": "Stornierungsquote"
+          }
+        }
+      }
+    }
   }
 }
 

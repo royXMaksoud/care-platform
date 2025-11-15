@@ -134,6 +134,84 @@
     "warning": "Toujours là ? Nous vous déconnecterons dans {{minutes}} minute(s) pour inactivité.",
     "extend": "Rester connecté(e)",
     "timeout": "Vous avez été déconnecté(e) pour cause d’inactivité."
+  },
+  "appointment": {
+    "home": {
+      "searchLabel": "Rechercher des modules",
+      "searchPlaceholder": "Rechercher par nom de module ou description...",
+      "quickFilters": "Filtres rapides",
+      "filters": {
+        "all": "Tous",
+        "analytics": "Analytique",
+        "operations": "Opérations",
+        "users": "Utilisateurs",
+        "reference": "Référence",
+        "planning": "Planification",
+        "configuration": "Configuration"
+      },
+      "categories": {
+        "analytics": "Rapports et analyses",
+        "operations": "Flux de travail quotidiens",
+        "users": "Personnes et profils",
+        "reference": "Données de référence",
+        "planning": "Outils de planification",
+        "configuration": "Configuration et paramétrage"
+      },
+      "noResults": "Aucun module ne correspond à votre recherche.",
+      "moduleSingular": "module",
+      "modulePlural": "modules",
+      "addShortcut": "Ajouter aux accès rapides",
+      "removeShortcut": "Retirer des accès rapides",
+      "manageCta": "Gérer"
+    },
+    "reports": {
+      "excel": {
+        "title": "Rapports Excel",
+        "description": "Générez et téléchargez des rapports analytiques sur les rendez-vous au format Excel",
+        "comingSoon": "L’interface de rapports Excel sera bientôt disponible. Revenez plus tard."
+      },
+      "dashboard": {
+        "title": "Tableau de bord des rendez-vous",
+        "subtitle": "Analyses professionnelles et rapports pour la gestion des rendez-vous",
+        "error": "Erreur lors du chargement du tableau de bord",
+        "loading": "Chargement des indicateurs du tableau de bord...",
+        "filtersApplied": "Filtres appliqués avec succès",
+        "filtersCleared": "Filtres réinitialisés",
+        "filtersGeoError": "Impossible de charger les données géographiques des centres",
+        "kpiSection": "Indicateurs clés de performance",
+        "charts": {
+          "statusDistribution": "Répartition des statuts des rendez-vous",
+          "serviceTypeDistribution": "Principaux types de services",
+          "trendAnalysis": "Analyse des tendances des rendez-vous",
+          "ageDistribution": "Répartition des bénéficiaires par âge",
+          "genderDistribution": "Répartition des bénéficiaires par genre",
+          "priorityDistribution": "Priorité des rendez-vous"
+        },
+        "map": {
+          "title": "Carte interactive des centres en Syrie",
+          "summaryTitle": "Résumé statistique par centre",
+          "tableHeaders": {
+            "center": "Centre",
+            "governorate": "Gouvernorat",
+            "referrals": "Références",
+            "completed": "Terminées",
+            "inProgress": "En traitement"
+          }
+        },
+        "centerPerformance": {
+          "title": "Performances des centres",
+          "headers": {
+            "centerName": "Centre",
+            "governorate": "Gouvernorat",
+            "total": "Total",
+            "completed": "Terminées",
+            "completionRate": "Taux d'achèvement",
+            "noShowRate": "Taux d'absence",
+            "cancellationRate": "Taux d'annulation"
+          }
+        }
+      }
+    }
   }
 }
 

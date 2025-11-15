@@ -166,6 +166,9 @@ export default function CrudPage({
 
   const refresh = () => setRefreshKey((k) => k + 1)
 
+  const resolveErrorMessage = (err, fallbackMessage) =>
+    err?.response?.data?.message || err?.message || fallbackMessage
+
   // Store displayed data for export (will be empty for now - export feature needs redesign)
   const [displayedData, setDisplayedData] = useState([])
   
@@ -258,7 +261,7 @@ export default function CrudPage({
       exportXlsx(exportCols, allData, `${title}_all_data.xlsx`)
       toast.success(`Exported ${allData.length} records successfully!`)
     } catch (error) {
-      console.error('Export error:', error)
+     // console.error('Export error:', error)
       toast.error('Failed to export data: ' + (error?.response?.data?.message || error.message))
     }
   }
@@ -276,7 +279,7 @@ export default function CrudPage({
       refresh()
       setShowCreate(false)
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'Create failed')
+      toast.error(resolveErrorMessage(err, 'Create failed'))
     } finally {
       setBusy(false)
     }
@@ -292,7 +295,7 @@ export default function CrudPage({
       refresh()
       setShowEdit(false)
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'Update failed')
+      toast.error(resolveErrorMessage(err, 'Update failed'))
     } finally {
       setBusy(false)
     }
@@ -308,7 +311,7 @@ export default function CrudPage({
       setSelected(null)
       refresh()
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'Delete failed')
+      toast.error(resolveErrorMessage(err, 'Delete failed'))
     } finally {
       setBusy(false)
     }

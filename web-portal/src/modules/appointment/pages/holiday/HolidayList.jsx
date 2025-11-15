@@ -4,6 +4,7 @@ import HolidayFormModal from './HolidayFormModal'
 import HolidayCalendar from './HolidayCalendar'
 import { api } from '@/lib/axios'
 import { CalendarCheck, Calendar, RefreshCw, List } from 'lucide-react'
+import AppointmentBreadcrumb from '@/modules/appointment/components/AppointmentBreadcrumb'
 
 export default function HolidayList() {
   // Use state-only tabs (no navigation) to prevent unmount/remount issues
@@ -221,6 +222,7 @@ export default function HolidayList() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50">
       <div className="container mx-auto px-4 py-8">
+        <AppointmentBreadcrumb />
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-3">

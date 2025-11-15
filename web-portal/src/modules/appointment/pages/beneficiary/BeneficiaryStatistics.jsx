@@ -12,6 +12,7 @@ import {
   UsersRound,
   BarChart3,
 } from 'lucide-react'
+import AppointmentBreadcrumb from '@/modules/appointment/components/AppointmentBreadcrumb'
 
 export default function BeneficiaryStatistics() {
   const navigate = useNavigate()
@@ -46,6 +47,7 @@ export default function BeneficiaryStatistics() {
   if (!stats) {
     return (
       <div className="container mx-auto px-4 py-8">
+        <AppointmentBreadcrumb currentPageLabel="Beneficiary Statistics" />
         <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
           <p className="text-red-600">Failed to load statistics</p>
           <button
@@ -67,6 +69,7 @@ export default function BeneficiaryStatistics() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
       <div className="container mx-auto px-4 py-8">
+        <AppointmentBreadcrumb currentPageLabel="Beneficiary Statistics" />
         {/* Header */}
         <div className="mb-6">
           <button

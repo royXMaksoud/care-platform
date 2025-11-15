@@ -5,6 +5,7 @@ import { ChevronLeft } from 'lucide-react'
 import CrudPage from '@/features/crud/CrudPage'
 import ConfirmDialog from '@/components/ConfirmDialog'
 import { api } from '@/lib/axios'
+import AppointmentBreadcrumb from '@/modules/appointment/components/AppointmentBreadcrumb'
 
 const languageColumns = [
   {
@@ -225,6 +226,11 @@ export default function ServiceTypeDetails() {
       }))
   }, [serviceTypesLookup, serviceTypeId])
 
+  const breadcrumbLabel = useMemo(() => {
+    if (!serviceType) return 'Service Type Details'
+    return serviceType.name || serviceType.code || 'Service Type Details'
+  }, [serviceType])
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-pink-50">
@@ -240,6 +246,7 @@ export default function ServiceTypeDetails() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50">
       <div className="container mx-auto px-4 py-8">
+        <AppointmentBreadcrumb currentPageLabel={breadcrumbLabel} />
         <button
           onClick={() => navigate(-1)}
           className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"

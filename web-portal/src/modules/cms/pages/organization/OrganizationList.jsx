@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react'
+import React, { useMemo, useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import Select from 'react-select'
@@ -135,6 +135,10 @@ export default function OrganizationListPage() {
   
   // Get organization types for dropdown
   const { organizationTypes, loading: typesLoading } = useOrganizationTypes('en')
+  const [bulkUploading, setBulkUploading] = useState(false)
+  const [bulkResult, setBulkResult] = useState(null)
+  const bulkInputRef = useRef(null)
+  const [crudRefreshKey, setCrudRefreshKey] = useState(0)
   
   const permissions = useMemo(() => {
     const perms = getSectionPermissions(CMS_SECTIONS.CODE_COUNTRY, SYSTEMS.CMS)
@@ -146,6 +150,56 @@ export default function OrganizationListPage() {
   const canUpdate = permissions.canUpdate
   const canDelete = permissions.canDelete
   const canList = permissions.canList
+
+  const handleDownloadTemplate = async () => {
+    try {
+      const response = await api.get('/access/api/organizations/bulk/template', {
+        responseType: 'blob',
+      })
+      const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8' })
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'organization-bulk-template.csv'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+      toast.success('Template downloaded successfully')
+    } catch (error) {
+      console.error('Failed to download template', error)
+      toast.error('Failed to download template')
+    }
+  }
+
+  const handleBulkUploadClick = () => {
+    bulkInputRef.current?.click()
+  }
+
+  const handleBulkFileChange = async (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    const formData = new FormData()
+    formData.append('file', file)
+    setBulkUploading(true)
+    try {
+      const { data } = await api.post('/access/api/organizations/bulk/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      setBulkResult(data)
+      toast.success(`Imported ${data.importedCount} of ${data.totalRows} organizations`)
+      if (data.errors?.length) {
+        toast.warning('Some rows could not be imported. See details below.')
+      }
+      setCrudRefreshKey((prev) => prev + 1)
+    } catch (error) {
+      console.error('Bulk upload failed', error)
+      toast.error(error.response?.data?.message || 'Bulk upload failed')
+    } finally {
+      setBulkUploading(false)
+      event.target.value = ''
+    }
+  }
   
   // Map state
   const [showMap, setShowMap] = useState(false)
@@ -588,6 +642,67 @@ export default function OrganizationListPage() {
           <CMSBreadcrumb />
         </div>
 
+        <div className="mb-6 bg-white rounded-xl shadow-lg border border-gray-200 p-5">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Bulk organizations</h3>
+              <p className="text-sm text-gray-600">
+                Download the CSV template, fill code and name columns, then upload it to create multiple organizations at once.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleDownloadTemplate}
+                className="px-4 py-2 rounded-lg border border-blue-200 text-blue-700 font-semibold hover:bg-blue-50 transition"
+              >
+                Download Template
+              </button>
+              <button
+                onClick={handleBulkUploadClick}
+                disabled={bulkUploading}
+                className="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition disabled:opacity-60"
+              >
+                {bulkUploading ? 'Uploading...' : 'Upload CSV'}
+              </button>
+            </div>
+          </div>
+          <input
+            type="file"
+            ref={bulkInputRef}
+            accept=".csv,text/csv"
+            className="hidden"
+            onChange={handleBulkFileChange}
+          />
+          {bulkResult && (
+            <div className="mt-4 border border-slate-200 rounded-lg p-4 bg-slate-50">
+              <p className="text-sm text-gray-700">
+                Imported <span className="font-semibold">{bulkResult.importedCount}</span> of{' '}
+                <span className="font-semibold">{bulkResult.totalRows}</span> rows. Skipped{' '}
+                <span className="font-semibold">{bulkResult.skippedCount}</span>.
+              </p>
+              {bulkResult.errors?.length > 0 && (
+                <div className="mt-3">
+                  <p className="text-sm font-semibold text-red-600">
+                    {bulkResult.errors.length} row(s) failed:
+                  </p>
+                  <ul className="mt-2 space-y-1 max-h-40 overflow-y-auto text-sm text-red-500">
+                    {bulkResult.errors.slice(0, 5).map((error, idx) => (
+                      <li key={`${error.line}-${idx}`}>
+                        Line {error.line}: {error.message}
+                      </li>
+                    ))}
+                    {bulkResult.errors.length > 5 && (
+                      <li className="text-xs text-gray-500">
+                        +{bulkResult.errors.length - 5} more errors not shown
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Map View Toggle and Filters */}
         <div className="mb-6 bg-white rounded-xl shadow-lg border border-gray-200 p-5">
           <div className="flex items-center gap-4 flex-wrap">
@@ -779,6 +894,7 @@ export default function OrganizationListPage() {
         </div>
 
         <CrudPage
+          key={crudRefreshKey}
           title={t('cms.organizations') || 'Organizations'}
           service="access"
           resourceBase="/api/organizations"

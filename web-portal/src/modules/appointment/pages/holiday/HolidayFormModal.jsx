@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '@/lib/axios'
 import { toast } from 'sonner'
 import SearchableSelect from '@/components/SearchableSelect'
-import { usePermissionCheck } from '@/contexts/PermissionsContext'
+import { useSystemSectionScopes } from '@/modules/appointment/hooks/useSystemSectionScopes'
+import { SYSTEM_SECTIONS } from '@/config/systemSectionConstants'
 
 export default function HolidayFormModal({ 
   open, 
@@ -26,30 +27,11 @@ export default function HolidayFormModal({
   const [loadingScopedBranches, setLoadingScopedBranches] = useState(false)
 
   const uiLang = (typeof navigator !== 'undefined' && (navigator.language || '').startsWith('ar')) ? 'ar' : 'en'
-  const { getSectionPermissions, permissionsData } = usePermissionCheck()
+  const { scopeValueIds, isLoading: scopesLoading } = useSystemSectionScopes(SYSTEM_SECTIONS.APPOINTMENT_SCHEDULING)
   const lastScopeFetchKeyRef = useRef(null)
 
   useEffect(() => {
-    if (!open) return
-
-    const extractScopeValueIds = () => {
-      let sectionPerms = getSectionPermissions('Appointment Schedule Mangement', 'Appointments')
-      if (!sectionPerms?.actions?.length && !sectionPerms?.allActions?.length) {
-        sectionPerms = getSectionPermissions('Appointment Schedule Mangement')
-      }
-
-      const actions = sectionPerms?.allActions ?? sectionPerms?.actions ?? []
-      const ids = new Set()
-      actions.forEach((action) => {
-        ;(action.scopes ?? []).forEach((scope) => {
-          if (scope.effect === 'ALLOW' && scope.scopeValueId) {
-            ids.add(scope.scopeValueId)
-          }
-        })
-      })
-
-      return Array.from(ids)
-    }
+    if (!open || scopesLoading) return
 
     let isActive = true
 
@@ -57,10 +39,10 @@ export default function HolidayFormModal({
       try {
         setLoadingScopedBranches(true)
 
-        const scopeValueIds = extractScopeValueIds()
-        const scopeKey = JSON.stringify({ scopeValueIds, lang: uiLang })
+        const allowedScopeIds = Array.isArray(scopeValueIds) ? scopeValueIds : []
+        const scopeKey = JSON.stringify({ scopeValueIds: allowedScopeIds, lang: uiLang })
 
-        if (!scopeValueIds.length) {
+        if (!allowedScopeIds.length) {
           lastScopeFetchKeyRef.current = scopeKey
           setAllOrganizationBranches([])
           return
@@ -72,10 +54,7 @@ export default function HolidayFormModal({
 
         lastScopeFetchKeyRef.current = scopeKey
 
-        const payload = {
-          scopeValueIds,
-          lang: uiLang,
-        }
+        const payload = { scopeValueIds: allowedScopeIds, lang: uiLang }
 
         const { data } = await api.post('/access/api/dropdowns/organization-branches/by-scope', payload)
         if (!isActive) return
@@ -101,7 +80,7 @@ export default function HolidayFormModal({
       isActive = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, uiLang, permissionsData])
+  }, [open, uiLang, scopeValueIds, scopesLoading])
 
   const organizationOptions = useMemo(() => {
     const seen = new Set()
