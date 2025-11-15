@@ -9,6 +9,7 @@ import AppointmentCalendar from '@/modules/appointment/pages/appointments/Appoin
 import AppointmentBreadcrumb from '@/modules/appointment/components/AppointmentBreadcrumb'
 import { SYSTEM_SECTIONS } from '@/config/systemSectionConstants'
 import { useSystemSectionScopes } from '@/modules/appointment/hooks/useSystemSectionScopes'
+import { useActionPermission } from '@/hooks/useActionPermission'
 import {
   Calendar,
   Clock,
@@ -46,19 +47,18 @@ export default function AppointmentList() {
   const [beneficiaryOptions, setBeneficiaryOptions] = useState([])
   const [serviceTypeOptions, setServiceTypeOptions] = useState([])
   const [serviceTypeTree, setServiceTypeTree] = useState([])
-const [statusOptions, setStatusOptions] = useState([])
-const [organizationOptions, setOrganizationOptions] = useState([])
-const [allOrganizations, setAllOrganizations] = useState([])
-const [showCreateModal, setShowCreateModal] = useState(false)
-const [showEditModal, setShowEditModal] = useState(false)
-const [showFilters, setShowFilters] = useState(true)
-const [activeTab, setActiveTab] = useState('list')
-const [canCreateAppointment, setCanCreateAppointment] = useState(false)
-const [selectedDateFilter, setSelectedDateFilter] = useState(null)
-const [selectedBeneficiaryId, setSelectedBeneficiaryId] = useState(null)
-const [selectedServiceTypeId, setSelectedServiceTypeId] = useState(null)
-const [selectedStatusId, setSelectedStatusId] = useState(null)
-const [selectedPriority, setSelectedPriority] = useState(null)
+  const [statusOptions, setStatusOptions] = useState([])
+  const [organizationOptions, setOrganizationOptions] = useState([])
+  const [allOrganizations, setAllOrganizations] = useState([])
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [showFilters, setShowFilters] = useState(true)
+  const [activeTab, setActiveTab] = useState('list')
+  const [selectedDateFilter, setSelectedDateFilter] = useState(null)
+  const [selectedBeneficiaryId, setSelectedBeneficiaryId] = useState(null)
+  const [selectedServiceTypeId, setSelectedServiceTypeId] = useState(null)
+  const [selectedStatusId, setSelectedStatusId] = useState(null)
+  const [selectedPriority, setSelectedPriority] = useState(null)
   const [selectedAppointment, setSelectedAppointment] = useState(null)
   const [deletingId, setDeletingId] = useState(null)
   const [beneficiaryLocation, setBeneficiaryLocation] = useState(null)
@@ -71,6 +71,7 @@ const [selectedPriority, setSelectedPriority] = useState(null)
   const [nearestAvailabilitySearched, setNearestAvailabilitySearched] = useState(false)
   const [nearestLimit, setNearestLimit] = useState(5)
   const uiLang = (typeof navigator !== 'undefined' && (navigator.language || '').startsWith('ar')) ? 'ar' : 'en'
+  const canCreateAppointment = useActionPermission('d707da02-4127-4a86-8e5d-f619e9473b94')
 
   const refresh = useCallback(() => {
     setRefreshKey((key) => key + 1)
@@ -290,7 +291,6 @@ const toggleFilters = useCallback(() => {
           ),
           api.get('/appointment-service/api/admin/beneficiaries/lookup'),
           api.get('/appointment-service/api/admin/service-types/tree'),
-          api.get('/auth/me/permissions'),
           api.get('/appointment-service/api/admin/appointment-statuses/lookup', {
             params: { lang: uiLang },
           }),
@@ -309,9 +309,8 @@ const toggleFilters = useCallback(() => {
         const branchesRes = getValue(0)
         const beneficiariesRes = getValue(1)
         const servicesRes = getValue(2)
-        const permissionsRes = getValue(3)
-        const statusesRes = getValue(4)
-        const organizationsRes = getValue(5)
+        const statusesRes = getValue(3)
+        const organizationsRes = getValue(4)
 
         const rejectedReasons = results
           .map((item) => (item?.status === 'rejected' ? item.reason : null))
@@ -321,35 +320,6 @@ const toggleFilters = useCallback(() => {
         }
 
         if (!isActive) return
-
-        // Check permissions for CREATE action (by systemSectionActionId)
-        const APPOINTMENT_CREATE_ACTION_ID = 'd707da02-4127-4a86-8e5d-f619e9473b94'
-        let hasCreatePermission = false
-
-        if (permissionsRes?.data) {
-          const permData = permissionsRes.data
-          const systems = Array.isArray(permData?.systems) ? permData.systems : []
-
-          // Search for the action with specific systemSectionActionId
-          for (const system of systems) {
-            const sections = Array.isArray(system?.sections) ? system.sections : []
-            for (const section of sections) {
-              const actions = Array.isArray(section?.actions) ? section.actions : []
-              for (const action of actions) {
-                if (action?.systemSectionActionId === APPOINTMENT_CREATE_ACTION_ID && action?.effect === 'ALLOW') {
-                  hasCreatePermission = true
-                  break
-                }
-              }
-              if (hasCreatePermission) break
-            }
-            if (hasCreatePermission) break
-          }
-        }
-
-        if (isActive) {
-          setCanCreateAppointment(hasCreatePermission)
-        }
 
         const branchData = branchesRes?.data
         const branchItems = Array.isArray(branchData)

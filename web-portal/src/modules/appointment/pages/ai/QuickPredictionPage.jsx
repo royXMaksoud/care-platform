@@ -126,7 +126,7 @@ const QuickPredictionPage = () => {
             <span>{t('appointment.ai.quickPrediction.title', { defaultValue: '🎯 Quick No-Show Prediction' })}</span>
           </Space>
         }
-        bordered={false}
+        variant="borderless"
       >
         {error && (
           <Alert

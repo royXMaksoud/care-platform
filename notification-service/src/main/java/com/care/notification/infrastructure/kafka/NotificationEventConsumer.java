@@ -21,12 +21,12 @@ import java.time.LocalDateTime;
 @Slf4j
 @Transactional
 public class NotificationEventConsumer {
-    
+
     private final NotificationRepository notificationRepository;
     private final EmailService emailService;
     private final SMSService smsService;
     private final PushNotificationService pushNotificationService;
-    
+
     @KafkaListener(
         topics = KafkaConfig.TOPIC_NOTIFICATION_EVENTS,
         groupId = KafkaConfig.CONSUMER_GROUP_NOTIFICATION,

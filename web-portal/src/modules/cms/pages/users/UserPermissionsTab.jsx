@@ -208,6 +208,23 @@ export default function UserPermissionsSystemTree({ userId, tenantId, defaultLan
   }, [allowByAction, denyByAction, actionLevelEffect])
   const isDirty = useMemo(() => snapshot() !== baselineRef.current, [snapshot])
 
+  const getLeafIdsForAction = useCallback((actionId) => {
+    const lvls = levelsByAction[actionId] || []
+    if (!lvls.length) return []
+    const lastIndex = lvls.length - 1
+    const nodesByPath = treeByAction[actionId] || {}
+    const ids = []
+    Object.values(nodesByPath).forEach(entry => {
+      const list = entry?.nodes || []
+      list.forEach(node => {
+        if (node.levelIndex === lastIndex) {
+          ids.push(String(node.id))
+        }
+      })
+    })
+    return ids
+  }, [levelsByAction, treeByAction])
+
   const toggleAllSystem = () => {
     const allActionIds = sections.flatMap(s => (s.actions ?? []).map(a => a.id))
     
@@ -217,16 +234,9 @@ export default function UserPermissionsSystemTree({ userId, tenantId, defaultLan
         const eff = actionLevelEffect[actionId]
         return eff === mode
       } else {
-        const rootNodes = rootNodesForAction(actionId)
-        if (rootNodes.length === 0) return false
-        return rootNodes.every(n => {
-          const isLeaf = n.levelIndex === lastIndexOf(actionId)
-          if (isLeaf) {
-            const state = selState(actionId, n.id)
-            return state === mode
-          }
-          return false
-        })
+        const leafIds = getLeafIdsForAction(actionId)
+        if (!leafIds.length) return false
+        return leafIds.every(id => selState(actionId, id) === mode)
       }
     })
 
@@ -244,9 +254,7 @@ export default function UserPermissionsSystemTree({ userId, tenantId, defaultLan
         if (lvls.length === 0) {
           newActionEffects[actionId] = mode
         } else {
-          const rootNodes = rootNodesForAction(actionId)
-          const leafNodes = rootNodes.filter(n => n.levelIndex === lastIndexOf(actionId))
-          const ids = leafNodes.map(n => String(n.id))
+          const ids = getLeafIdsForAction(actionId)
           if (mode === 'ALLOW') {
             newAllow[actionId] = new Set(ids)
           } else {
@@ -273,16 +281,9 @@ export default function UserPermissionsSystemTree({ userId, tenantId, defaultLan
         const eff = actionLevelEffect[actionId]
         return eff === mode
       } else {
-        const rootNodes = rootNodesForAction(actionId)
-        if (rootNodes.length === 0) return false
-        return rootNodes.every(n => {
-          const isLeaf = n.levelIndex === lastIndexOf(actionId)
-          if (isLeaf) {
-            const state = selState(actionId, n.id)
-            return state === mode
-          }
-          return false
-        })
+        const leafIds = getLeafIdsForAction(actionId)
+        if (!leafIds.length) return false
+        return leafIds.every(id => selState(actionId, id) === mode)
       }
     })
 
@@ -310,9 +311,7 @@ export default function UserPermissionsSystemTree({ userId, tenantId, defaultLan
         if (lvls.length === 0) {
           newActionEffects[actionId] = mode
         } else {
-          const rootNodes = rootNodesForAction(actionId)
-          const leafNodes = rootNodes.filter(n => n.levelIndex === lastIndexOf(actionId))
-          const ids = leafNodes.map(n => String(n.id))
+          const ids = getLeafIdsForAction(actionId)
           if (mode === 'ALLOW') {
             newAllow[actionId] = new Set(ids)
           } else {

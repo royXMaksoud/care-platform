@@ -5,6 +5,7 @@ import HolidayCalendar from './HolidayCalendar'
 import { api } from '@/lib/axios'
 import { CalendarCheck, Calendar, RefreshCw, List } from 'lucide-react'
 import AppointmentBreadcrumb from '@/modules/appointment/components/AppointmentBreadcrumb'
+import { useActionPermission } from '@/hooks/useActionPermission'
 
 export default function HolidayList() {
   // Use state-only tabs (no navigation) to prevent unmount/remount issues
@@ -12,6 +13,7 @@ export default function HolidayList() {
   const [branchesMap, setBranchesMap] = useState({})
   const [fixedFilters, setFixedFilters] = useState([])  // Branch filter for POST body
   const [isReady, setIsReady] = useState(false)
+  const canManageHolidays = useActionPermission('091f5553-a59b-494f-ac1d-3aff864bb06a')
 
   // Load branches map for display in table AND extract authorized branch IDs from permissions
   useEffect(() => {
@@ -275,28 +277,36 @@ export default function HolidayList() {
                 idKey="holidayId"
                 columns={holidayColumns}
                 pageSize={20}
-                enableCreate={true}
-                enableEdit={true}
-                enableDelete={true}
+                enableCreate={canManageHolidays}
+                enableEdit={canManageHolidays}
+                enableDelete={canManageHolidays}
                 tableId="holidays-list"
                 fixedFilters={fixedFilters}
-                renderCreate={({ open, onClose, onSuccess }) => (
-                  <HolidayFormModal
-                    open={open}
-                    mode="create"
-                    onClose={onClose}
-                    onSuccess={onSuccess}
-                  />
-                )}
-                renderEdit={({ open, initial, onClose, onSuccess }) => (
-                  <HolidayFormModal
-                    open={open}
-                    mode="edit"
-                    initial={initial}
-                    onClose={onClose}
-                    onSuccess={onSuccess}
-                  />
-                )}
+                renderCreate={
+                  canManageHolidays
+                    ? ({ open, onClose, onSuccess }) => (
+                        <HolidayFormModal
+                          open={open}
+                          mode="create"
+                          onClose={onClose}
+                          onSuccess={onSuccess}
+                        />
+                      )
+                    : undefined
+                }
+                renderEdit={
+                  canManageHolidays
+                    ? ({ open, initial, onClose, onSuccess }) => (
+                        <HolidayFormModal
+                          open={open}
+                          mode="edit"
+                          initial={initial}
+                          onClose={onClose}
+                          onSuccess={onSuccess}
+                        />
+                      )
+                    : undefined
+                }
               />
             ) : (
               <div className="flex-1 flex items-center justify-center text-gray-500">

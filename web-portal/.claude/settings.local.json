@@ -57,7 +57,17 @@
       "Bash(__NEW_LINE__ grep -n \"enum NotificationStatus\\|class NotificationStatus\" \"/c/Java/care/Code/notification-service/src/main/java/com/care/notification/infrastructure/persistence/entity/NotificationEntity.java\")",
       "Bash(__NEW_LINE__ sed -i 's/\"\"\"\"EMAIL\"\"\"\".equals Channel/\"\"\"\"EMAIL\"\"\"\".equalsIgnoreCase/g' \"/c/Java/care/Code/notification-service/src/main/java/com/care/notification/infrastructure/kafka/NotificationEventConsumer.java\")",
       "Bash(__NEW_LINE__ sed -i 's/\"\"EMAIL\"\".equals Channel/\"\"EMAIL\"\".equalsIgnoreCase/g' \"/c/Java/care/Code/notification-service/src/main/java/com/care/notification/infrastructure/kafka/NotificationEventConsumer.java\")",
-      "Bash(__NEW_LINE__ echo \"✅ Fixed typo - testing build...\")"
+      "Bash(__NEW_LINE__ echo \"✅ Fixed typo - testing build...\")",
+      "Bash(psql:*)",
+      "Bash(timeout 60 mvn clean spring-boot:run:*)",
+      "Bash(timeout 90 mvn clean spring-boot:run:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)",
+      "Bash(wmic process where ProcessId=79100 delete)",
+      "Bash(timeout 60 mvn:*)",
+      "Bash(timeout 90 mvn spring-boot:run:*)",
+      "Bash(timeout 40 mvn spring-boot:run:*)",
+      "Bash(timeout 50 mvn spring-boot:run:*)"
     ],
     "deny": [],
     "ask": []

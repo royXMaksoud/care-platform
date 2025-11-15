@@ -15,6 +15,8 @@ import {
   BarChart3,
   FileSpreadsheet,
   Search,
+  Zap,
+  Brain,
 } from 'lucide-react'
 import { useFastAccessShortcuts } from '@/hooks/useFastAccessShortcuts'
 import AppointmentBreadcrumb from '@/modules/appointment/components/AppointmentBreadcrumb'
@@ -22,13 +24,14 @@ import { useTranslation } from 'react-i18next'
 import { SYSTEM_SECTIONS } from '@/config/systemSectionConstants'
 import { useSystemSectionScopes } from '@/modules/appointment/hooks/useSystemSectionScopes'
 
-const CATEGORY_ORDER = ['Analytics', 'Operations', 'Users', 'Reference', 'Scheduling', 'Configuration']
+const CATEGORY_ORDER = ['AI', 'Analytics', 'Operations', 'Users', 'Reference', 'Scheduling', 'Configuration']
 
 // Map each section to its required system section for permission checking
 const SECTION_PERMISSION_MAP = {
+  'aiQuickPrediction': 'APPOINTMENT_REPORTING_AND_ANALYTICS',
+  'aiTraining': 'APPOINTMENT_REPORTING_AND_ANALYTICS',
   'dashboard': 'APPOINTMENT_REPORTING_AND_ANALYTICS',
   'excel': 'APPOINTMENT_REPORTING_AND_ANALYTICS',
-  'aiQuickPrediction': 'APPOINTMENT_REPORTING_AND_ANALYTICS',
   'appointments': 'APPOINTMENT_SCHEDULING',
   'schedules': 'APPOINTMENT_SCHEDULING',
   'holidays': 'APPOINTMENT_SCHEDULING',
@@ -40,6 +43,26 @@ const SECTION_PERMISSION_MAP = {
 }
 
 const RAW_SECTIONS = [
+  {
+    id: 'aiQuickPrediction',
+    category: 'AI',
+    titleKey: 'appointment.home.sections.aiQuickPrediction.title',
+    descriptionKey: 'appointment.home.sections.aiQuickPrediction.description',
+    defaultTitle: '⚡ Quick Prediction',
+    defaultDescription: 'Run instant no-show predictions powered by the AI risk engine.',
+    icon: Zap,
+    path: '/appointment/ai/quick-prediction',
+  },
+  {
+    id: 'aiTraining',
+    category: 'AI',
+    titleKey: 'appointment.home.sections.aiTraining.title',
+    descriptionKey: 'appointment.home.sections.aiTraining.description',
+    defaultTitle: '🧠 Model Training',
+    defaultDescription: 'Train and evaluate ML models with database or uploaded CSV data.',
+    icon: Brain,
+    path: '/appointment/ai/training',
+  },
   {
     id: 'dashboard',
     category: 'Analytics',
@@ -59,16 +82,6 @@ const RAW_SECTIONS = [
     defaultDescription: 'Generate and download Excel-based appointment analytics reports.',
     icon: FileSpreadsheet,
     path: '/appointment/reports/excel',
-  },
-  {
-    id: 'aiQuickPrediction',
-    category: 'Analytics',
-    titleKey: 'appointment.home.sections.aiQuickPrediction.title',
-    descriptionKey: 'appointment.home.sections.aiQuickPrediction.description',
-    defaultTitle: 'AI Quick Prediction',
-    defaultDescription: 'Run instant no-show predictions powered by the AI risk engine.',
-    icon: Star,
-    path: '/appointment/ai/quick-prediction',
   },
   {
     id: 'appointments',
@@ -210,6 +223,17 @@ export default function AppointmentHome() {
 
   const categoryMeta = useMemo(
     () => ({
+      AI: {
+        ...baseCategoryTheme,
+        icon: Brain,
+        label: t('appointment.home.categories.ai', { defaultValue: 'AI & Predictions' }),
+        caption: t('appointment.home.categoryDescriptions.ai', { defaultValue: 'Machine learning and predictive analytics' }),
+        accent: 'text-purple-700',
+        badgeClass: 'border border-purple-200 bg-purple-50 text-purple-700',
+        iconGradient: 'from-purple-600 to-pink-500',
+        cardBorder: 'border-purple-200',
+        cardBackground: 'from-purple-900/5 via-white to-pink-50',
+      },
       Analytics: {
         ...baseCategoryTheme,
         icon: BarChart3,

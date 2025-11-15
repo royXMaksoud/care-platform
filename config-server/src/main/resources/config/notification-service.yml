@@ -12,7 +12,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/notification_service_db
     username: postgres
-    password: postgres
+    password: P@ssw0rd
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10

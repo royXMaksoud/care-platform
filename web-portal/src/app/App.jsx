@@ -12,9 +12,9 @@ const CMSRoutes = lazy(() => import('@/modules/cms/routes'))
 // lazy-load DAS module
 const DASRoutes = lazy(() => import('@/modules/das/routes'))
 // lazy-load Appointment module
-const AppointmentRoutes = lazy(() => import('@/modules/appointment/routes'))  
-
-
+const AppointmentRoutes = lazy(() => import('@/modules/appointment/routes'))
+// lazy-load Notification module
+const NotificationRoutes = lazy(() => import('@/modules/notification/routes'))
 
 import { useAuth } from '@/auth/useAuth'
 import authStorage from '@/auth/authStorage'
@@ -306,9 +306,33 @@ export default function App() {
               </Suspense>
             }
           />
+          <Route
+            path="/notification/*"
+            element={
+              <Suspense fallback={<div className="p-6">Loading…</div>}>
+                <NotificationRoutes />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/notifications/*"
+            element={
+              <Suspense fallback={<div className="p-6">Loading…</div>}>
+                <NotificationRoutes />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/notification-service/*"
+            element={
+              <Suspense fallback={<div className="p-6">Loading…</div>}>
+                <NotificationRoutes />
+              </Suspense>
+            }
+          />
 
           {extendedModules
-          .filter(m => m.path !== '/cms' && m.path !== '/das' && m.path !== '/appointment' && m.path !== '/appointments')
+          .filter(m => m.path !== '/cms' && m.path !== '/das' && m.path !== '/appointment' && m.path !== '/appointments' && m.path !== '/notification' && m.path !== '/notifications' && m.path !== '/notification-service')
           .map((m, idx) => (
             <Route
               key={m.path || `${m.name}-${idx}`}

@@ -98,6 +98,88 @@
   animation: pulse 2s infinite;
 }
 
+/* Upload Card Styling */
+.upload-card {
+  background: #fafafa;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.upload-card:hover {
+  background: #f0f5ff;
+}
+
+.ant-upload-dragger {
+  padding: 40px 20px !important;
+  border-radius: 8px !important;
+  transition: all 0.3s ease !important;
+}
+
+.ant-upload-dragger:hover {
+  border-color: #1890ff !important;
+  background-color: #f0f5ff !important;
+}
+
+.ant-upload-dragger p {
+  margin: 8px 0;
+}
+
+/* Data Preview Styling */
+.data-preview {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  padding: 12px;
+}
+
+.ant-table-small {
+  font-size: 12px;
+}
+
+.ant-table-small .ant-table-thead > tr > th {
+  padding: 8px 4px;
+  background: #fafafa;
+}
+
+/* Tab Styling */
+.training-page .ant-tabs {
+  background: white;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.training-page .ant-tabs-nav {
+  margin-bottom: 16px;
+}
+
+.training-page .ant-tabs-tab {
+  font-weight: 500;
+  font-size: 14px;
+}
+
+/* Step List Styling */
+.training-page ol {
+  padding-left: 24px;
+}
+
+.training-page ol li {
+  margin: 10px 0;
+  line-height: 1.6;
+}
+
+/* Requirements Card */
+.training-page ul {
+  padding-left: 20px;
+}
+
+.training-page ul li {
+  margin: 8px 0;
+  line-height: 1.5;
+  font-size: 13px;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .training-page {
@@ -110,5 +192,17 @@
 
   .result-card {
     margin-bottom: 12px;
+  }
+
+  .ant-upload-dragger {
+    padding: 20px 12px !important;
+  }
+
+  .upload-card {
+    border-radius: 4px;
+  }
+
+  .training-page .ant-tabs {
+    padding: 12px;
   }
 }

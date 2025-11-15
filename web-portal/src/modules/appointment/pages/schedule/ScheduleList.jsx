@@ -7,6 +7,7 @@ import { Clock, Calendar, List } from 'lucide-react'
 import AppointmentBreadcrumb from '@/modules/appointment/components/AppointmentBreadcrumb'
 import { SYSTEM_SECTIONS } from '@/config/systemSectionConstants'
 import { useSystemSectionScopes } from '@/modules/appointment/hooks/useSystemSectionScopes'
+import { useActionPermission } from '@/hooks/useActionPermission'
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 const DAY_NAMES_AR = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
@@ -23,6 +24,8 @@ export default function ScheduleList() {
 
   // Get scopeValueIds from APPOINTMENT_SCHEDULING section only
   const { scopeValueIds, isLoading: isLoadingScopes, error: scopesError } = useSystemSectionScopes(SYSTEM_SECTIONS.APPOINTMENT_SCHEDULING)
+
+  const canManageSchedules = useActionPermission('a35326c6-5cde-4231-9057-f4ab2e281d47')
 
   // Load branches map for display in table
   useEffect(() => {
@@ -268,28 +271,36 @@ export default function ScheduleList() {
                 idKey="scheduleId"
                 columns={scheduleColumns}
                 pageSize={20}
-                enableCreate={true}
-                enableEdit={true}
-                enableDelete={true}
+                enableCreate={canManageSchedules}
+                enableEdit={canManageSchedules}
+                enableDelete={canManageSchedules}
                 tableId="schedules-list"
                 fixedFilters={fixedFilters}
-                renderCreate={({ open, onClose, onSuccess }) => (
-                  <ScheduleFormModal
-                    open={open}
-                    mode="create"
-                    onClose={onClose}
-                    onSuccess={onSuccess}
-                  />
-                )}
-                renderEdit={({ open, initial, onClose, onSuccess }) => (
-                  <ScheduleFormModal
-                    open={open}
-                    mode="edit"
-                    initial={initial}
-                    onClose={onClose}
-                    onSuccess={onSuccess}
-                  />
-                )}
+                renderCreate={
+                  canManageSchedules
+                    ? ({ open, onClose, onSuccess }) => (
+                        <ScheduleFormModal
+                          open={open}
+                          mode="create"
+                          onClose={onClose}
+                          onSuccess={onSuccess}
+                        />
+                      )
+                    : undefined
+                }
+                renderEdit={
+                  canManageSchedules
+                    ? ({ open, initial, onClose, onSuccess }) => (
+                        <ScheduleFormModal
+                          open={open}
+                          mode="edit"
+                          initial={initial}
+                          onClose={onClose}
+                          onSuccess={onSuccess}
+                        />
+                      )
+                    : undefined
+                }
               />
             ) : (
               <div className="flex-1 flex items-center justify-center text-gray-500">

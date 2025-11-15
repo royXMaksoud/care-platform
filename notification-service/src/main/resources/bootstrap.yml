@@ -13,6 +13,18 @@ spring:
     discovery:
       enabled: true
 
+# Eureka Configuration for Service Discovery
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30
+
 ---
 
 spring:
@@ -22,6 +34,16 @@ spring:
   cloud:
     config:
       uri: http://config-server:8888
+    discovery:
+      enabled: true
+
+eureka:
+  instance:
+    hostname: notification-service
+    ip-address: notification-service
+  client:
+    service-url:
+      defaultZone: http://service-registry:8761/eureka/
 
 ---
 
@@ -32,3 +54,14 @@ spring:
   cloud:
     config:
       uri: ${CONFIG_SERVER_URI:http://config-server:8888}
+    discovery:
+      enabled: true
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://service-registry:8761/eureka/}
+  instance:
+    prefer-ip-address: true
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30
