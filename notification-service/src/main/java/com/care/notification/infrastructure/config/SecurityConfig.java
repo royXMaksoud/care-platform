@@ -6,12 +6,6 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
-import java.util.Arrays;
-import java.util.Collections;
 
 /**
  * Security Configuration for Notification Service
@@ -25,8 +19,8 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            // CORS Configuration
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            // CORS is handled by API Gateway - disable here
+            .cors(cors -> cors.disable())
 
             // Disable CSRF for stateless REST API
             .csrf(csrf -> csrf.disable())
@@ -51,30 +45,15 @@ public class SecurityConfig {
                 .requestMatchers("/swagger-ui/**").permitAll()
                 .requestMatchers("/swagger-ui.html").permitAll()
 
+                // TODO: TEMPORARY - Allow admin endpoints for development/testing
+                // IMPORTANT: Remove .permitAll() and replace with proper @PreAuthorize("hasRole('ADMIN')")
+                // once role-based access control is configured
+                .requestMatchers("/api/v1/admin/**").permitAll()
+
                 // All other endpoints require authentication
                 .anyRequest().authenticated()
             );
 
         return http.build();
-    }
-
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList(
-            "http://localhost:3000",
-            "http://localhost:5173",
-            "http://localhost:5174"
-        ));
-        configuration.setAllowedMethods(Arrays.asList(
-            "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
-        ));
-        configuration.setAllowedHeaders(Collections.singletonList("*"));
-        configuration.setAllowCredentials(true);
-        configuration.setMaxAge(3600L);
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
     }
 }

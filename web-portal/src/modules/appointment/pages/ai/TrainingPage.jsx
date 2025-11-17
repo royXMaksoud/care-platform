@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Card,
   Form,
@@ -36,7 +36,7 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
-import axios from 'axios';
+import api from '@/lib/axios';
 import './TrainingPage.css';
 
 /**
@@ -50,10 +50,21 @@ const TrainingPage = () => {
   const [training, setTraining] = useState(null);
   const [job, setJob] = useState(null);
   const [error, setError] = useState(null);
-  const [pollInterval, setPollInterval] = useState(null);
+  const pollIntervalRef = useRef(null);
   const [uploadedData, setUploadedData] = useState(null);
   const [uploadedDataPreview, setUploadedDataPreview] = useState([]);
+  const [uploadedModelName, setUploadedModelName] = useState('');
   const [activeTab, setActiveTab] = useState('config'); // config or upload
+
+  // Cleanup polling interval on component unmount
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
+    };
+  }, []);
 
   // Start training
   const handleStartTraining = async (values) => {
@@ -66,6 +77,8 @@ const TrainingPage = () => {
         dateRangeTo: values.dateRange[1].format('YYYY-MM-DD'),
         centerIds: values.centerIds || [],
         serviceTypeIds: values.serviceTypeIds || [],
+        modelName: values.modelName,
+        modelType: values.modelType,
         algorithm: values.algorithm || 'RANDOM_FOREST',
         trainTestSplit: values.trainTestSplit || 0.7,
         features: [
@@ -86,16 +99,18 @@ const TrainingPage = () => {
         },
       };
 
-      const response = await axios.post('/api/ai/training/start', request);
+      const response = await api.post('/api/ai/training/start', request);
       setJob(response.data);
       setTraining(true);
       message.success(t('appointment.ai.training.success.started', { defaultValue: 'Training started successfully' }));
 
       // Start polling for progress
-      const interval = setInterval(() => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+      pollIntervalRef.current = setInterval(() => {
         pollTrainingStatus(response.data.jobId);
       }, 2000);
-      setPollInterval(interval);
     } catch (err) {
       setError(err.response?.data?.message || t('appointment.ai.training.error.start', { defaultValue: 'Error starting training' }));
       console.error('Training error:', err);
@@ -107,16 +122,26 @@ const TrainingPage = () => {
   // Poll training status
   const pollTrainingStatus = async (jobId) => {
     try {
-      const response = await axios.get(`/api/ai/training/status/${jobId}`);
+      const response = await api.get(`/api/ai/training/status/${jobId}`);
       setJob(response.data);
 
       if (response.data.status === 'COMPLETED') {
-        if (pollInterval) clearInterval(pollInterval);
+        if (pollIntervalRef.current) {
+          clearInterval(pollIntervalRef.current);
+          pollIntervalRef.current = null;
+        }
         message.success(t('appointment.ai.training.success.completed', { defaultValue: 'Training completed successfully!' }));
         setTraining(false);
       } else if (response.data.status === 'FAILED') {
-        if (pollInterval) clearInterval(pollInterval);
-        setError(t('appointment.ai.training.error.failed', { defaultValue: 'Training failed' }));
+        if (pollIntervalRef.current) {
+          clearInterval(pollIntervalRef.current);
+          pollIntervalRef.current = null;
+        }
+        const backendMessage = response.data.errorMessage;
+        setError(
+          backendMessage ||
+            t('appointment.ai.training.error.failed', { defaultValue: 'Training failed' })
+        );
         setTraining(false);
       }
     } catch (err) {
@@ -258,6 +283,8 @@ const TrainingPage = () => {
     try {
       const request = {
         uploadedData: uploadedData,
+        modelName: uploadedModelName || undefined,
+        modelType: form.getFieldValue('modelType'),
         algorithm: 'RANDOM_FOREST',
         trainTestSplit: 0.7,
         features: [
@@ -278,15 +305,17 @@ const TrainingPage = () => {
         },
       };
 
-      const response = await axios.post('/api/ai/training/start-with-data', request);
+      const response = await api.post('/api/ai/training/start-with-data', request);
       setJob(response.data);
       setTraining(true);
       message.success(t('appointment.ai.training.success.started', { defaultValue: 'Training started successfully' }));
 
-      const interval = setInterval(() => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+      pollIntervalRef.current = setInterval(() => {
         pollTrainingStatus(response.data.jobId);
       }, 2000);
-      setPollInterval(interval);
     } catch (err) {
       setError(err.response?.data?.message || t('appointment.ai.training.error.start', { defaultValue: 'Error starting training' }));
       console.error('Training error:', err);
@@ -375,6 +404,7 @@ const TrainingPage = () => {
                   algorithm: 'RANDOM_FOREST',
                   numTrees: 100,
                   maxDepth: 10,
+                  minSamplesSplit: 5,
                   trainTestSplit: 0.7,
                 }}
               >
@@ -387,6 +417,44 @@ const TrainingPage = () => {
                   >
                     <DatePicker.RangePicker
                       style={{ width: '100%' }}
+                    />
+                  </Form.Item>
+                </Col>
+
+                <Col xs={24} sm={12}>
+                  <Form.Item
+                    name="modelName"
+                    label={t('appointment.ai.training.modelName', { defaultValue: 'Model name (optional)' })}
+                  >
+                    <Input
+                      placeholder={t('appointment.ai.training.modelNamePlaceholder', {
+                        defaultValue: 'e.g. NoShowPrediction_2025_Q1',
+                      })}
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Row gutter={16}>
+                <Col xs={24} sm={12}>
+                  <Form.Item
+                    name="modelType"
+                    label={t('appointment.ai.training.modelType', { defaultValue: 'Model Type' })}
+                    rules={[{ required: true, message: t('appointment.ai.training.required', { defaultValue: 'Required' }) }]}
+                  >
+                    <Select
+                      placeholder={t('appointment.ai.training.modelTypePlaceholder', {
+                        defaultValue: 'Select prediction goal (e.g. No-Show, Distance, Priority...)',
+                      })}
+                      options={[
+                        { label: 'No-Show Prediction', value: 'NO_SHOW' },
+                        { label: 'Distance / Travel Impact', value: 'DISTANCE_ESTIMATION' },
+                        { label: 'Appointment Duration Estimation', value: 'DURATION_PREDICTION' },
+                        { label: 'Priority Scoring', value: 'PRIORITY_SCORING' },
+                        { label: 'Service Recommendation', value: 'SERVICE_RECOMMENDATION' },
+                        { label: 'Capacity / Slot Optimization', value: 'CAPACITY_OPTIMIZATION' },
+                        { label: 'Cancellation Risk', value: 'CANCELLATION_RISK' },
+                      ]}
                     />
                   </Form.Item>
                 </Col>
@@ -409,7 +477,7 @@ const TrainingPage = () => {
               <Divider>{t('appointment.ai.training.sections.hyperparameters', { defaultValue: 'Hyperparameters' })}</Divider>
 
               <Row gutter={16}>
-                <Col xs={24} sm={8}>
+                <Col xs={24} sm={6}>
                   <Form.Item
                     name="numTrees"
                     label={t('appointment.ai.training.numTrees', { defaultValue: 'Number of Trees' })}
@@ -418,7 +486,7 @@ const TrainingPage = () => {
                   </Form.Item>
                 </Col>
 
-                <Col xs={24} sm={8}>
+                <Col xs={24} sm={6}>
                   <Form.Item
                     name="maxDepth"
                     label={t('appointment.ai.training.maxDepth', { defaultValue: 'Max Depth' })}
@@ -427,7 +495,16 @@ const TrainingPage = () => {
                   </Form.Item>
                 </Col>
 
-                <Col xs={24} sm={8}>
+                <Col xs={24} sm={6}>
+                  <Form.Item
+                    name="minSamplesSplit"
+                    label={t('appointment.ai.training.minSamplesSplit', { defaultValue: 'Min Samples Split' })}
+                  >
+                    <Input type="number" min={1} max={20} />
+                  </Form.Item>
+                </Col>
+
+                <Col xs={24} sm={6}>
                   <Form.Item
                     name="trainTestSplit"
                     label={t('appointment.ai.training.trainTestSplit', { defaultValue: 'Train/Test Split' })}
@@ -450,6 +527,63 @@ const TrainingPage = () => {
                 </Button>
               </Form.Item>
             </Form>
+
+                <Alert
+                  type="info"
+                  message={t('appointment.ai.training.modelTypeTable.title', { defaultValue: 'Core Model Types' })}
+                  description={
+                    <div style={{ overflowX: 'auto', marginTop: 8 }}>
+                      <table className="min-w-full text-xs border border-gray-200">
+                        <thead>
+                          <tr className="bg-gray-50">
+                            <th className="px-2 py-1 border border-gray-200 text-left">Type</th>
+                            <th className="px-2 py-1 border border-gray-200 text-left">Key / Enum</th>
+                            <th className="px-2 py-1 border border-gray-200 text-left">Example Use</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td className="px-2 py-1 border border-gray-200">No-Show Prediction</td>
+                            <td className="px-2 py-1 border border-gray-200">NO_SHOW</td>
+                            <td className="px-2 py-1 border border-gray-200">Reduce missed appointments</td>
+                          </tr>
+                          <tr>
+                            <td className="px-2 py-1 border border-gray-200">Distance / Travel Impact</td>
+                            <td className="px-2 py-1 border border-gray-200">DISTANCE_ESTIMATION</td>
+                            <td className="px-2 py-1 border border-gray-200">Optimize center selection, rescheduling</td>
+                          </tr>
+                          <tr>
+                            <td className="px-2 py-1 border border-gray-200">Appointment Duration Estimation</td>
+                            <td className="px-2 py-1 border border-gray-200">DURATION_PREDICTION</td>
+                            <td className="px-2 py-1 border border-gray-200">Calendar & slot optimization</td>
+                          </tr>
+                          <tr>
+                            <td className="px-2 py-1 border border-gray-200">Priority Scoring</td>
+                            <td className="px-2 py-1 border border-gray-200">PRIORITY_SCORING</td>
+                            <td className="px-2 py-1 border border-gray-200">Triage, emergency ordering</td>
+                          </tr>
+                          <tr>
+                            <td className="px-2 py-1 border border-gray-200">Service Recommendation</td>
+                            <td className="px-2 py-1 border border-gray-200">SERVICE_RECOMMENDATION</td>
+                            <td className="px-2 py-1 border border-gray-200">Route to best department</td>
+                          </tr>
+                          <tr>
+                            <td className="px-2 py-1 border border-gray-200">Capacity / Slot Optimization</td>
+                            <td className="px-2 py-1 border border-gray-200">CAPACITY_OPTIMIZATION</td>
+                            <td className="px-2 py-1 border border-gray-200">Balance load across centers</td>
+                          </tr>
+                          <tr>
+                            <td className="px-2 py-1 border border-gray-200">Cancellation Risk</td>
+                            <td className="px-2 py-1 border border-gray-200">CANCELLATION_RISK</td>
+                            <td className="px-2 py-1 border border-gray-200">Reminder/reconfirmation strategy</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  }
+                  showIcon
+                  style={{ marginTop: '20px' }}
+                />
 
                 <Alert
                   type="info"
@@ -536,6 +670,22 @@ const TrainingPage = () => {
                   {t('appointment.ai.training.upload.templateInfo', { defaultValue: 'This will download a CSV file named training_data_template.csv' })}
                 </p>
               </div>
+
+              <Card style={{ marginBottom: '20px' }}>
+                <Form layout="vertical">
+                  <Form.Item
+                    label={t('appointment.ai.training.modelName', { defaultValue: 'Model name (optional)' })}
+                  >
+                    <Input
+                      value={uploadedModelName}
+                      onChange={(e) => setUploadedModelName(e.target.value)}
+                      placeholder={t('appointment.ai.training.modelNamePlaceholder', {
+                        defaultValue: 'e.g. NoShowPrediction_Uploaded_2025_Q1',
+                      })}
+                    />
+                  </Form.Item>
+                </Form>
+              </Card>
 
               <Card className="upload-card" style={{ marginBottom: '20px', border: '2px dashed #1890ff' }}>
                 <Upload.Dragger

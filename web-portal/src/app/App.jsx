@@ -115,7 +115,26 @@ export default function App() {
         path: '/warehouse',
       },
     ]
-    return [...modules, ...extra]
+    // Avoid adding duplicate systems when they already exist from the backend
+    const normalizedExistingPaths = new Set(
+      modules
+        .map((m) => m?.path)
+        .filter(Boolean)
+        .map((p) => p.replace(/\/+$/, '') || '/')
+    )
+    const existingNames = new Set(
+      modules
+        .map((m) => (m?.name || '').toLowerCase())
+        .filter(Boolean)
+    )
+
+    const filteredExtra = extra.filter((m) => {
+      const normalizedPath = (m.path || '').replace(/\/+$/, '') || '/'
+      const lowerName = (m.name || '').toLowerCase()
+      return !normalizedExistingPaths.has(normalizedPath) && !existingNames.has(lowerName)
+    })
+
+    return [...modules, ...filteredExtra]
   }, [modules])
 
   const systemModules = useMemo(() => {
@@ -205,25 +224,40 @@ export default function App() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
-              <div className="invisible absolute left-0 top-full z-30 mt-2 w-56 origin-top-right scale-95 transform rounded-xl border border-slate-200 bg-white/95 p-2 shadow-xl ring-1 ring-black/5 transition-all duration-150 ease-out group-hover:visible group-hover:scale-100">
-                <div className="max-h-80 space-y-1 overflow-y-auto pr-1">
-                  {systemModules.map((m, idx) => (
-                    <Link
-                      key={m.path || `${m.name}-${idx}`}
-                      to={m.path}
-                      className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
-                    >
-                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500">
-                        {(m.name || '').slice(0, 2).toUpperCase()}
+              <div className="invisible fixed left-0 right-0 top-16 z-30 border-t border-slate-200 bg-gradient-to-r from-white via-slate-50 to-white/95 shadow-lg ring-1 ring-black/5 opacity-0 transform translate-y-1 transition-all duration-200 ease-out group-hover:visible group-hover:opacity-100 group-hover:translate-y-0">
+                <div className="mx-auto max-w-7xl px-4 py-3">
+                  {/* Systems mega-row */}
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="hidden sm:flex flex-col gap-1">
+                      <span className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                        Systems
                       </span>
-                      <span className="truncate">{m.name}</span>
-                    </Link>
-                  ))}
-                  {systemModules.length === 0 && (
-                    <div className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-500">
-                      No systems available
+                      <span className="text-xs text-slate-500">
+                        Select a system to open its workspace.
+                      </span>
                     </div>
-                  )}
+                    <div className="max-h-64 flex-1 overflow-y-auto">
+                      <div className="flex flex-wrap gap-2">
+                        {systemModules.map((m, idx) => (
+                          <Link
+                            key={m.path || `${m.name}-${idx}`}
+                            to={m.path}
+                            className="group/system flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-3.5 py-1.5 text-xs font-medium text-slate-600 shadow-sm transition-all duration-150 hover:border-blue-200 hover:bg-blue-50/80 hover:text-slate-900 hover:-translate-y-0.5"
+                          >
+                            <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-[0.7rem] font-semibold text-slate-500 group-hover/system:bg-blue-100 group-hover/system:text-blue-700">
+                              {(m.name || '').slice(0, 2).toUpperCase()}
+                            </span>
+                            <span className="truncate max-w-[12rem]">{m.name}</span>
+                          </Link>
+                        ))}
+                      </div>
+                      {systemModules.length === 0 && (
+                        <div className="mt-2 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-500">
+                          No systems available
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

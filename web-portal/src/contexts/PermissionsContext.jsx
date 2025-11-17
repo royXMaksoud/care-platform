@@ -18,15 +18,17 @@ export function PermissionsProvider({ children }) {
   
   // ✅ Only fetch permissions if user has a token (is authenticated)
   const hasToken = Boolean(authStorage.getToken())
-  
+
   const { data: permissionsData, isLoading, error, refetch } = useQuery({
     queryKey: ['me', 'permissions'],
     queryFn: ({ meta }) => fetchMyPermissions({ force: meta?.force ?? shouldForceRefresh }),
     enabled: hasToken, // ✅ Only fetch if user is authenticated
-    staleTime: 0,
-    cacheTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true,
+    // ✅ Cache permissions for a while to avoid spamming /auth/me/permissions
+    staleTime: 5 * 60 * 1000,   // 5 minutes considered "fresh"
+    cacheTime: 10 * 60 * 1000,  // 10 minutes kept in cache
+    // ✅ Do NOT refetch on every window focus / reconnect to reduce noise
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
     onSuccess: () => {
       // Mark permissions as loaded in this session
       sessionStorage.setItem('perms_loaded', 'true')

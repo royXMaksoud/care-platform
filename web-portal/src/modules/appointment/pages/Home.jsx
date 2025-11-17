@@ -17,6 +17,7 @@ import {
   Search,
   Zap,
   Brain,
+  List,
 } from 'lucide-react'
 import { useFastAccessShortcuts } from '@/hooks/useFastAccessShortcuts'
 import AppointmentBreadcrumb from '@/modules/appointment/components/AppointmentBreadcrumb'
@@ -30,6 +31,7 @@ const CATEGORY_ORDER = ['AI', 'Analytics', 'Operations', 'Users', 'Reference', '
 const SECTION_PERMISSION_MAP = {
   'aiQuickPrediction': 'APPOINTMENT_REPORTING_AND_ANALYTICS',
   'aiTraining': 'APPOINTMENT_REPORTING_AND_ANALYTICS',
+  'aiModels': 'APPOINTMENT_REPORTING_AND_ANALYTICS',
   'dashboard': 'APPOINTMENT_REPORTING_AND_ANALYTICS',
   'excel': 'APPOINTMENT_REPORTING_AND_ANALYTICS',
   'appointments': 'APPOINTMENT_SCHEDULING',
@@ -62,6 +64,16 @@ const RAW_SECTIONS = [
     defaultDescription: 'Train and evaluate ML models with database or uploaded CSV data.',
     icon: Brain,
     path: '/appointment/ai/training',
+  },
+  {
+    id: 'aiModels',
+    category: 'AI',
+    titleKey: 'appointment.home.sections.aiModels.title',
+    descriptionKey: 'appointment.home.sections.aiModels.description',
+    defaultTitle: '📊 Models & Versions',
+    defaultDescription: 'View, activate, and manage trained AI model versions.',
+    icon: List,
+    path: '/appointment/ai/models',
   },
   {
     id: 'dashboard',

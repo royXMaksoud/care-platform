@@ -105,4 +105,32 @@ public class AdminNotificationController {
             return ResponseEntity.notFound().build();
         }
     }
+    
+    @GetMapping("/campaigns/scheduled")
+    public ResponseEntity<?> getScheduledCampaigns(
+        @RequestHeader("X-Tenant-ID") UUID tenantId) {
+        
+        try {
+            // TODO: Implement actual scheduled campaigns retrieval
+            List<Map<String, Object>> scheduled = new ArrayList<>();
+            return ResponseEntity.ok(scheduled);
+        } catch (Exception e) {
+            log.error("Error fetching scheduled campaigns: {}", e.getMessage());
+            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
+        }
+    }
+    
+    @GetMapping("/actions/recent")
+    public ResponseEntity<?> getRecentAdminActions(
+        @RequestParam(defaultValue = "10") int limit) {
+        
+        try {
+            // TODO: Implement actual recent actions retrieval from audit log or activity log
+            List<Map<String, Object>> actions = new ArrayList<>();
+            return ResponseEntity.ok(actions);
+        } catch (Exception e) {
+            log.error("Error fetching recent admin actions: {}", e.getMessage());
+            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
+        }
+    }
 }

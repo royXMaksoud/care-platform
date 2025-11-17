@@ -24,6 +24,7 @@ import BranchServiceTypeList from './pages/serviceByOrganizationBranch/BranchSer
 import { AppointmentDashboard, ExcelReports } from '@/modules/appointment/pages/reports'
 import QuickPredictionPage from '@/modules/appointment/pages/ai/QuickPredictionPage'
 import TrainingPage from '@/modules/appointment/pages/ai/TrainingPage'
+import ModelManagementPage from '@/modules/appointment/pages/ai/ModelManagementPage'
 
 export const basePath = '/appointment'
 
@@ -71,6 +72,7 @@ export default function AppointmentRoutes() {
         {/* AI & Predictions */}
         <Route path="ai/quick-prediction" element={<QuickPredictionPage />} />
         <Route path="ai/training" element={<TrainingPage />} />
+        <Route path="ai/models" element={<ModelManagementPage />} />
       </Routes>
     </Suspense>
   )

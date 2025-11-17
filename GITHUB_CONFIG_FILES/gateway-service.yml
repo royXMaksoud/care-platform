@@ -30,8 +30,11 @@ spring:
             allowedHeaders:
               - Authorization
               - Content-Type
+              - Accept
               - X-Requested-With
+              - x-tenant-id
               - Accept-Language
+              - X-Internal-Key
             allowCredentials: true
       default-filters:
         - RemoveRequestHeader=Cookie

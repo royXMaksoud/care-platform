@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
@@ -7,7 +7,8 @@ import { Plus, Calendar as CalendarIcon, Clock } from 'lucide-react'
 import ScheduleFormModal from './ScheduleFormModal'
 import SearchableSelect from '@/components/SearchableSelect'
 import { toast } from 'sonner'
-import { usePermissionCheck } from '@/contexts/PermissionsContext'
+import { SYSTEM_SECTIONS } from '@/config/systemSectionConstants'
+import { useSystemSectionScopes } from '@/modules/appointment/hooks/useSystemSectionScopes'
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
@@ -24,115 +25,161 @@ export default function ScheduleCalendar() {
   const [organizationId, setOrganizationId] = useState('')
   const [organizationBranchId, setOrganizationBranchId] = useState('')
   const [allOrganizationBranches, setAllOrganizationBranches] = useState([])
-  const [loadingScopedBranches, setLoadingScopedBranches] = useState(false)
+  const [allOrganizations, setAllOrganizations] = useState([])
+  const [authorizedBranchIds, setAuthorizedBranchIds] = useState([])
+  const [loadingLookups, setLoadingLookups] = useState(false)
 
   const uiLang = (typeof navigator !== 'undefined' && (navigator.language || '').startsWith('ar')) ? 'ar' : 'en'
-  const { getSectionPermissions, permissionsData } = usePermissionCheck()
-  const lastScopeFetchKeyRef = useRef(null)
+  
+  // Get scopeValueIds from APPOINTMENT_SCHEDULING section only (same as AppointmentList)
+  const { scopeValueIds, isLoading: isLoadingScopes } = useSystemSectionScopes(SYSTEM_SECTIONS.APPOINTMENT_SCHEDULING)
 
-  // Debug: Log component mount (only once)
+  // Update authorized branch IDs from section-specific scopes
   useEffect(() => {
-  //  console.log('ScheduleCalendar component mounted')
-    return () => {
-    ///  console.log('ScheduleCalendar component unmounted')
+    if (scopeValueIds && scopeValueIds.length > 0) {
+      setAuthorizedBranchIds(scopeValueIds)
+    } else {
+      setAuthorizedBranchIds([])
     }
-  }, [])
+  }, [scopeValueIds])
 
-  const extractScopeValueIds = () => {
-    let sectionPerms = getSectionPermissions('Appointment Schedule Mangement', 'Appointments')
-    if (!sectionPerms?.actions?.length && !sectionPerms?.allActions?.length) {
-      sectionPerms = getSectionPermissions('Appointment Schedule Mangement')
-    }
-
-    const actions = sectionPerms?.allActions ?? sectionPerms?.actions ?? []
-    const ids = new Set()
-    actions.forEach((action) => {
-      ;(action.scopes ?? []).forEach((scope) => {
-        if (scope.effect === 'ALLOW' && scope.scopeValueId) {
-          ids.add(scope.scopeValueId)
-        }
-      })
-    })
-
-    return Array.from(ids)
-  }
-
-  // Load scoped organizations/branches based on permissions
+  // Load organizations and branches (same method as AppointmentList)
   useEffect(() => {
     let isActive = true
-
-    const loadScopedBranches = async () => {
+    const loadInitialData = async () => {
+      setLoadingLookups(true)
       try {
-        setLoadingScopedBranches(true)
+        const results = await Promise.allSettled([
+          api.post(
+            '/access/api/organization-branches/filter',
+            { criteria: [] },
+            {
+              params: { page: 0, size: 10000, lang: uiLang },
+            }
+          ),
+          api.post(
+            '/access/api/organizations/filter',
+            { criteria: [] },
+            {
+              params: { page: 0, size: 10000, lang: uiLang },
+            }
+          ),
+        ])
 
-        const scopeValueIds = extractScopeValueIds()
-        const scopeKey = JSON.stringify({ scopeValueIds, lang: uiLang })
+        const getValue = (idx) =>
+          results[idx]?.status === 'fulfilled' ? results[idx].value : null
 
-        if (!scopeValueIds.length) {
-          lastScopeFetchKeyRef.current = scopeKey
-          setAllOrganizationBranches([])
-          setOrganizationId('')
-          setOrganizationBranchId('')
-          return
-        }
+        const branchesRes = getValue(0)
+        const organizationsRes = getValue(1)
 
-        if (lastScopeFetchKeyRef.current === scopeKey) {
-          return
-        }
-
-        lastScopeFetchKeyRef.current = scopeKey
-
-        const payload = { scopeValueIds, lang: uiLang }
-        const { data } = await api.post('/access/api/dropdowns/organization-branches/by-scope', payload)
         if (!isActive) return
 
-        const items = Array.isArray(data) ? data : []
-        setAllOrganizationBranches(items)
+        const branchData = branchesRes?.data
+        const branchItems = Array.isArray(branchData)
+          ? branchData
+          : Array.isArray(branchData?.content)
+          ? branchData.content
+          : []
+        setAllOrganizationBranches(branchItems)
+
+        const organizationsData = organizationsRes?.data
+        const organizationItems = Array.isArray(organizationsData)
+          ? organizationsData
+          : Array.isArray(organizationsData?.content)
+          ? organizationsData.content
+          : []
+        setAllOrganizations(organizationItems)
       } catch (err) {
-        if (!isActive) return
-        console.error('Failed to load scoped organizations/branches:', err)
-        toast.error('Failed to load organizations')
-        setAllOrganizationBranches([])
-        lastScopeFetchKeyRef.current = null
+        if (isActive) {
+          console.error('Failed to load lookups:', err)
+          toast.error('Failed to load organizations and branches')
+          setAllOrganizationBranches([])
+          setAllOrganizations([])
+        }
       } finally {
         if (isActive) {
-          setLoadingScopedBranches(false)
+          setLoadingLookups(false)
         }
       }
     }
 
-    loadScopedBranches()
+    loadInitialData()
 
     return () => {
       isActive = false
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [uiLang, permissionsData])
+  }, [uiLang])
 
   const organizationOptions = useMemo(() => {
-    const seen = new Set()
-    return allOrganizationBranches.reduce((acc, item) => {
-      if (!item?.organizationId || seen.has(item.organizationId)) {
-        return acc
-      }
-      seen.add(item.organizationId)
-      acc.push({
-        value: item.organizationId,
-        label: item.organizationName || 'Unknown organization',
+    const orgMap = {}
+    const options = []
+    const authorizedSet = new Set(authorizedBranchIds || [])
+    const hasScopeFilter = authorizedSet.size > 0
+    const allowedOrgIds = new Set()
+
+    if (hasScopeFilter) {
+      allOrganizationBranches.forEach((branch) => {
+        if (authorizedSet.has(branch.organizationBranchId) && branch.organizationId) {
+          allowedOrgIds.add(branch.organizationId)
+        }
       })
-      return acc
-    }, [])
-  }, [allOrganizationBranches])
+    }
+
+    const canUseOrg = (orgId) => {
+      if (!orgId) return false
+      if (!hasScopeFilter) return true
+      return allowedOrgIds.has(orgId)
+    }
+
+    const ensureOrgOption = (orgId, labelCandidate) => {
+      if (!orgId || orgMap[orgId] || !canUseOrg(orgId)) return
+      const label = labelCandidate || orgId || 'Organization'
+      orgMap[orgId] = label
+      options.push({ value: orgId, label })
+    }
+
+    allOrganizations.forEach((org) => {
+      const orgId = org.organizationId || org.id
+      const label = org.organizationName || org.name || org.code || orgId
+      ensureOrgOption(orgId, label)
+    })
+
+    allOrganizationBranches.forEach((branch) => {
+      const orgId = branch.organizationId
+      const label =
+        branch.organizationName ||
+        branch.organization?.name ||
+        branch.organizationCode ||
+        branch.name ||
+        orgId
+      ensureOrgOption(orgId, label)
+    })
+
+    return options
+  }, [allOrganizations, allOrganizationBranches, authorizedBranchIds])
 
   const branchOptions = useMemo(() => {
-    if (!organizationId) return []
     return allOrganizationBranches
-      .filter((item) => item.organizationId === organizationId)
+      .filter((item) => {
+        if (organizationId && item.organizationId !== organizationId) {
+          return false
+        }
+        if (authorizedBranchIds.length && !authorizedBranchIds.includes(item.organizationBranchId)) {
+          return false
+        }
+        return true
+      })
       .map((item) => ({
         value: item.organizationBranchId,
-        label: item.organizationBranchName || 'Unknown branch',
+        label:
+          item.organizationBranchName ||
+          item.name ||
+          item.branchName ||
+          item.code ||
+          item.organizationBranchId ||
+          'Branch',
       }))
-  }, [allOrganizationBranches, organizationId])
+  }, [allOrganizationBranches, authorizedBranchIds, organizationId])
 
   const branchesMap = useMemo(() => {
     const map = {}
@@ -443,11 +490,14 @@ export default function ScheduleCalendar() {
             <SearchableSelect
               options={organizationOptions}
               value={organizationId}
-              onChange={(value) => setOrganizationId(value)}
+              onChange={(value) => {
+                setOrganizationId(value)
+                setOrganizationBranchId('')
+              }}
               placeholder="Select organization"
               isClearable={false}
               isSearchable={true}
-              isLoading={loadingScopedBranches}
+              isLoading={loadingLookups || isLoadingScopes}
             />
           </div>
 
@@ -461,7 +511,7 @@ export default function ScheduleCalendar() {
               isDisabled={!organizationId || branchOptions.length === 0}
               isClearable={false}
               isSearchable={true}
-              isLoading={loadingScopedBranches}
+              isLoading={loadingLookups || isLoadingScopes}
             />
           </div>
         </div>

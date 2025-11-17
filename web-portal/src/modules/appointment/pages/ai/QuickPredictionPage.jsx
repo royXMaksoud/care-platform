@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Card,
   Form,
@@ -24,7 +24,7 @@ import {
   InfoCircleOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import axios from 'axios';
+import api from '@/lib/axios';
 import './QuickPredictionPage.css';
 
 /**
@@ -34,12 +34,86 @@ import './QuickPredictionPage.css';
  * 2. Enter manual features to get a prediction
  */
 const QuickPredictionPage = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [prediction, setPrediction] = useState(null);
   const [error, setError] = useState(null);
   const [predictionMode, setPredictionMode] = useState('manual'); // 'manual' or 'appointment'
+  const [models, setModels] = useState([]);
+  const [modelsLoading, setModelsLoading] = useState(false);
+  const [selectedModelId, setSelectedModelId] = useState(null);
+  const [serviceTypeOptions, setServiceTypeOptions] = useState([]);
+  const uiLang = (i18n.language || '').startsWith('ar') ? 'ar' : 'en';
+
+  // Load available models on mount
+  useEffect(() => {
+    const loadModels = async () => {
+      setModelsLoading(true);
+      try {
+        const { data } = await api.get('/api/ai/models');
+        setModels(data || []);
+      } catch (err) {
+        console.error('Failed to load models', err);
+      } finally {
+        setModelsLoading(false);
+      }
+    };
+    loadModels();
+  }, []);
+
+  // Helper: build service type options with parent › child label, leaf-only enabled
+  const buildServiceTypeOptions = (nodes = []) => {
+    const collected = [];
+
+    const traverse = (items, path = [], depth = 0) => {
+      if (!Array.isArray(items)) return;
+      items.forEach((item) => {
+        if (!item) return;
+        const name = item.name || item.code || 'Service';
+        const children = Array.isArray(item.children) ? item.children : [];
+        const isLeaf = item.leaf ?? children.length === 0;
+        const currentPath = [...path, name];
+        const pathLabel = currentPath.join(' › ');
+        collected.push({
+          value: item.code || item.serviceTypeId,
+          label: pathLabel,
+          disabled: !isLeaf, // لا نستعمل الأب كقيمة بحد ذاته
+        });
+        if (children.length) {
+          traverse(children, currentPath, depth + 1);
+        }
+      });
+    };
+
+    traverse(nodes, [], 0);
+    return collected;
+  };
+
+  // Load service types with localization
+  useEffect(() => {
+    let active = true;
+    const loadServiceTypes = async () => {
+      try {
+        const { data } = await api.get('/appointment-service/api/admin/service-types/tree', {
+          params: { lang: uiLang },
+        });
+        if (!active) return;
+        const tree = Array.isArray(data) ? data : [];
+        const options = buildServiceTypeOptions(tree);
+        setServiceTypeOptions(options);
+      } catch (err) {
+        console.error('Failed to load service types for quick prediction', err);
+        if (active) {
+          setServiceTypeOptions([]);
+        }
+      }
+    };
+    loadServiceTypes();
+    return () => {
+      active = false;
+    };
+  }, [uiLang]);
 
   const handlePredict = async (values) => {
     setLoading(true);
@@ -47,8 +121,9 @@ const QuickPredictionPage = () => {
     setPrediction(null);
 
     try {
-      const response = await axios.post('/api/ai/predictions/predict', {
+      const response = await api.post('/api/ai/predictions/predict', {
         ...values,
+        modelVersionId: selectedModelId || null,
       });
 
       setPrediction(response.data);
@@ -140,6 +215,21 @@ const QuickPredictionPage = () => {
         )}
 
         <Form form={form} layout="vertical" onFinish={handlePredict}>
+          <Form.Item label={t('appointment.ai.quickPrediction.model', { defaultValue: '🧠 Model' })}>
+            <Select
+              value={selectedModelId}
+              onChange={setSelectedModelId}
+              loading={modelsLoading}
+              allowClear
+              placeholder={t('appointment.ai.quickPrediction.modelPlaceholder', {
+                defaultValue: 'Use active model or choose a specific one',
+              })}
+              options={(models || []).map((m) => ({
+                label: `${m.modelName} (v${m.versionNumber}) – ${m.accuracy != null ? `${m.accuracy}%` : 'n/a'}`,
+                value: m.modelVersionId,
+              }))}
+            />
+          </Form.Item>
           <Form.Item label={t('appointment.ai.quickPrediction.inputOption', { defaultValue: '📊 Input Mode' })}>
             <Select
               value={predictionMode}
@@ -195,12 +285,7 @@ const QuickPredictionPage = () => {
                   >
                     <Select
                       placeholder={t('appointment.ai.quickPrediction.placeholders.select', { defaultValue: 'Select' })}
-                      options={[
-                        { label: t('appointment.ai.quickPrediction.options.serviceType.cardiology', { defaultValue: 'Cardiology' }), value: 'CARDIOLOGY' },
-                        { label: t('appointment.ai.quickPrediction.options.serviceType.gynecology', { defaultValue: 'Gynecology' }), value: 'GYNECOLOGY' },
-                        { label: t('appointment.ai.quickPrediction.options.serviceType.pediatrics', { defaultValue: 'Pediatrics' }), value: 'PEDIATRICS' },
-                        { label: t('appointment.ai.quickPrediction.options.serviceType.general', { defaultValue: 'General Medicine' }), value: 'GENERAL' },
-                      ]}
+                      options={serviceTypeOptions}
                     />
                   </Form.Item>
                 </Col>
@@ -299,7 +384,7 @@ const QuickPredictionPage = () => {
             </Form.Item>
           )}
 
-          <Form.Item>
+          <Form.Item style={{ marginTop: '24px', marginBottom: 0 }}>
             <Button
               type="primary"
               htmlType="submit"
@@ -307,6 +392,7 @@ const QuickPredictionPage = () => {
               size="large"
               block
               icon={<ThunderboltOutlined />}
+              style={{ height: '48px', fontSize: '16px', fontWeight: 'bold' }}
             >
               {t('appointment.ai.quickPrediction.actions.predict', { defaultValue: '🎲 Predict' })}
             </Button>
@@ -319,116 +405,273 @@ const QuickPredictionPage = () => {
               {t('appointment.ai.quickPrediction.sections.results', { defaultValue: '📊 Prediction Results' })}
             </Divider>
 
-            <Row gutter={16} style={{ marginBottom: '30px' }}>
+            {/* Simple Summary Card */}
+            <Card 
+              style={{ 
+                marginBottom: '24px',
+                background: prediction.riskLevel === 'HIGH' 
+                  ? 'linear-gradient(135deg, #fff1f0 0%, #ffe7e5 100%)'
+                  : prediction.riskLevel === 'MEDIUM'
+                  ? 'linear-gradient(135deg, #fff7e6 0%, #ffecc7 100%)'
+                  : 'linear-gradient(135deg, #f6ffed 0%, #e6f7d9 100%)',
+                border: `2px solid ${
+                  prediction.riskLevel === 'HIGH' ? '#ff4d4f' :
+                  prediction.riskLevel === 'MEDIUM' ? '#faad14' : '#52c41a'
+                }`
+              }}
+            >
+              <div style={{ textAlign: 'center', padding: '8px 0' }}>
+                <div style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '8px', color: '#1f2937' }}>
+                  {prediction.riskLevel === 'HIGH' 
+                    ? t('appointment.ai.quickPrediction.summary.high.title', { 
+                        defaultValue: '⚠️ High Risk of No-Show' 
+                      })
+                    : prediction.riskLevel === 'MEDIUM'
+                    ? t('appointment.ai.quickPrediction.summary.medium.title', { 
+                        defaultValue: '⚡ Medium Risk - Monitor Closely' 
+                      })
+                    : t('appointment.ai.quickPrediction.summary.low.title', { 
+                        defaultValue: '✅ Low Risk - Good Attendance Expected' 
+                      })
+                  }
+                </div>
+                <div style={{ fontSize: '14px', color: '#666', lineHeight: '1.6' }}>
+                  {prediction.riskLevel === 'HIGH' 
+                    ? t('appointment.ai.quickPrediction.summary.high.description', { 
+                        defaultValue: 'There is a high probability that the beneficiary will not attend this appointment. Immediate action is recommended.' 
+                      })
+                    : prediction.riskLevel === 'MEDIUM'
+                    ? t('appointment.ai.quickPrediction.summary.medium.description', { 
+                        defaultValue: 'There is a moderate chance of no-show. Consider sending reminders and monitoring this appointment.' 
+                      })
+                    : t('appointment.ai.quickPrediction.summary.low.description', { 
+                        defaultValue: 'The beneficiary is likely to attend. Standard follow-up procedures should be sufficient.' 
+                      })
+                  }
+                </div>
+              </div>
+            </Card>
+
+            <Row gutter={16} style={{ marginBottom: '24px' }}>
               <Col xs={24} sm={8}>
-                <Card className="prediction-stat-card">
+                <Card className="prediction-stat-card" style={{ textAlign: 'center' }}>
+                  <div style={{ marginBottom: '12px' }}>
+                    <Tag
+                      icon={getRiskIcon(prediction.riskLevel)}
+                      color={getRiskColor(prediction.riskLevel)}
+                      style={{ fontSize: '18px', padding: '8px 16px', marginBottom: '8px' }}
+                    >
+                      {getRiskLabel(prediction.riskLevel)}
+                    </Tag>
+                  </div>
                   <Statistic
                     title={t('appointment.ai.quickPrediction.stats.riskLevel', { defaultValue: 'Risk Level' })}
-                    value={
-                      <Tag
-                        icon={getRiskIcon(prediction.riskLevel)}
-                        color={getRiskColor(prediction.riskLevel)}
-                        style={{ fontSize: '16px' }}
-                      >
-                        {getRiskLabel(prediction.riskLevel)}
-                      </Tag>
-                    }
+                    value=""
+                    valueStyle={{ display: 'none' }}
                   />
+                  <div style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
+                    {prediction.riskLevel === 'HIGH' 
+                      ? t('appointment.ai.quickPrediction.stats.riskLevel.high.desc', { 
+                          defaultValue: '60% or higher chance of missing the appointment' 
+                        })
+                      : prediction.riskLevel === 'MEDIUM'
+                      ? t('appointment.ai.quickPrediction.stats.riskLevel.medium.desc', { 
+                          defaultValue: '40-60% chance of missing the appointment' 
+                        })
+                      : t('appointment.ai.quickPrediction.stats.riskLevel.low.desc', { 
+                          defaultValue: 'Less than 40% chance of missing the appointment' 
+                        })
+                    }
+                  </div>
                 </Card>
               </Col>
 
               <Col xs={24} sm={8}>
-                <Card className="prediction-stat-card">
+                <Card className="prediction-stat-card" style={{ textAlign: 'center' }}>
                   <Statistic
                     title={t('appointment.ai.quickPrediction.stats.riskScore', { defaultValue: 'Risk Score' })}
                     value={`${getRiskPercentage(prediction.riskScore)}%`}
-                    valueStyle={{ color: getRiskColor(prediction.riskLevel) }}
+                    valueStyle={{ 
+                      color: getRiskColor(prediction.riskLevel),
+                      fontSize: '32px',
+                      fontWeight: 'bold'
+                    }}
                   />
+                  <div style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
+                    {t('appointment.ai.quickPrediction.stats.riskScore.desc', { 
+                      defaultValue: 'Probability of no-show based on historical data and patient profile' 
+                    })}
+                  </div>
                 </Card>
               </Col>
 
               <Col xs={24} sm={8}>
-                <Card className="prediction-stat-card">
+                <Card className="prediction-stat-card" style={{ textAlign: 'center' }}>
                   <Statistic
                     title={t('appointment.ai.quickPrediction.stats.confidence', { defaultValue: 'Confidence' })}
                     value={`${Math.round(parseFloat(prediction.confidence) * 100)}%`}
-                    valueStyle={{ color: '#52c41a' }}
+                    valueStyle={{ color: '#52c41a', fontSize: '32px', fontWeight: 'bold' }}
                   />
+                  <div style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
+                    {t('appointment.ai.quickPrediction.stats.confidence.desc', { 
+                      defaultValue: 'How reliable this prediction is based on available data' 
+                    })}
+                  </div>
                 </Card>
               </Col>
             </Row>
 
-            <Card className="prediction-progress">
-              <p style={{ marginBottom: '10px' }}>
-                {t('appointment.ai.quickPrediction.stats.likelihood', { defaultValue: 'Likelihood of No-Show' })}
-              </p>
+            <Card className="prediction-progress" style={{ marginBottom: '24px' }}>
+              <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '16px', fontWeight: '500' }}>
+                  {t('appointment.ai.quickPrediction.stats.likelihood', { defaultValue: 'Likelihood of No-Show' })}
+                </span>
+                <span style={{ 
+                  fontSize: '18px', 
+                  fontWeight: 'bold',
+                  color: getRiskColor(prediction.riskLevel)
+                }}>
+                  {getRiskPercentage(prediction.riskScore)}%
+                </span>
+              </div>
               <Progress
                 percent={getRiskPercentage(prediction.riskScore)}
                 strokeColor={{
-                  '0%': '#108ee9',
-                  '100%': '#87d068',
+                  '0%': prediction.riskLevel === 'HIGH' ? '#ff4d4f' : '#108ee9',
+                  '100%': prediction.riskLevel === 'LOW' ? '#52c41a' : '#faad14',
                 }}
                 status={
                   prediction.riskLevel === 'HIGH' ? 'exception' :
                   prediction.riskLevel === 'MEDIUM' ? 'active' : 'success'
                 }
+                size={12}
               />
+              <div style={{ marginTop: '8px', fontSize: '12px', color: '#666', textAlign: 'center' }}>
+                {t('appointment.ai.quickPrediction.stats.likelihood.desc', { 
+                  defaultValue: 'This percentage shows how likely it is that the beneficiary will not attend' 
+                })}
+              </div>
             </Card>
+
+            {/* Model Information */}
+            {prediction.modelVersion && (
+              <Card style={{ marginBottom: '24px', background: '#f0f5ff', border: '1px solid #adc6ff' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '16px' }}>🤖</span>
+                  <span style={{ fontSize: '14px', fontWeight: '500', color: '#1f2937' }}>
+                    {t('appointment.ai.quickPrediction.modelInfo.title', { 
+                      defaultValue: 'Model Used' 
+                    })}
+                  </span>
+                </div>
+                <div style={{ fontSize: '13px', color: '#666', paddingLeft: '24px' }}>
+                  {prediction.modelVersion}
+                </div>
+              </Card>
+            )}
 
             {/* Contributing Factors */}
             {prediction.contributingFactors && prediction.contributingFactors.length > 0 && (
               <Card className="factors-card" style={{ marginTop: '20px' }}>
-                <h3>{t('appointment.ai.quickPrediction.sections.factors', { defaultValue: '📊 Contributing Factors' })}</h3>
-                <Table
-                  dataSource={prediction.contributingFactors.map((f, idx) => ({
-                    ...f,
-                    key: idx,
-                  }))}
-                  columns={[
-                    {
-                      title: t('appointment.ai.quickPrediction.table.factor', { defaultValue: 'Factor' }),
-                      dataIndex: 'factor',
-                      key: 'factor',
-                    },
-                    {
-                      title: t('appointment.ai.quickPrediction.table.value', { defaultValue: 'Value' }),
-                      dataIndex: 'value',
-                      key: 'value',
-                    },
-                    {
-                      title: t('appointment.ai.quickPrediction.table.impact', { defaultValue: 'Impact' }),
-                      dataIndex: 'impactPercent',
-                      key: 'impact',
-                      render: (impact) => (
-                        <Tag color={impact > 0 ? 'red' : 'green'}>
-                          {impact > 0 ? '+' : ''}{impact}%
+                <div style={{ marginBottom: '16px' }}>
+                  <h3 style={{ marginBottom: '8px', fontSize: '18px', fontWeight: '600' }}>
+                    {t('appointment.ai.quickPrediction.sections.factors', { defaultValue: '📊 Contributing Factors' })}
+                  </h3>
+                  <p style={{ fontSize: '13px', color: '#666', margin: 0 }}>
+                    {t('appointment.ai.quickPrediction.sections.factors.desc', { 
+                      defaultValue: 'These factors influenced the prediction result' 
+                    })}
+                  </p>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {prediction.contributingFactors.map((f, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        padding: '12px',
+                        borderRadius: '8px',
+                        border: '1px solid #e8e8e8',
+                        background: '#fafafa',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '15px', fontWeight: '500', color: '#1f2937', marginBottom: '4px' }}>
+                            {f.factor}
+                          </div>
+                          <div style={{ fontSize: '13px', color: '#666' }}>
+                            {f.description || f.value}
+                          </div>
+                        </div>
+                        <Tag 
+                          color={f.impactPercent > 0 ? 'red' : f.impactPercent < 0 ? 'green' : 'default'}
+                          style={{ fontSize: '13px', padding: '4px 12px', marginLeft: '12px' }}
+                        >
+                          {f.impactPercent > 0 ? '+' : ''}{f.impactPercent}%
                         </Tag>
-                      ),
-                    },
-                  ]}
-                  pagination={false}
-                  size="small"
-                />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </Card>
             )}
 
             {/* Recommendations */}
             {prediction.recommendedActions && prediction.recommendedActions.length > 0 && (
-              <Card className="recommendations-card" style={{ marginTop: '20px' }}>
-                <h3>{t('appointment.ai.quickPrediction.sections.recommendations', { defaultValue: '⚠️ Recommended Actions' })}</h3>
-                <Space direction="vertical" style={{ width: '100%' }}>
-                  {prediction.recommendedActions.map((action, idx) => (
-                    <Alert
-                      key={idx}
-                      type={
-                        prediction.riskLevel === 'HIGH' ? 'error' :
-                        prediction.riskLevel === 'MEDIUM' ? 'warning' : 'success'
-                      }
-                      message={recommendationLabels[action] || action}
-                      showIcon
-                    />
-                  ))}
-                </Space>
+              <Card 
+                className="recommendations-card" 
+                style={{ 
+                  marginTop: '20px',
+                  background: prediction.riskLevel === 'HIGH' 
+                    ? '#fff1f0' 
+                    : prediction.riskLevel === 'MEDIUM'
+                    ? '#fff7e6'
+                    : '#f6ffed'
+                }}
+              >
+                <div style={{ marginBottom: '16px' }}>
+                  <h3 style={{ marginBottom: '8px', fontSize: '18px', fontWeight: '600' }}>
+                    {t('appointment.ai.quickPrediction.sections.recommendations', { defaultValue: '💡 Recommended Actions' })}
+                  </h3>
+                  <p style={{ fontSize: '13px', color: '#666', margin: 0 }}>
+                    {t('appointment.ai.quickPrediction.sections.recommendations.desc', { 
+                      defaultValue: 'Suggested steps to improve attendance or reduce risk' 
+                    })}
+                  </p>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {prediction.recommendedActions.map((action, idx) => {
+                    const actionLabel = recommendationLabels[action] || action;
+                    return (
+                      <div
+                        key={idx}
+                        style={{
+                          padding: '12px 16px',
+                          borderRadius: '6px',
+                          border: `1px solid ${
+                            prediction.riskLevel === 'HIGH' ? '#ffccc7' :
+                            prediction.riskLevel === 'MEDIUM' ? '#ffe58f' : '#b7eb8f'
+                          }`,
+                          background: 'white',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                        }}
+                      >
+                        <span style={{ 
+                          fontSize: '18px',
+                          color: prediction.riskLevel === 'HIGH' ? '#ff4d4f' :
+                                 prediction.riskLevel === 'MEDIUM' ? '#faad14' : '#52c41a'
+                        }}>
+                          {idx + 1}.
+                        </span>
+                        <span style={{ fontSize: '14px', color: '#1f2937', flex: 1 }}>
+                          {actionLabel}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
               </Card>
             )}
           </>

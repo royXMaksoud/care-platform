@@ -3,7 +3,7 @@ import { api } from '@/lib/axios'
 import { toast } from 'sonner'
 import SearchableSelect from '@/components/SearchableSelect'
 import Select from 'react-select'
-import { MapPin, Navigation, Calendar as CalendarIcon, Loader2, Route } from 'lucide-react'
+import { MapPin, Navigation, Calendar as CalendarIcon, Loader2, Route, Brain, AlertCircle, CheckCircle, Info } from 'lucide-react'
 
 const SLOT_DURATION_OPTIONS = [
   { value: 15, label: '15 minutes' },
@@ -40,6 +40,11 @@ export default function AppointmentFormModal({
   const [nearestLimit, setNearestLimit] = useState(5)
   const [loadingNearestLocation, setLoadingNearestLocation] = useState(false)
   const [loadingNearestAvailability, setLoadingNearestAvailability] = useState(false)
+  const [showPredictionModal, setShowPredictionModal] = useState(false)
+  const [predictionResult, setPredictionResult] = useState(null)
+  const [loadingPrediction, setLoadingPrediction] = useState(false)
+  const [beneficiaryDetails, setBeneficiaryDetails] = useState(null)
+  const [appointmentHistory, setAppointmentHistory] = useState({ previousAppointments: 0, previousNoShows: 0 })
   const [form, setForm] = useState({
     organizationId: '',
     organizationBranchId: '',
@@ -412,6 +417,182 @@ export default function AppointmentFormModal({
     setForm((prev) => ({ ...prev, [name]: value }))
   }
 
+  const calculateAge = (dateOfBirth) => {
+    if (!dateOfBirth) return null
+    try {
+      const birthDate = new Date(dateOfBirth)
+      const today = new Date()
+      let age = today.getFullYear() - birthDate.getFullYear()
+      const monthDiff = today.getMonth() - birthDate.getMonth()
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--
+      }
+      return age
+    } catch {
+      return null
+    }
+  }
+
+  const getDayOfWeek = (dateString) => {
+    if (!dateString) return null
+    try {
+      const date = new Date(dateString)
+      const days = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY']
+      return days[date.getDay()]
+    } catch {
+      return null
+    }
+  }
+
+  const calculateDistance = (beneficiaryLat, beneficiaryLng, branchLat, branchLng) => {
+    if (!beneficiaryLat || !beneficiaryLng || !branchLat || !branchLng) return null
+    try {
+      const R = 6371 // Earth's radius in km
+      const dLat = ((branchLat - beneficiaryLat) * Math.PI) / 180
+      const dLon = ((branchLng - beneficiaryLng) * Math.PI) / 180
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos((beneficiaryLat * Math.PI) / 180) *
+          Math.cos((branchLat * Math.PI) / 180) *
+          Math.sin(dLon / 2) *
+          Math.sin(dLon / 2)
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+      return R * c
+    } catch {
+      return null
+    }
+  }
+
+  const handleCheckNoShowPossibility = async () => {
+    if (!form.beneficiaryId) {
+      toast.error('Please select a beneficiary first')
+      return
+    }
+    if (!form.serviceTypeId) {
+      toast.error('Please select a service type first')
+      return
+    }
+    if (!form.appointmentDate) {
+      toast.error('Please select an appointment date first')
+      return
+    }
+    if (!form.appointmentTime) {
+      toast.error('Please select an appointment time first')
+      return
+    }
+
+    setLoadingPrediction(true)
+    setPredictionResult(null)
+    setBeneficiaryDetails(null)
+
+    try {
+      // 1. Get beneficiary details
+      const beneficiaryRes = await api.get(
+        `/appointment-service/api/admin/beneficiaries/${form.beneficiaryId}`
+      )
+      const beneficiary = beneficiaryRes?.data || {}
+      setBeneficiaryDetails(beneficiary)
+
+      // 2. Get beneficiary appointments to calculate history
+      let appointments = []
+      let previousAppointments = 0
+      let previousNoShows = 0
+      try {
+        const appointmentsRes = await api.get(
+          `/appointment-service/api/admin/beneficiaries/${form.beneficiaryId}/appointments`,
+          { params: { page: 0, size: 100 } }
+        )
+        appointments = appointmentsRes?.data?.content || appointmentsRes?.data || []
+
+        // Calculate previous appointments and no-shows
+        previousAppointments = appointments.length
+        previousNoShows = appointments.filter((apt) => {
+          const status = apt?.appointmentStatus?.code || apt?.status?.code || ''
+          return status === 'NO_SHOW' || status === 'MISSED' || status === 'CANCELLED'
+        }).length
+        setAppointmentHistory({ previousAppointments, previousNoShows })
+      } catch (err) {
+        console.warn('Failed to fetch appointment history, using defaults', err)
+        previousAppointments = 0
+        previousNoShows = 0
+        setAppointmentHistory({ previousAppointments: 0, previousNoShows: 0 })
+      }
+
+      // 3. Get service type code
+      const selectedServiceType = serviceTypeOptions.find((opt) => opt.value === form.serviceTypeId)
+      const serviceTypeCode = selectedServiceType?.label?.split(' › ')?.pop() || 'GENERAL'
+
+      // 4. Calculate age
+      const age = calculateAge(beneficiary.dateOfBirth)
+
+      // 5. Get gender code - fetch from code table or use default
+      let genderCode = 'MALE' // Default
+      if (beneficiary.genderCodeValueId) {
+        try {
+          // Fetch gender code value from code table
+          const genderRes = await api.get(
+            `/access/api/cascade-dropdowns/access.code-table-value`,
+            { params: { codeTableValueId: beneficiary.genderCodeValueId } }
+          )
+          const genderValue = genderRes?.data
+          if (genderValue?.code || genderValue?.label) {
+            const codeOrLabel = (genderValue.code || genderValue.label || '').toUpperCase()
+            if (codeOrLabel.includes('FEMALE') || codeOrLabel.includes('أنثى') || codeOrLabel.includes('F')) {
+              genderCode = 'FEMALE'
+            } else if (codeOrLabel.includes('MALE') || codeOrLabel.includes('ذكر') || codeOrLabel.includes('M')) {
+              genderCode = 'MALE'
+            } else {
+              genderCode = 'OTHER'
+            }
+          }
+        } catch (err) {
+          console.warn('Failed to fetch gender code value, using default MALE', err)
+          genderCode = 'MALE'
+        }
+      }
+
+      // 6. Calculate day of week
+      const dayOfWeek = getDayOfWeek(form.appointmentDate)
+
+      // 7. Calculate distance if coordinates available
+      const selectedBranch = branchMap[form.organizationBranchId]
+      let distanceKm = null
+      if (beneficiary.latitude && beneficiary.longitude && selectedBranch?.latitude && selectedBranch?.longitude) {
+        distanceKm = calculateDistance(
+          beneficiary.latitude,
+          beneficiary.longitude,
+          selectedBranch.latitude,
+          selectedBranch.longitude
+        )
+      }
+
+      // 8. Build prediction request
+      const predictionRequest = {
+        age: age || 35,
+        gender: genderCode,
+        serviceType: serviceTypeCode,
+        appointmentTime: form.appointmentTime.substring(0, 5) || '10:00',
+        dayOfWeek: dayOfWeek || 'MONDAY',
+        distanceKm: distanceKm,
+        priority: form.priority || 'NORMAL',
+        previousNoShows: previousNoShows,
+        previousAppointments: previousAppointments,
+      }
+
+      // 9. Call prediction API
+      const predictionRes = await api.post('/api/ai/predictions/predict', predictionRequest)
+      setPredictionResult(predictionRes.data)
+      setShowPredictionModal(true)
+    } catch (error) {
+      console.error('Failed to check no-show possibility', error)
+      toast.error(
+        error?.response?.data?.message || 'Failed to calculate no-show risk. Please try again.'
+      )
+    } finally {
+      setLoadingPrediction(false)
+    }
+  }
+
   const submit = async (e) => {
     e.preventDefault()
 
@@ -759,6 +940,30 @@ export default function AppointmentFormModal({
           />
         </div>
 
+        {/* No-Show Risk Check Button */}
+        {form.beneficiaryId && form.serviceTypeId && form.appointmentDate && form.appointmentTime && (
+          <div className="border-t pt-4">
+            <button
+              type="button"
+              onClick={handleCheckNoShowPossibility}
+              disabled={loadingPrediction}
+              className="w-full flex items-center justify-center gap-2 rounded-lg border-2 border-purple-500 bg-purple-50 px-4 py-3 text-sm font-semibold text-purple-700 hover:bg-purple-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+            >
+              {loadingPrediction ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Analyzing...</span>
+                </>
+              ) : (
+                <>
+                  <Brain className="h-4 w-4" />
+                  <span>Check Possibility for No-Show</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
+
         <div className="flex justify-end gap-2 border-t pt-3">
           <button
             type="button"
@@ -779,6 +984,206 @@ export default function AppointmentFormModal({
           </button>
         </div>
       </form>
+
+      {/* No-Show Prediction Result Modal */}
+      {showPredictionModal && predictionResult && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] px-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b pb-4 mb-4">
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <Brain className="h-5 w-5 text-purple-600" />
+                <span>No-Show Risk Analysis</span>
+              </h2>
+              <button
+                type="button"
+                onClick={() => setShowPredictionModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Beneficiary Info */}
+            {beneficiaryDetails && (
+              <div className="mb-4 space-y-3">
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <div className="text-sm font-semibold text-gray-700 mb-2">Beneficiary Information</div>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <span className="text-gray-600">Name:</span>{' '}
+                      <span className="font-medium">
+                        {beneficiaryDetails.fullName || beneficiaryDetails.displayName || 'N/A'}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Age:</span>{' '}
+                      <span className="font-medium">
+                        {calculateAge(beneficiaryDetails.dateOfBirth) || 'N/A'}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Gender:</span>{' '}
+                      <span className="font-medium">
+                        {beneficiaryDetails.genderCodeValueId
+                          ? 'Gender ID: ' + beneficiaryDetails.genderCodeValueId.substring(0, 8) + '...'
+                          : 'N/A'}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">National ID:</span>{' '}
+                      <span className="font-medium">{beneficiaryDetails.nationalId || 'N/A'}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="text-sm font-semibold text-gray-700 mb-2">Appointment History</div>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <span className="text-gray-600">Total Previous:</span>{' '}
+                      <span className="font-medium">{appointmentHistory.previousAppointments}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">No-Shows:</span>{' '}
+                      <span className="font-medium text-red-600">
+                        {appointmentHistory.previousNoShows}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Risk Level Summary */}
+            <div
+              className={`mb-4 p-4 rounded-lg border-2 ${
+                predictionResult.riskLevel === 'HIGH'
+                  ? 'bg-red-50 border-red-300'
+                  : predictionResult.riskLevel === 'MEDIUM'
+                  ? 'bg-yellow-50 border-yellow-300'
+                  : 'bg-green-50 border-green-300'
+              }`}
+            >
+              <div className="flex items-center gap-3 mb-2">
+                {predictionResult.riskLevel === 'HIGH' ? (
+                  <AlertCircle className="h-6 w-6 text-red-600" />
+                ) : predictionResult.riskLevel === 'MEDIUM' ? (
+                  <Info className="h-6 w-6 text-yellow-600" />
+                ) : (
+                  <CheckCircle className="h-6 w-6 text-green-600" />
+                )}
+                <div>
+                  <div className="text-lg font-bold">
+                    {predictionResult.riskLevel === 'HIGH'
+                      ? '⚠️ High Risk of No-Show'
+                      : predictionResult.riskLevel === 'MEDIUM'
+                      ? '⚡ Medium Risk'
+                      : '✅ Low Risk - Good Attendance Expected'}
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    Probability: {Math.round(parseFloat(predictionResult.riskScore) * 100)}%
+                  </div>
+                </div>
+              </div>
+              <div className="text-sm text-gray-700 mt-2">
+                {predictionResult.riskLevel === 'HIGH'
+                  ? 'There is a high probability that the beneficiary will not attend this appointment. Immediate action is recommended.'
+                  : predictionResult.riskLevel === 'MEDIUM'
+                  ? 'There is a moderate chance of no-show. Consider sending reminders and monitoring this appointment.'
+                  : 'The beneficiary is likely to attend. Standard follow-up procedures should be sufficient.'}
+              </div>
+            </div>
+
+            {/* Prediction Details */}
+            <div className="mb-4 grid grid-cols-2 gap-3">
+              <div className="p-3 bg-blue-50 rounded border border-blue-200">
+                <div className="text-xs text-gray-600 mb-1">Risk Score</div>
+                <div className="text-2xl font-bold text-blue-700">
+                  {Math.round(parseFloat(predictionResult.riskScore) * 100)}%
+                </div>
+              </div>
+              <div className="p-3 bg-green-50 rounded border border-green-200">
+                <div className="text-xs text-gray-600 mb-1">Confidence</div>
+                <div className="text-2xl font-bold text-green-700">
+                  {Math.round(parseFloat(predictionResult.confidence) * 100)}%
+                </div>
+              </div>
+            </div>
+
+            {/* Contributing Factors */}
+            {predictionResult.contributingFactors && predictionResult.contributingFactors.length > 0 && (
+              <div className="mb-4">
+                <div className="text-sm font-semibold text-gray-700 mb-2">
+                  📊 Contributing Factors
+                </div>
+                <div className="space-y-2">
+                  {predictionResult.contributingFactors.map((factor, idx) => (
+                    <div
+                      key={idx}
+                      className="p-2 bg-gray-50 rounded border border-gray-200 flex justify-between items-center"
+                    >
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-gray-900">{factor.factor}</div>
+                        {factor.description && (
+                          <div className="text-xs text-gray-600">{factor.description}</div>
+                        )}
+                      </div>
+                      <div
+                        className={`px-2 py-1 rounded text-xs font-semibold ${
+                          factor.impactPercent > 0
+                            ? 'bg-red-100 text-red-700'
+                            : factor.impactPercent < 0
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-gray-100 text-gray-700'
+                        }`}
+                      >
+                        {factor.impactPercent > 0 ? '+' : ''}
+                        {factor.impactPercent}%
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Recommended Actions */}
+            {predictionResult.recommendedActions && predictionResult.recommendedActions.length > 0 && (
+              <div className="mb-4">
+                <div className="text-sm font-semibold text-gray-700 mb-2">💡 Recommended Actions</div>
+                <div className="space-y-2">
+                  {predictionResult.recommendedActions.map((action, idx) => (
+                    <div
+                      key={idx}
+                      className={`p-3 rounded border ${
+                        predictionResult.riskLevel === 'HIGH'
+                          ? 'bg-red-50 border-red-200'
+                          : predictionResult.riskLevel === 'MEDIUM'
+                          ? 'bg-yellow-50 border-yellow-200'
+                          : 'bg-green-50 border-green-200'
+                      }`}
+                    >
+                      <div className="flex items-start gap-2">
+                        <span className="text-sm font-semibold">{idx + 1}.</span>
+                        <span className="text-sm text-gray-800">{action}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Close Button */}
+            <div className="flex justify-end mt-4 border-t pt-4">
+              <button
+                type="button"
+                onClick={() => setShowPredictionModal(false)}
+                className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

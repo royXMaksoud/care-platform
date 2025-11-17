@@ -1,5 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
-import { fetchMyPermissions } from '@/api/permissions.api'
+import { usePermissionCheck, usePermissionsContext } from '@/contexts/PermissionsContext'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { resolveModulePath } from '@/config/module-routes'
@@ -27,11 +26,8 @@ function pickIcon(name = '') {
 }
 
 export default function HomeCare() {
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ['me', 'permissions'],
-    queryFn: fetchMyPermissions,
-    staleTime: 5 * 60 * 1000,
-  })
+  // Re‑use permissions data from global context instead of firing another query
+  const { permissionsData, isLoading, error: permsError } = usePermissionsContext()
 
   const [sp, setSp] = useSearchParams()
   const q = (sp.get('q') || '').toLowerCase().trim()
@@ -46,10 +42,10 @@ export default function HomeCare() {
   }
 
   if (isLoading) return <div className="p-6 text-base">{t('common.loading')}</div>
-  if (isError) return <div className="p-6 text-destructive text-base">Failed to load systems.</div>
+  if (permsError) return <div className="p-6 text-destructive text-base">Failed to load systems.</div>
 
   // Get all systems from response
-  const allSystems = data?.systems || []
+  const allSystems = permissionsData?.systems || []
   
   const items = allSystems
     .map((sys, idx) => {

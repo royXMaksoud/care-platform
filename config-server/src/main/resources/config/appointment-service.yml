@@ -40,3 +40,14 @@ eureka:
     preferIpAddress: true
     instance-id: ${spring.application.name}:${server.port}
 
+# Feign client service URLs
+services:
+  access-management:
+    base-url: http://access-management-service:6062
+  auth-service:
+    base-url: http://auth-service:6061
+  auth-service-permissions:
+    base-url: http://auth-service:6061
+  notification-service:
+    base-url: http://notification-service:6068
+

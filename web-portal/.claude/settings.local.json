@@ -67,7 +67,13 @@
       "Bash(timeout 60 mvn:*)",
       "Bash(timeout 90 mvn spring-boot:run:*)",
       "Bash(timeout 40 mvn spring-boot:run:*)",
-      "Bash(timeout 50 mvn spring-boot:run:*)"
+      "Bash(timeout 50 mvn spring-boot:run:*)",
+      "Bash(timeout 60 java:*)",
+      "Bash(timeout 30 powershell:*)",
+      "Bash(timeout 20 powershell:*)",
+      "Bash(timeout:*)",
+      "Bash(lsof:*)",
+      "Bash(unzip:*)"
     ],
     "deny": [],
     "ask": []

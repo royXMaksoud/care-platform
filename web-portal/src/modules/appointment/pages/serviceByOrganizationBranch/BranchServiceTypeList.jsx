@@ -455,7 +455,7 @@ function BranchServiceTypeEditor({ branch, onClose, onSaved }) {
   const [assignments, setAssignments] = useState(new Map())
   const [expanded, setExpanded] = useState(new Set())
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     enabled: !!branch?.organizationBranchId,
     queryKey: ['branch-service-types', branch?.organizationBranchId],
     queryFn: async () => {
@@ -463,6 +463,13 @@ function BranchServiceTypeEditor({ branch, onClose, onSaved }) {
         `/appointment-service/api/admin/branch-service-types/${branch.organizationBranchId}`,
       )
       return data
+    },
+    onError: (err) => {
+      const errorMessage = err?.response?.data?.message || 
+                          err?.message || 
+                          'Failed to load branch service types'
+      console.error('Error loading branch service types:', err)
+      toast.error(errorMessage)
     },
   })
 
@@ -646,7 +653,27 @@ function BranchServiceTypeEditor({ branch, onClose, onSaved }) {
                 <p className="text-sm">Loading service tree…</p>
               </div>
             )}
-            {!isLoading && filteredTree.length === 0 && (
+            {error && (
+              <div className="flex flex-col items-center justify-center gap-3 py-20 text-slate-600">
+                <Circle className="h-10 w-10 text-red-400" />
+                <div className="text-center max-w-md space-y-2">
+                  <p className="text-sm font-semibold text-red-600">
+                    Unable to load branch service types
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    {error?.response?.data?.message || 
+                     error?.message || 
+                     'An error occurred while loading the service types. Please try again later.'}
+                  </p>
+                  {error?.response?.status === 503 && (
+                    <p className="text-xs text-amber-600 mt-2">
+                      Cannot connect to access-management-service. Please check if the service is running and try again.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+            {!isLoading && !error && filteredTree.length === 0 && (
               <div className="flex flex-col items-center justify-center gap-3 py-20 text-slate-500">
                 <Circle className="h-10 w-10" />
                 <p className="text-sm text-center max-w-xs">
