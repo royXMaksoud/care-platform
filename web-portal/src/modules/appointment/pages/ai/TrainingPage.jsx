@@ -391,7 +391,7 @@ const TrainingPage = () => {
               items={[
                 {
                   key: 'config',
-                  label: t('appointment.ai.training.tabs.manual', { defaultValue: 'Manual Configuration' }),
+                  label: t('appointment.ai.training.tabs.manual', { defaultValue: 'From Current Database' }),
                   children: (
                     <div style={{ paddingTop: '20px' }}>
 

@@ -80,6 +80,12 @@ const CampaignsManagement = () => {
       setTemplates(response.data || []);
     } catch (error) {
       console.error('Error fetching templates:', error);
+      // Ensure templates is always an array, even on error
+      setTemplates([]);
+      // Only show error if it's not a 403 (permission denied)
+      if (error.response?.status !== 403) {
+        message.warning(t('notification.template.loadFailed', 'Unable to load templates'));
+      }
     }
   };
 

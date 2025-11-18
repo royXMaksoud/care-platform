@@ -1,0 +1,18 @@
+# Gateway Route Configuration for warehouse-service
+# Add this configuration to gateway-service/src/main/resources/application.yml
+# under spring.cloud.gateway.routes section
+
+- id: warehouse-service
+  uri: lb://warehouse-service
+  predicates:
+    - Path=/api/warehouse/v1/**,/warehouse/**,/v3/api-docs/warehouse,/swagger-ui/warehouse/**
+  filters:
+    - RewritePath=/api/warehouse/v1/(?<segment>.*), /api/${segment}
+    - RewritePath=/warehouse/(?<segment>.*), /${segment}
+    - RewritePath=/v3/api-docs/warehouse, /v3/api-docs
+  order: 5
+
+# Also add to springdoc.swagger-ui.urls section:
+# - name: warehouse-service
+#   url: /v3/api-docs/warehouse
+

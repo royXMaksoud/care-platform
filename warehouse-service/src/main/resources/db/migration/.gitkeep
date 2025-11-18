@@ -1,0 +1,4 @@
+# Flyway migration scripts will be placed here
+# Naming convention: V{version}__{description}.sql
+# Example: V1_0__Create_warehouse_tables.sql
+

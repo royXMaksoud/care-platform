@@ -162,6 +162,19 @@ export default function Login() {
       const status = err?.response?.status
       const responseData = err?.response?.data
 
+      // Handle network errors (no response from server)
+      if (!err.response) {
+        console.error('Network error during login:', err)
+        if (err.code === 'ERR_NETWORK' || err.message?.includes('Network Error')) {
+          setError(t('auth.networkError') || 'Network error: Please check if the server is running and try again.')
+        } else if (err.code === 'ECONNREFUSED') {
+          setError(t('auth.connectionRefused') || 'Cannot connect to server. Please check if the backend services are running.')
+        } else {
+          setError(t('auth.networkError') || `Network error: ${err.message || 'Please try again later.'}`)
+        }
+        return
+      }
+
       if (err?.message === 'NO_TOKEN_IN_LOGIN_RESPONSE') {
         setError(t('auth.noToken'))
         return

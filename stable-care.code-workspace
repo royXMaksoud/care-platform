@@ -35,6 +35,9 @@
 		},
 		{
 			"path": "notification-service"
+		},
+		{
+			"path": "warehouse-service"
 		}
 	],
 	"settings": {

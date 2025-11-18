@@ -529,14 +529,13 @@ export default function AppointmentFormModal({
       let genderCode = 'MALE' // Default
       if (beneficiary.genderCodeValueId) {
         try {
-          // Fetch gender code value from code table
+          // Fetch gender code value directly from code table endpoint
           const genderRes = await api.get(
-            `/access/api/cascade-dropdowns/access.code-table-value`,
-            { params: { codeTableValueId: beneficiary.genderCodeValueId } }
+            `/access/api/code-table-values/${beneficiary.genderCodeValueId}`
           )
           const genderValue = genderRes?.data
-          if (genderValue?.code || genderValue?.label) {
-            const codeOrLabel = (genderValue.code || genderValue.label || '').toUpperCase()
+          if (genderValue?.code || genderValue?.name || genderValue?.shortCode) {
+            const codeOrLabel = (genderValue.code || genderValue.name || genderValue.shortCode || '').toUpperCase()
             if (codeOrLabel.includes('FEMALE') || codeOrLabel.includes('أنثى') || codeOrLabel.includes('F')) {
               genderCode = 'FEMALE'
             } else if (codeOrLabel.includes('MALE') || codeOrLabel.includes('ذكر') || codeOrLabel.includes('M')) {
@@ -580,7 +579,7 @@ export default function AppointmentFormModal({
       }
 
       // 9. Call prediction API
-      const predictionRes = await api.post('/api/ai/predictions/predict', predictionRequest)
+      const predictionRes = await api.post('/appointment-service/api/ai/predictions/predict', predictionRequest)
       setPredictionResult(predictionRes.data)
       setShowPredictionModal(true)
     } catch (error) {

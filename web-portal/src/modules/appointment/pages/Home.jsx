@@ -18,6 +18,7 @@ import {
   Zap,
   Brain,
   List,
+  MapPin,
 } from 'lucide-react'
 import { useFastAccessShortcuts } from '@/hooks/useFastAccessShortcuts'
 import AppointmentBreadcrumb from '@/modules/appointment/components/AppointmentBreadcrumb'
@@ -42,6 +43,7 @@ const SECTION_PERMISSION_MAP = {
   'serviceTypes': 'Appointment_Reference_Data',
   'actionTypes': 'Appointment_Reference_Data',
   'appointmentStatuses': 'Appointment_Reference_Data',
+  'maps': 'APPOINTMENT_REPORTING_AND_ANALYTICS',
 }
 
 const RAW_SECTIONS = [
@@ -174,6 +176,16 @@ const RAW_SECTIONS = [
     defaultDescription: 'Manage weekly schedules, working hours, and slot configurations for centers.',
     icon: Clock,
     path: '/appointment/schedules',
+  },
+  {
+    id: 'maps',
+    category: 'Analytics',
+    titleKey: 'appointment.home.sections.maps.title',
+    descriptionKey: 'appointment.home.sections.maps.description',
+    defaultTitle: 'Interactive Map',
+    defaultDescription: 'Geographic visualization of appointments with interactive filtering and multiple visualization modes.',
+    icon: MapPin,
+    path: '/appointment/maps',
   },
 ]
 

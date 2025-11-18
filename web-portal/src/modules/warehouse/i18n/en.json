@@ -1,0 +1,135 @@
+{
+  "warehouse": {
+    "title": "Warehouse Management",
+    "warehouses": {
+      "title": "Warehouses",
+      "list": "Warehouse List",
+      "create": "Create Warehouse",
+      "edit": "Edit Warehouse",
+      "details": "Warehouse Details",
+      "delete": "Delete Warehouse",
+      "restore": "Restore Warehouse",
+      "deleteConfirm": "Are you sure you want to delete this warehouse?",
+      "restoreConfirm": "Are you sure you want to restore this warehouse?",
+      "code": "Code",
+      "name": "Name",
+      "type": "Type",
+      "status": "Status",
+      "location": "Location",
+      "active": "Active",
+      "inactive": "Inactive",
+      "deleted": "Deleted",
+      "createdAt": "Created At",
+      "updatedAt": "Updated At"
+    },
+    "materials": {
+      "title": "Materials & Catalog",
+      "list": "Material List",
+      "create": "Create Material",
+      "edit": "Edit Material",
+      "details": "Material Details",
+      "code": "Material Code",
+      "name": "Name",
+      "category": "Category",
+      "brand": "Brand",
+      "status": "Status",
+      "trackable": "Trackable",
+      "reorderLevel": "Reorder Level",
+      "unit": "Unit"
+    },
+    "stock": {
+      "title": "Stock Transactions",
+      "stockIn": "Stock IN",
+      "stockOut": "Stock OUT",
+      "transfer": "Transfer",
+      "adjustment": "Adjustment",
+      "ledger": "Stock Ledger",
+      "transactionType": "Transaction Type",
+      "quantity": "Quantity",
+      "sourceWarehouse": "Source Warehouse",
+      "targetWarehouse": "Target Warehouse",
+      "reason": "Reason",
+      "referenceDocument": "Reference Document",
+      "notes": "Notes",
+      "createTransaction": "Create Transaction",
+      "transactionCreated": "Transaction created successfully",
+      "insufficientStock": "Insufficient stock available"
+    },
+    "dashboard": {
+      "title": "Dashboard",
+      "totalWarehouses": "Total Warehouses",
+      "totalMaterials": "Total Materials",
+      "totalOrders": "Total Orders",
+      "itemsBelowReorder": "Items Below Reorder Level",
+      "lowStock": "Low Stock",
+      "export": "Export",
+      "refresh": "Refresh"
+    },
+    "interfaces": {
+      "title": "Warehouse Management System",
+      "subtitle": "Available Interfaces",
+      "summary": "Summary",
+      "available": "Available",
+      "comingSoon": "Coming Soon",
+      "planned": "Planned",
+      "interface": "Interface",
+      "interfaces": "Interfaces",
+      "open": "Open",
+      "items": {
+        "dashboard": {
+          "name": "Dashboard",
+          "description": "Overview of stock, materials, and warehouse performance"
+        },
+        "warehouses": {
+          "name": "Warehouses",
+          "description": "Manage warehouse locations and details"
+        },
+        "materials": {
+          "name": "Materials",
+          "description": "Manage materials, categories, and brands"
+        },
+        "orders": {
+          "name": "Orders",
+          "description": "Manage warehouse orders and transactions"
+        },
+        "stock": {
+          "name": "Stock Management",
+          "description": "View and manage stock levels and transactions"
+        },
+        "reports": {
+          "name": "Reports",
+          "description": "Generate reports and analytics"
+        },
+        "customFields": {
+          "name": "Custom Fields",
+          "description": "Configure custom field definitions"
+        }
+      },
+      "categories": {
+        "overview": "Overview",
+        "management": "Management",
+        "analytics": "Analytics",
+        "configuration": "Configuration"
+      }
+    },
+    "common": {
+      "save": "Save",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "edit": "Edit",
+      "view": "View",
+      "create": "Create",
+      "search": "Search",
+      "filter": "Filter",
+      "export": "Export",
+      "loading": "Loading...",
+      "noData": "No data available",
+      "error": "An error occurred",
+      "retry": "Retry",
+      "success": "Success",
+      "confirm": "Confirm",
+      "close": "Close"
+    }
+  }
+}
+

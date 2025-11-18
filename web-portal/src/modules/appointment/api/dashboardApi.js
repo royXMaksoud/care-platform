@@ -1,7 +1,7 @@
 import { api } from '@/lib/axios'
 
-const BASE_URL = '/appointment/api/admin/appointments/dashboard'
-const REPORTS_URL = '/appointment/api/admin/appointments/reports'
+const BASE_URL = '/appointment-service/api/admin/appointments/dashboard'
+const REPORTS_URL = '/appointment-service/api/admin/appointments/reports'
 
 /**
  * Dashboard API service for appointment analytics and reporting

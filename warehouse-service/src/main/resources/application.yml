@@ -1,0 +1,275 @@
+server:
+  port: 6068
+
+spring:
+  main:
+    bean-name-generator: org.springframework.context.annotation.FullyQualifiedAnnotationBeanNameGenerator
+  application:
+    name: warehouse-service
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:warehouse_db}?currentSchema=public&searchPath=public
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:P@ssw0rd}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      schema: public
+      connection-timeout: 30000
+      maximum-pool-size: 10
+      minimum-idle: 5
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      leak-detection-threshold: 60000
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        default_schema: public
+        physical_naming_strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
+        format_sql: true
+        use_sql_comments: true
+    show-sql: true
+    open-in-view: false
+  messages:
+    basename: i18n/messages,shared/i18n/messages
+    fallback-to-system-locale: false
+    encoding: UTF-8
+    cache-duration: 0
+  jackson:
+    time-zone: UTC
+    serialization:
+      WRITE_DATES_AS_TIMESTAMPS: false
+      FAIL_ON_EMPTY_BEANS: false
+    deserialization:
+      FAIL_ON_UNKNOWN_PROPERTIES: false
+  validation:
+    enabled: true
+  web:
+    locale: en
+    locale-resolver: accept-header
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 10MB
+      file-size-threshold: 2KB
+
+jwt:
+  secret: SuperSecureKeyThatIsAtLeast64CharactersLongToAvoidWeakKeyException1234567890
+  expiration: 86400000
+  refreshExpiration: 2592000000
+
+care:
+  security:
+    csrf:
+      enabled: false
+    cors:
+      allowed-origins: ${CORS_ALLOWED_ORIGINS:"http://localhost:3000,http://localhost:5173"}
+      allowed-methods: "GET,POST,PUT,DELETE,OPTIONS"
+      allowed-headers: "Authorization,Content-Type,X-Requested-With,x-tenant-id"
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    try-it-out-enabled: true
+    operationsSorter: method
+  default-produces-media-type: application/json
+
+logging:
+  level:
+    root: INFO
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE
+    org.hibernate.type.descriptor.jdbc: TRACE
+    org.springframework.web: INFO
+    com.care.warehouse: DEBUG
+    com.sharedlib.core: DEBUG
+    org.springframework.security: DEBUG
+    com.netflix.discovery: DEBUG
+    com.netflix.eureka: DEBUG
+    org.springframework.cloud.client.discovery: DEBUG
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      accessManagementService:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 30s
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+      authService:
+        registerHealthIndicator: true
+        slidingWindowSize: 15
+        failureRateThreshold: 60
+        waitDurationInOpenState: 45s
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+      notificationService:
+        registerHealthIndicator: true
+        slidingWindowSize: 20
+        failureRateThreshold: 50
+        waitDurationInOpenState: 30s
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+  
+  retry:
+    instances:
+      accessManagementService:
+        maxAttempts: 3
+        waitDuration: 1s
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2
+      authService:
+        maxAttempts: 4
+        waitDuration: 500ms
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2
+      notificationService:
+        maxAttempts: 3
+        waitDuration: 100ms
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 1.5
+  
+  bulkhead:
+    instances:
+      accessManagementService:
+        maxConcurrentCalls: 25
+        maxWaitDuration: 1000ms
+      authService:
+        maxConcurrentCalls: 20
+        maxWaitDuration: 1000ms
+      notificationService:
+        maxConcurrentCalls: 30
+        maxWaitDuration: 500ms
+  
+  ratelimiter:
+    instances:
+      accessManagementService:
+        registerHealthIndicator: true
+        limitForPeriod: 50
+        limitRefreshPeriod: 1s
+        timeoutDuration: 500ms
+      apiEndpoint:
+        registerHealthIndicator: true
+        limitForPeriod: 200
+        limitRefreshPeriod: 1s
+        timeoutDuration: 500ms
+      notificationService:
+        registerHealthIndicator: true
+        limitForPeriod: 100
+        limitRefreshPeriod: 1s
+        timeoutDuration: 500ms
+  
+  timelimiter:
+    instances:
+      accessManagementService:
+        timeoutDuration: 5s
+        cancelRunningFuture: true
+      authService:
+        timeoutDuration: 3s
+        cancelRunningFuture: true
+      notificationService:
+        timeoutDuration: 10s
+        cancelRunningFuture: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+    info:
+      enabled: true
+  health:
+    circuitbreakers:
+      enabled: true
+    db:
+      enabled: true
+    diskspace:
+      enabled: true
+    ping:
+      enabled: true
+    defaults:
+      enabled: true
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+  tracing:
+    sampling:
+      probability: 0.0
+    enabled: false
+  zipkin:
+    tracing:
+      endpoint: http://localhost:9411/api/v2/spans
+    enabled: false
+
+gateway:
+  url: http://localhost:6060
+
+services:
+  internal-key: ${SERVICES_INTERNAL_KEY:dev-internal-key}
+  auth:
+    base-url: ${gateway.url}/auth
+  access-management:
+    base-url: ${gateway.url}/access
+
+# Feign client configuration
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 5000
+        readTimeout: 10000
+        loggerLevel: full
+      access-management-service:
+        connectTimeout: 5000
+        readTimeout: 10000
+        loggerLevel: full
+  httpclient:
+    enabled: true
+    connection-timeout: 5000
+    connection-timer-repeat: 3000
+    max-connections: 200
+    max-connections-per-route: 50
+
+notification:
+  service:
+    url: ${NOTIFICATION_SERVICE_URL:http://localhost:6067}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+    initial-instance-info-replication-interval-seconds: 5
+    instance-info-replication-interval-seconds: 10
+    registry-fetch-interval-seconds: 5
+    healthcheck:
+      enabled: true
+  instance:
+    prefer-ip-address: true
+    hostname: localhost
+    instance-id: ${spring.application.name}:${server.port}
+    lease-renewal-interval-in-seconds: 5
+    lease-expiration-duration-in-seconds: 15
+    status-page-url: http://${eureka.instance.hostname}:${server.port}/actuator/info
+    health-check-url: http://${eureka.instance.hostname}:${server.port}/actuator/health
+    health-check-url-path: /actuator/health
+    home-page-url: http://${eureka.instance.hostname}:${server.port}/
+    metadata-map:
+      management.context-path: /actuator
+

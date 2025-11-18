@@ -73,7 +73,13 @@
       "Bash(timeout 20 powershell:*)",
       "Bash(timeout:*)",
       "Bash(lsof:*)",
-      "Bash(unzip:*)"
+      "Bash(unzip:*)",
+      "Bash(git reset:*)",
+      "Bash(start java -jar target/notification-service-*.jar --server.port=6067)",
+      "Bash(start java -jar target/notification-service-*.jar --server.port=6067 timeout 5 /nobreak 2)",
+      "Bash(/dev/null curl -s http://localhost:6067/api/v1/admin/templates -I)",
+      "Bash(wmic process where name=java.exe delete)",
+      "Bash(npx eslint:*)"
     ],
     "deny": [],
     "ask": []

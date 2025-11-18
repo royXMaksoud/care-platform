@@ -1,0 +1,37 @@
+package com.care.warehouse.application.material.command;
+
+import com.care.warehouse.domain.enums.MaterialStatus;
+import com.care.warehouse.domain.model.Material;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+/**
+ * Command object used to create a new Material.
+ * This is part of the application layer (Command side) in Clean Architecture.
+ */
+@Getter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class CreateMaterialCommand {
+    
+    private String code;
+    private Map<String, String> nameTranslations;
+    private Map<String, String> descriptionTranslations;
+    private UUID categoryId;
+    private UUID brandId;
+    private List<Material.MaterialDeterminer> determiners;
+    private Boolean isTrackable;
+    private MaterialStatus status;
+    private Map<String, Object> customAttributes;
+    private Integer reorderLevel;
+    private String unit;
+    private Boolean isActive;
+}
+

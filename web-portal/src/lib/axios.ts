@@ -45,13 +45,40 @@ api.interceptors.response.use(
     const status = err?.response?.status
     const requestUrl = err?.config?.url || ''
     
+    // Don't auto-logout for these endpoints - let them handle their own errors
+    const isAuthEndpoint = requestUrl.includes('/auth/login') || 
+                           requestUrl.includes('/auth/register') ||
+                           requestUrl.includes('/auth/oauth/callback')
     // Don't auto-logout for permissions API (new OAuth users may not have permissions yet)
     const isPermissionsEndpoint = requestUrl.includes('/permissions/users/me') || 
                                    requestUrl.includes('/auth/me/permissions')
+    // Don't auto-logout for user profile endpoint - it's optional and failure shouldn't logout user
+    const isUserProfileEndpoint = requestUrl.includes('/auth/api/users/')
     
-    if (status === 401 && !isPermissionsEndpoint) {
-      try { authStorage?.clearAll?.() } catch {}
-      if (!location.pathname.startsWith('/auth')) location.href = '/auth/login'
+    // For user profile endpoint, suppress error logging (it's optional)
+    if (status === 401 && isUserProfileEndpoint) {
+      // Silently fail - mark as handled to prevent console logging
+      err.isHandled = true
+      err.silent = true
+      // Create a custom error that won't be logged
+      const silentError = new Error('User profile fetch failed (silent)')
+      silentError.response = err.response
+      silentError.config = err.config
+      silentError.isAxiosError = true
+      silentError.silent = true
+      return Promise.reject(silentError)
+    }
+    
+    if (status === 401 && !isAuthEndpoint && !isPermissionsEndpoint && !isUserProfileEndpoint) {
+      // Normal 401 - clear immediately
+      try { 
+        authStorage?.clearAll?.() 
+      } catch (e) {
+        console.error('Error clearing auth storage:', e)
+      }
+      if (!location.pathname.startsWith('/auth')) {
+        location.href = '/auth/login'
+      }
     }
     return Promise.reject(err)
   }

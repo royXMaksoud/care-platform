@@ -35,3 +35,9 @@ export function getLangFromToken(token) {
   const c = decodeJwt(token)
   return pick(c, ['lang', 'language', 'locale'], 'en')
 }
+
+// Extract user's full name from token
+export function getFullNameFromToken(token) {
+  const c = decodeJwt(token)
+  return pick(c, ['fullName', 'full_name', 'name', 'given_name', 'preferred_username'], null)
+}

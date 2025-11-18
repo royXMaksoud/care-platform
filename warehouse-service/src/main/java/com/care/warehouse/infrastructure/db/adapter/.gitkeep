@@ -1,0 +1,3 @@
+# Database adapters will be placed here
+# Adapters implement the output ports (repository interfaces) from domain layer
+

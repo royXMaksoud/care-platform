@@ -1,5 +1,5 @@
 import { Link, Routes, Route, Navigate } from 'react-router-dom'
-import { lazy, Suspense, useMemo } from 'react'
+import React, { lazy, Suspense, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { LogOut, Sparkles } from 'lucide-react'
@@ -15,10 +15,13 @@ const DASRoutes = lazy(() => import('@/modules/das/routes'))
 const AppointmentRoutes = lazy(() => import('@/modules/appointment/routes'))
 // lazy-load Notification module
 const NotificationRoutes = lazy(() => import('@/modules/notification/routes'))
+// lazy-load Warehouse module
+const WarehouseRoutes = lazy(() => import('@/modules/warehouse/routes'))
 
 import { useAuth } from '@/auth/useAuth'
 import authStorage from '@/auth/authStorage'
 import { api } from '@/lib/axios'
+import { getFullNameFromToken } from '@/auth/jwt'
 import { useMyModules } from '@/hooks/useMyModules'
 import { useFastAccessShortcuts } from '@/hooks/useFastAccessShortcuts'
 import LanguageSwitcher from '@/shared/components/LanguageSwitcher'
@@ -39,7 +42,7 @@ function Placeholder({ title }) {
 
 export default function App() {
   const { t } = useTranslation()
-  const { logout, claims } = useAuth()
+  const { logout, claims, token } = useAuth()
   const storedUser = authStorage.getUser()
   const sessionTimeoutMinutes = storedUser?.sessionTimeoutMinutes ?? null
   const tenantLogo = storedUser?.tenantLogo ?? authStorage.getTenantLogo()
@@ -63,14 +66,40 @@ export default function App() {
     claims?.sub ||
     null
 
+  // Get user's full name from JWT token
+  const fullNameFromToken = token ? getFullNameFromToken(token) : null
+
+  // Debug: log JWT claims to see what we're working with
+  useEffect(() => {
+    if (claims) {
+      console.log('🔍 JWT Claims Debug:', {
+        fullNameFromToken,
+        claims,
+        allClaimsKeys: Object.keys(claims),
+      })
+    }
+  }, [claims, fullNameFromToken])
+
+  // Clear just_logged_in flag on mount
+  useEffect(() => {
+    const justLoggedIn = sessionStorage.getItem('just_logged_in')
+    if (justLoggedIn) {
+      // Clear flag after a short delay to allow page to load
+      setTimeout(() => {
+        sessionStorage.removeItem('just_logged_in')
+      }, 1000)
+    }
+  }, [])
+
+  // Disable user profile fetch for now - it's causing 401 errors
+  // We'll use token claims instead
   const { data: currentUser } = useQuery({
     queryKey: ['me', 'profile', userId],
     queryFn: async () => {
-      if (!userId) return null
-      const { data } = await api.get(`/auth/api/users/${userId}`)
-      return data
+      // Disabled - return null to use token claims instead
+      return null
     },
-    enabled: !!userId,
+    enabled: false, // Disabled - use token claims instead
     staleTime: 5 * 60 * 1000,
   })
 
@@ -87,6 +116,7 @@ export default function App() {
   }, [currentUser])
 
   const fallbackName =
+    fullNameFromToken ||
     claims?.fullName ||
     claims?.name ||
     claims?.given_name ||
@@ -113,6 +143,10 @@ export default function App() {
       {
         name: 'Warehouse Management System',
         path: '/warehouse',
+      },
+      {
+        name: 'Warehouse Management System',
+        path: '/warehouse-management-system',
       },
     ]
     // Avoid adding duplicate systems when they already exist from the backend
@@ -364,9 +398,25 @@ export default function App() {
               </Suspense>
             }
           />
+          <Route
+            path="/warehouse/*"
+            element={
+              <Suspense fallback={<div className="p-6">Loading…</div>}>
+                <WarehouseRoutes />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/warehouse-management-system/*"
+            element={
+              <Suspense fallback={<div className="p-6">Loading…</div>}>
+                <WarehouseRoutes />
+              </Suspense>
+            }
+          />
 
           {extendedModules
-          .filter(m => m.path !== '/cms' && m.path !== '/das' && m.path !== '/appointment' && m.path !== '/appointments' && m.path !== '/notification' && m.path !== '/notifications' && m.path !== '/notification-service')
+          .filter(m => m.path !== '/cms' && m.path !== '/das' && m.path !== '/appointment' && m.path !== '/appointments' && m.path !== '/notification' && m.path !== '/notifications' && m.path !== '/notification-service' && m.path !== '/warehouse' && m.path !== '/warehouse-management-system')
           .map((m, idx) => (
             <Route
               key={m.path || `${m.name}-${idx}`}

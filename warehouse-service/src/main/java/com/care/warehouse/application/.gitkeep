@@ -1,0 +1,3 @@
+# Application layer - Use cases, services, commands, queries, validators
+# This layer contains the application logic and orchestrates domain operations
+

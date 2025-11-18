@@ -1,0 +1,135 @@
+{
+  "warehouse": {
+    "title": "Lagerverwaltung",
+    "warehouses": {
+      "title": "Lager",
+      "list": "Lagerliste",
+      "create": "Lager erstellen",
+      "edit": "Lager bearbeiten",
+      "details": "Lagerdetails",
+      "delete": "Lager löschen",
+      "restore": "Lager wiederherstellen",
+      "deleteConfirm": "Sind Sie sicher, dass Sie dieses Lager löschen möchten?",
+      "restoreConfirm": "Sind Sie sicher, dass Sie dieses Lager wiederherstellen möchten?",
+      "code": "Code",
+      "name": "Name",
+      "type": "Typ",
+      "status": "Status",
+      "location": "Standort",
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "deleted": "Gelöscht",
+      "createdAt": "Erstellt am",
+      "updatedAt": "Aktualisiert am"
+    },
+    "materials": {
+      "title": "Materialien & Katalog",
+      "list": "Materialliste",
+      "create": "Material erstellen",
+      "edit": "Material bearbeiten",
+      "details": "Materialdetails",
+      "code": "Materialcode",
+      "name": "Name",
+      "category": "Kategorie",
+      "brand": "Marke",
+      "status": "Status",
+      "trackable": "Nachverfolgbar",
+      "reorderLevel": "Nachbestellgrenze",
+      "unit": "Einheit"
+    },
+    "stock": {
+      "title": "Lagerbuchungen",
+      "stockIn": "Wareneingang",
+      "stockOut": "Warenausgang",
+      "transfer": "Transfer",
+      "adjustment": "Anpassung",
+      "ledger": "Lagerbuch",
+      "transactionType": "Buchungstyp",
+      "quantity": "Menge",
+      "sourceWarehouse": "Quelllager",
+      "targetWarehouse": "Ziellager",
+      "reason": "Grund",
+      "referenceDocument": "Referenzdokument",
+      "notes": "Notizen",
+      "createTransaction": "Buchung erstellen",
+      "transactionCreated": "Buchung erfolgreich erstellt",
+      "insufficientStock": "Unzureichender Lagerbestand"
+    },
+    "dashboard": {
+      "title": "Dashboard",
+      "totalWarehouses": "Gesamte Lager",
+      "totalMaterials": "Gesamte Materialien",
+      "totalOrders": "Gesamte Bestellungen",
+      "itemsBelowReorder": "Artikel unter Nachbestellgrenze",
+      "lowStock": "Niedriger Bestand",
+      "export": "Exportieren",
+      "refresh": "Aktualisieren"
+    },
+    "interfaces": {
+      "title": "Lagerverwaltungssystem",
+      "subtitle": "Verfügbare Schnittstellen",
+      "summary": "Zusammenfassung",
+      "available": "Verfügbar",
+      "comingSoon": "Demnächst",
+      "planned": "Geplant",
+      "interface": "Schnittstelle",
+      "interfaces": "Schnittstellen",
+      "open": "Öffnen",
+      "items": {
+        "dashboard": {
+          "name": "Dashboard",
+          "description": "Überblick über Bestand, Materialien und Lagerleistung"
+        },
+        "warehouses": {
+          "name": "Lager",
+          "description": "Lagerstandorte und Details verwalten"
+        },
+        "materials": {
+          "name": "Materialien",
+          "description": "Materialien, Kategorien und Marken verwalten"
+        },
+        "orders": {
+          "name": "Bestellungen",
+          "description": "Lagerbestellungen und Transaktionen verwalten"
+        },
+        "stock": {
+          "name": "Bestandsverwaltung",
+          "description": "Bestandsniveaus und Transaktionen anzeigen und verwalten"
+        },
+        "reports": {
+          "name": "Berichte",
+          "description": "Berichte und Analysen generieren"
+        },
+        "customFields": {
+          "name": "Benutzerdefinierte Felder",
+          "description": "Benutzerdefinierte Felddefinitionen konfigurieren"
+        }
+      },
+      "categories": {
+        "overview": "Überblick",
+        "management": "Verwaltung",
+        "analytics": "Analysen",
+        "configuration": "Konfiguration"
+      }
+    },
+    "common": {
+      "save": "Speichern",
+      "cancel": "Abbrechen",
+      "delete": "Löschen",
+      "edit": "Bearbeiten",
+      "view": "Anzeigen",
+      "create": "Erstellen",
+      "search": "Suchen",
+      "filter": "Filtern",
+      "export": "Exportieren",
+      "loading": "Lädt...",
+      "noData": "Keine Daten verfügbar",
+      "error": "Ein Fehler ist aufgetreten",
+      "retry": "Wiederholen",
+      "success": "Erfolg",
+      "confirm": "Bestätigen",
+      "close": "Schließen"
+    }
+  }
+}
+

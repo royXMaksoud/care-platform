@@ -1,0 +1,269 @@
+{
+  "info": {
+    "name": "Warehouse Service - Material API",
+    "description": "Postman collection for Material Management APIs in Warehouse Service",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "warehouse-service"
+  },
+  "item": [
+    {
+      "name": "Create Material",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"code\": \"MAT-001\",\n  \"nameTranslations\": {\n    \"en\": \"Laptop Computer\",\n    \"ar\": \"جهاز كمبيوتر محمول\"\n  },\n  \"descriptionTranslations\": {\n    \"en\": \"High-performance laptop for business use\",\n    \"ar\": \"جهاز كمبيوتر محمول عالي الأداء للاستخدام التجاري\"\n  },\n  \"categoryId\": \"{{category_id}}\",\n  \"brandId\": \"{{brand_id}}\",\n  \"determiners\": [\n    {\n      \"type\": \"BARCODE\",\n      \"value\": \"1234567890123\",\n      \"metadata\": {}\n    }\n  ],\n  \"isTrackable\": true,\n  \"status\": \"ACTIVE\",\n  \"customAttributes\": {\n    \"weight\": 2.5,\n    \"dimensions\": {\n      \"length\": 35,\n      \"width\": 24,\n      \"height\": 2\n    }\n  },\n  \"reorderLevel\": 10,\n  \"unit\": \"PCS\",\n  \"isActive\": true\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/api/warehouse/v1/materials",
+          "host": ["{{base_url}}"],
+          "path": ["api", "warehouse", "v1", "materials"]
+        },
+        "description": "Creates a new material with the provided data"
+      },
+      "response": []
+    },
+    {
+      "name": "Update Material",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"code\": \"MAT-001-UPDATED\",\n  \"nameTranslations\": {\n    \"en\": \"Laptop Computer (Updated)\",\n    \"ar\": \"جهاز كمبيوتر محمول (محدث)\"\n  },\n  \"reorderLevel\": 15,\n  \"unit\": \"BOX\",\n  \"isActive\": true\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/api/warehouse/v1/materials/{{material_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "warehouse", "v1", "materials", "{{material_id}}"]
+        },
+        "description": "Updates an existing material with the provided data"
+      },
+      "response": []
+    },
+    {
+      "name": "Get Material by ID",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/warehouse/v1/materials/{{material_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "warehouse", "v1", "materials", "{{material_id}}"]
+        },
+        "description": "Retrieves a material by its unique identifier"
+      },
+      "response": []
+    },
+    {
+      "name": "Search Materials",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/warehouse/v1/materials?page=0&size=10&sort=code,asc&categoryId={{category_id}}&status=ACTIVE",
+          "host": ["{{base_url}}"],
+          "path": ["api", "warehouse", "v1", "materials"],
+          "query": [
+            {
+              "key": "page",
+              "value": "0",
+              "description": "Page number (0-based)"
+            },
+            {
+              "key": "size",
+              "value": "10",
+              "description": "Page size"
+            },
+            {
+              "key": "sort",
+              "value": "code,asc",
+              "description": "Sort criteria (field,direction)"
+            },
+            {
+              "key": "categoryId",
+              "value": "{{category_id}}",
+              "description": "Filter by category ID",
+              "disabled": true
+            },
+            {
+              "key": "brandId",
+              "value": "{{brand_id}}",
+              "description": "Filter by brand ID",
+              "disabled": true
+            },
+            {
+              "key": "status",
+              "value": "ACTIVE",
+              "description": "Filter by status (ACTIVE, INACTIVE, DISCONTINUED, PENDING_APPROVAL)",
+              "disabled": true
+            },
+            {
+              "key": "isTrackable",
+              "value": "true",
+              "description": "Filter by trackable flag",
+              "disabled": true
+            },
+            {
+              "key": "isActive",
+              "value": "true",
+              "description": "Filter by active flag",
+              "disabled": true
+            },
+            {
+              "key": "determinerValue",
+              "value": "",
+              "description": "Search by determiner value",
+              "disabled": true
+            },
+            {
+              "key": "nameSearch",
+              "value": "",
+              "description": "Search in name translations",
+              "disabled": true
+            }
+          ]
+        },
+        "description": "Searches materials with optional filters and pagination"
+      },
+      "response": []
+    },
+    {
+      "name": "Save Custom Fields",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customFields\": {\n    \"warranty_period\": 24,\n    \"manufacturing_date\": \"2024-01-15\",\n    \"color\": \"silver\",\n    \"warranty_type\": \"standard\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/api/warehouse/v1/materials/{{material_id}}/custom-fields",
+          "host": ["{{base_url}}"],
+          "path": ["api", "warehouse", "v1", "materials", "{{material_id}}", "custom-fields"]
+        },
+        "description": "Saves or updates custom field values for a material. Values are validated against CustomFieldDefinition metadata."
+      },
+      "response": []
+    },
+    {
+      "name": "Get Custom Fields",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/warehouse/v1/materials/{{material_id}}/custom-fields",
+          "host": ["{{base_url}}"],
+          "path": ["api", "warehouse", "v1", "materials", "{{material_id}}", "custom-fields"]
+        },
+        "description": "Retrieves all custom field values for a material"
+      },
+      "response": []
+    },
+    {
+      "name": "Delete Material",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/warehouse/v1/materials/{{material_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "warehouse", "v1", "materials", "{{material_id}}"]
+        },
+        "description": "Soft deletes a material by setting isDeleted = true. The material will not be returned in search results but data is preserved."
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "material_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "category_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "brand_id",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
+

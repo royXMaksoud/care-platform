@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/axios'
 import { toast } from 'sonner'
@@ -29,7 +29,7 @@ export default function BranchServiceTypeList() {
   const lastScopeFetchKeyRef = useRef(null)
 
   // Get scopeValueIds from APPOINTMENT_SETUP_AND_CONFIGURATION section only
-  const { scopeValueIds, isLoading: isLoadingScopes } = useSystemSectionScopes(SYSTEM_SECTIONS.Appointment_SETUP_AND_CONFIGURATION)
+  const { scopeValueIds } = useSystemSectionScopes(SYSTEM_SECTIONS.Appointment_SETUP_AND_CONFIGURATION)
 
   const { data: summaries = [], isLoading } = useQuery({
     queryKey: ['branch-service-types'],
@@ -39,7 +39,7 @@ export default function BranchServiceTypeList() {
     },
   })
 
-  const hydrateBranch = (input) => {
+  const hydrateBranch = useCallback((input) => {
     if (!input) return null
     const branchInfo = allOrganizationBranches.find(
       (item) => item.organizationBranchId === input.organizationBranchId,
@@ -60,7 +60,7 @@ export default function BranchServiceTypeList() {
       organizationId: input.organizationId,
       organizationName: input.organizationName || '',
     }
-  }
+  }, [allOrganizationBranches])
 
   const handleOpenBranch = (branch) => {
     const hydrated = hydrateBranch(branch)
@@ -249,7 +249,7 @@ export default function BranchServiceTypeList() {
         setSelectedBranch(null)
       }
     }
-  }, [selectedOrganizationId, selectedBranchId, allOrganizationBranches])
+  }, [selectedOrganizationId, selectedBranchId, allOrganizationBranches, selectedBranch])
 
   useEffect(() => {
     if (!selectedBranch || !selectedBranchId) {
@@ -267,7 +267,7 @@ export default function BranchServiceTypeList() {
     ) {
       setSelectedBranch(branch)
     }
-  }, [selectedBranchId, selectedOrganizationId, allOrganizationBranches])
+  }, [selectedBranchId, selectedOrganizationId, allOrganizationBranches, selectedBranch, hydrateBranch])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
@@ -410,18 +410,18 @@ export default function BranchServiceTypeList() {
                         isSelected ? 'bg-emerald-50/50' : ''
                       }`}
                     >
-                      <td className="px-4 py-4">
-                      <div className="flex items-center gap-2">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600">
-                          <Building2 className="h-4 w-4" />
+                          <td className="px-4 py-4">
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+                            <Building2 className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-slate-800">
+                              {row.branchName || 'Unnamed Branch'}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-semibold text-slate-800">
-                            {row.branchName || 'Unnamed Branch'}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
+                      </td>
                     <td className="px-4 py-4 text-sm text-slate-600">
                       <div className="flex flex-col">
                         <span className="font-medium text-slate-700">
@@ -605,136 +605,136 @@ function BranchServiceTypeEditor({ branch, onClose, onSaved }) {
       <div className="relative flex h-full w-full max-w-2xl sm:max-w-3xl sm:max-h-[90vh] overflow-hidden border-l border-slate-200 bg-white shadow-2xl sm:rounded-l-2xl">
         <div className="flex w-full flex-col">
           <div className="flex items-center justify-between border-b border-slate-200 px-4 py-4">
-          <div>
-            <h2 className="text-xl font-semibold text-slate-800">
-              Configure Services
-            </h2>
-            <p className="text-xs text-slate-500">
-              {branch.organizationName ? `${branch.organizationName} • ` : ''}
-              {branch.branchName || branch.organizationBranchId}
-            </p>
+            <div>
+              <h2 className="text-xl font-semibold text-slate-800">
+                Configure Services
+              </h2>
+              <p className="text-xs text-slate-500">
+                {branch.organizationName ? `${branch.organizationName} • ` : ''}
+                {branch.branchName || branch.organizationBranchId}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
 
-        <div className="flex flex-1 flex-col overflow-hidden">
-          <div className="border-b border-slate-200 bg-slate-50 px-4 py-3">
-            <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2">
-              <Search className="h-4 w-4 text-slate-400" />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search services..."
-                className="flex-1 text-sm text-slate-700 outline-none placeholder:text-slate-400"
-              />
-              {search && (
-                <button
-                  type="button"
-                  onClick={() => setSearch('')}
-                  className="rounded-full bg-slate-100 p-1 text-slate-500 hover:bg-slate-200"
-                >
-                  <X className="h-3 w-3" />
-                </button>
+          <div className="flex flex-1 flex-col overflow-hidden">
+            <div className="border-b border-slate-200 bg-slate-50 px-4 py-3">
+              <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2">
+                <Search className="h-4 w-4 text-slate-400" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search services..."
+                  className="flex-1 text-sm text-slate-700 outline-none placeholder:text-slate-400"
+                />
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch('')}
+                    className="rounded-full bg-slate-100 p-1 text-slate-500 hover:bg-slate-200"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-4">
+              {isLoading && (
+                <div className="flex flex-col items-center justify-center gap-3 py-16 text-slate-500">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                  <p className="text-sm">Loading service tree…</p>
+                </div>
+              )}
+              {error && (
+                <div className="flex flex-col items-center justify-center gap-3 py-20 text-slate-600">
+                  <Circle className="h-10 w-10 text-red-400" />
+                  <div className="text-center max-w-md space-y-2">
+                    <p className="text-sm font-semibold text-red-600">
+                      Unable to load branch service types
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {error?.response?.data?.message ||
+                       error?.message ||
+                       'An error occurred while loading the service types. Please try again later.'}
+                    </p>
+                    {error?.response?.status === 503 && (
+                      <p className="text-xs text-amber-600 mt-2">
+                        Cannot connect to access-management-service. Please check if the service is running and try again.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+              {!isLoading && !error && filteredTree.length === 0 && (
+                <div className="flex flex-col items-center justify-center gap-3 py-20 text-slate-500">
+                  <Circle className="h-10 w-10" />
+                  <p className="text-sm text-center max-w-xs">
+                    There are no active service types configured. Add service types first to enable branch mapping.
+                  </p>
+                </div>
+              )}
+              {!isLoading && filteredTree.length > 0 && (
+                <div className="pb-20">
+                  {filteredTree.map((node) => (
+                    <TreeNode
+                      key={node.serviceTypeId}
+                      node={node}
+                      depth={0}
+                      assignments={assignments}
+                      filteredIds={filteredIds}
+                      expanded={expanded}
+                      onToggle={handleToggleNode}
+                      onCostChange={handleCostChange}
+                      onToggleExpand={handleToggleExpand}
+                    />
+                  ))}
+                </div>
               )}
             </div>
-          </div>
 
-          <div className="flex-1 overflow-y-auto px-4">
-            {isLoading && (
-              <div className="flex flex-col items-center justify-center gap-3 py-16 text-slate-500">
-                <Loader2 className="h-6 w-6 animate-spin" />
-                <p className="text-sm">Loading service tree…</p>
-              </div>
-            )}
-            {error && (
-              <div className="flex flex-col items-center justify-center gap-3 py-20 text-slate-600">
-                <Circle className="h-10 w-10 text-red-400" />
-                <div className="text-center max-w-md space-y-2">
-                  <p className="text-sm font-semibold text-red-600">
-                    Unable to load branch service types
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    {error?.response?.data?.message || 
-                     error?.message || 
-                     'An error occurred while loading the service types. Please try again later.'}
-                  </p>
-                  {error?.response?.status === 503 && (
-                    <p className="text-xs text-amber-600 mt-2">
-                      Cannot connect to access-management-service. Please check if the service is running and try again.
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-            {!isLoading && !error && filteredTree.length === 0 && (
-              <div className="flex flex-col items-center justify-center gap-3 py-20 text-slate-500">
-                <Circle className="h-10 w-10" />
-                <p className="text-sm text-center max-w-xs">
-                  There are no active service types configured. Add service types first to enable branch mapping.
-                </p>
-              </div>
-            )}
-            {!isLoading && filteredTree.length > 0 && (
-              <div className="pb-20">
-                {filteredTree.map((node) => (
-                  <TreeNode
-                    key={node.serviceTypeId}
-                    node={node}
-                    depth={0}
-                    assignments={assignments}
-                    filteredIds={filteredIds}
-                    expanded={expanded}
-                    onToggle={handleToggleNode}
-                    onCostChange={handleCostChange}
-                    onToggleExpand={handleToggleExpand}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="border-t border-slate-200 bg-white px-4 py-4">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div className="flex items-center gap-3 text-sm">
-                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                  {selectedCount} services selected
-                </span>
-                <span className="text-slate-500">
-                  Estimated total cost:{' '}
-                  <span className="font-semibold text-slate-700">
-                    {formatCurrency(totalCost)}
+            <div className="border-t border-slate-200 bg-white px-4 py-4">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div className="flex items-center gap-3 text-sm">
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                    {selectedCount} services selected
                   </span>
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 transition-colors hover:border-slate-400 hover:text-slate-800"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  disabled={mutation.isLoading}
-                  className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-emerald-200/60 transition-all hover:translate-y-[-1px] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-70"
-                >
-                  {mutation.isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-                  Save Changes
-                </button>
+                  <span className="text-slate-500">
+                    Estimated total cost:{' '}
+                    <span className="font-semibold text-slate-700">
+                      {formatCurrency(totalCost)}
+                    </span>
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 transition-colors hover:border-slate-400 hover:text-slate-800"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSave}
+                    disabled={mutation.isPending}
+                    className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-emerald-200/60 transition-all hover:translate-y-[-1px] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {mutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                    Save Changes
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
       </div>
     </div>
   )

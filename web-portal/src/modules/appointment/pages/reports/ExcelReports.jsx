@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Card,
@@ -14,6 +14,10 @@ import {
 import { DownloadOutlined, FilterOutlined, ReloadOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { excelReportsApi } from '../../api/dashboardApi'
+import { api } from '@/lib/axios'
+import { SYSTEM_SECTIONS } from '@/config/systemSectionConstants'
+import { useSystemSectionScopes } from '../../hooks/useSystemSectionScopes'
+import SearchableSelect from '@/components/SearchableSelect'
 
 const { RangePicker } = DatePicker
 
@@ -58,102 +62,243 @@ const REPORT_CONFIGS = {
   },
 }
 
-// الحالات - العربية
-const MOCK_STATUSES_AR = [
-  { value: 'PENDING', label: 'قيد الانتظار' },
-  { value: 'CONFIRMED', label: 'مؤكدة' },
-  { value: 'COMPLETED', label: 'مكتملة' },
-  { value: 'CANCELLED', label: 'ملغاة' },
-  { value: 'NO_SHOW', label: 'لم يحضر' },
-]
-
-// الحالات - الإنجليزية
-const MOCK_STATUSES_EN = [
-  { value: 'PENDING', label: 'Pending' },
-  { value: 'CONFIRMED', label: 'Confirmed' },
-  { value: 'COMPLETED', label: 'Completed' },
-  { value: 'CANCELLED', label: 'Cancelled' },
-  { value: 'NO_SHOW', label: 'No Show' },
-]
-
-// الأولويات - العربية
-const MOCK_PRIORITIES_AR = [
-  { value: 'LOW', label: 'منخفضة' },
-  { value: 'MEDIUM', label: 'متوسطة' },
-  { value: 'HIGH', label: 'عالية' },
-  { value: 'URGENT', label: 'طارئة' },
-]
-
-// الأولويات - الإنجليزية
-const MOCK_PRIORITIES_EN = [
-  { value: 'LOW', label: 'Low' },
-  { value: 'MEDIUM', label: 'Medium' },
-  { value: 'HIGH', label: 'High' },
-  { value: 'URGENT', label: 'Urgent' },
-]
-
-// المراكز - العربية
-const MOCK_CENTERS_AR = [
-  { value: 'CENTER_001', label: 'مركز رئيسي' },
-  { value: 'CENTER_002', label: 'مركز الشمال' },
-  { value: 'CENTER_003', label: 'مركز الجنوب' },
-]
-
-// المراكز - الإنجليزية
-const MOCK_CENTERS_EN = [
-  { value: 'CENTER_001', label: 'Main Center' },
-  { value: 'CENTER_002', label: 'North Center' },
-  { value: 'CENTER_003', label: 'South Center' },
-]
-
-// المنظمات - العربية
-const MOCK_ORGANIZATIONS_AR = [
-  { value: 'ORG_001', label: 'منظمة النور' },
-  { value: 'ORG_002', label: 'منظمة الأمل' },
-  { value: 'ORG_003', label: 'منظمة الرحمة' },
-]
-
-// المنظمات - الإنجليزية
-const MOCK_ORGANIZATIONS_EN = [
-  { value: 'ORG_001', label: 'Light Organization' },
-  { value: 'ORG_002', label: 'Hope Organization' },
-  { value: 'ORG_003', label: 'Mercy Organization' },
-]
-
-// دوال مساعدة للحصول على البيانات حسب اللغة
-const getStatuses = (isArabic) => isArabic ? MOCK_STATUSES_AR : MOCK_STATUSES_EN
-const getPriorities = (isArabic) => isArabic ? MOCK_PRIORITIES_AR : MOCK_PRIORITIES_EN
-const getCenters = (isArabic) => isArabic ? MOCK_CENTERS_AR : MOCK_CENTERS_EN
-const getOrganizations = (isArabic) => isArabic ? MOCK_ORGANIZATIONS_AR : MOCK_ORGANIZATIONS_EN
 
 export default function ExcelReports() {
   const { i18n } = useTranslation()
   const isArabic = i18n.language === 'ar'
+  const uiLang = isArabic ? 'ar' : 'en'
   const [form] = Form.useForm()
   const [selectedReportType, setSelectedReportType] = useState(REPORT_TYPES.DETAILED)
   const [loading, setLoading] = useState(false)
+  
+  // Get scopeValueIds for filtering branches
+  const { scopeValueIds, isLoading: isLoadingScopes } = useSystemSectionScopes(SYSTEM_SECTIONS.APPOINTMENT_SCHEDULING)
+  const [authorizedBranchIds, setAuthorizedBranchIds] = useState([])
+  
+  // Data states
+  const [allOrganizations, setAllOrganizations] = useState([])
+  const [allOrganizationBranches, setAllOrganizationBranches] = useState([])
+  const [organizationOptions, setOrganizationOptions] = useState([])
+  const [branchOptions, setBranchOptions] = useState([])
+  const [selectedOrganizationId, setSelectedOrganizationId] = useState(null)
+  const [loadingLookups, setLoadingLookups] = useState(false)
+  const [statusOptions, setStatusOptions] = useState([])
+  const [priorityOptions, setPriorityOptions] = useState([])
+
+  // Load organizations and branches
+  useEffect(() => {
+    let isActive = true
+    const loadLookups = async () => {
+      setLoadingLookups(true)
+      try {
+        const results = await Promise.allSettled([
+          api.post(
+            '/access/api/organizations/filter',
+            { criteria: [] },
+            { params: { page: 0, size: 10000, lang: uiLang } }
+          ),
+          api.post(
+            '/access/api/organization-branches/filter',
+            { criteria: [] },
+            { params: { page: 0, size: 10000, lang: uiLang } }
+          ),
+          api.get('/appointment-service/api/admin/appointment-statuses/lookup', {
+            params: { lang: uiLang },
+          }),
+        ])
+
+        if (!isActive) return
+
+        const organizationsRes = results[0]?.status === 'fulfilled' ? results[0].value : null
+        const branchesRes = results[1]?.status === 'fulfilled' ? results[1].value : null
+        const statusesRes = results[2]?.status === 'fulfilled' ? results[2].value : null
+
+        const organizationsData = organizationsRes?.data
+        const organizationItems = Array.isArray(organizationsData)
+          ? organizationsData
+          : Array.isArray(organizationsData?.content)
+          ? organizationsData.content
+          : []
+        setAllOrganizations(organizationItems)
+
+        const branchesData = branchesRes?.data
+        const branchItems = Array.isArray(branchesData)
+          ? branchesData
+          : Array.isArray(branchesData?.content)
+          ? branchesData.content
+          : []
+        setAllOrganizationBranches(branchItems)
+
+        // Load status options
+        const statusItems = Array.isArray(statusesRes?.data)
+          ? statusesRes.data
+          : []
+        setStatusOptions(
+          statusItems.map((status) => ({
+            value: status.code || status.value,
+            label: status.label || status.name || status.code || 'Status',
+            code: status.code,
+            name: status.name,
+          }))
+        )
+
+        // Priority options (static)
+        setPriorityOptions([
+          { value: 'NORMAL', label: isArabic ? 'عادية' : 'Normal' },
+          { value: 'URGENT', label: isArabic ? 'طارئة' : 'Urgent' },
+        ])
+      } catch (err) {
+        console.error('Failed to load lookups:', err)
+      } finally {
+        if (isActive) {
+          setLoadingLookups(false)
+        }
+      }
+    }
+
+    loadLookups()
+    return () => {
+      isActive = false
+    }
+  }, [uiLang])
+
+  // Update authorized branch IDs from scopes
+  useEffect(() => {
+    if (scopeValueIds && scopeValueIds.length > 0) {
+      setAuthorizedBranchIds(scopeValueIds)
+    } else {
+      setAuthorizedBranchIds([])
+    }
+  }, [scopeValueIds])
+
+  // Filter organizations based on scopeValueId (like AppointmentList.jsx)
+  const organizationOptionsFiltered = useMemo(() => {
+    const orgMap = {}
+    const options = []
+    const authorizedSet = new Set(authorizedBranchIds || [])
+    const hasScopeFilter = authorizedSet.size > 0
+    const allowedOrgIds = new Set()
+
+    if (hasScopeFilter) {
+      allOrganizationBranches.forEach((branch) => {
+        if (authorizedSet.has(branch.organizationBranchId) && branch.organizationId) {
+          allowedOrgIds.add(branch.organizationId)
+        }
+      })
+    }
+
+    const canUseOrg = (orgId) => {
+      if (!orgId) return false
+      if (!hasScopeFilter) return true
+      return allowedOrgIds.has(orgId)
+    }
+
+    const ensureOrgOption = (orgId, labelCandidate) => {
+      if (!orgId || orgMap[orgId] || !canUseOrg(orgId)) return
+      const label = labelCandidate || orgId || 'Organization'
+      orgMap[orgId] = label
+      options.push({ value: orgId, label })
+    }
+
+    allOrganizations.forEach((org) => {
+      const orgId = org.organizationId || org.id
+      const label = org.organizationName || org.name || org.code || orgId
+      ensureOrgOption(orgId, label)
+    })
+
+    allOrganizationBranches.forEach((branch) => {
+      const orgId = branch.organizationId
+      const label =
+        branch.organizationName ||
+        branch.organization?.name ||
+        branch.organizationCode ||
+        branch.name ||
+        orgId
+      ensureOrgOption(orgId, label)
+    })
+
+    return options
+  }, [allOrganizations, allOrganizationBranches, authorizedBranchIds])
+
+  // Update organization options
+  useEffect(() => {
+    setOrganizationOptions(organizationOptionsFiltered)
+  }, [organizationOptionsFiltered])
+
+  // Filter branches based on selected organizations and authorized branch IDs
+  const filteredBranchOptions = useMemo(() => {
+    const selectedOrgIds = Array.isArray(selectedOrganizationId) 
+      ? selectedOrganizationId 
+      : selectedOrganizationId ? [selectedOrganizationId] : []
+    
+    return allOrganizationBranches
+      .filter((branch) => {
+        if (!branch?.organizationBranchId) return false
+        if (authorizedBranchIds.length && !authorizedBranchIds.includes(branch.organizationBranchId)) {
+          return false
+        }
+        if (selectedOrgIds.length > 0 && !selectedOrgIds.includes(branch.organizationId)) {
+          return false
+        }
+        return true
+      })
+      .map((branch) => ({
+        value: branch.organizationBranchId,
+        label: branch.name || branch.organizationBranchName || 'Unknown branch',
+      }))
+  }, [allOrganizationBranches, authorizedBranchIds, selectedOrganizationId])
+
+  // Update branch options when filtered branches change
+  useEffect(() => {
+    setBranchOptions(filteredBranchOptions)
+  }, [filteredBranchOptions])
 
   const handleGenerateReport = useCallback(async () => {
     try {
       setLoading(true)
       const values = await form.validateFields()
 
-      // جمع الفلاتر
-      const filters = {
-        reportType: selectedReportType,
-        organizationIds: values.organization ? [values.organization] : [],
-        centerIds: values.center ? [values.center] : [],
-        statuses: values.status ? [values.status] : [],
-        priorities: values.priority ? [values.priority] : [],
-        language: isArabic ? 'ar' : 'en',
+      // Map report type
+      const reportTypeMap = {
+        [REPORT_TYPES.DETAILED]: 'DETAILED',
+        [REPORT_TYPES.STATISTICAL]: 'STATISTICAL',
+        [REPORT_TYPES.CENTER]: 'CENTER',
+        [REPORT_TYPES.ORGANIZATION]: 'ORGANIZATION',
+        [REPORT_TYPES.PRIORITY]: 'PRIORITY',
       }
 
-      if (values.dateRange) {
+      // Build filters
+      const filters = {
+        reportType: reportTypeMap[selectedReportType] || 'DETAILED',
+        organizationIds: Array.isArray(values.organization) 
+          ? values.organization 
+          : values.organization 
+          ? [values.organization] 
+          : [],
+        centerIds: Array.isArray(values.organizationBranchId)
+          ? values.organizationBranchId
+          : values.organizationBranchId
+          ? [values.organizationBranchId]
+          : [],
+        statuses: Array.isArray(values.status) 
+          ? values.status 
+          : values.status 
+          ? [values.status] 
+          : [],
+        priorities: Array.isArray(values.priority)
+          ? values.priority
+          : values.priority
+          ? [values.priority]
+          : [],
+        language: uiLang,
+      }
+
+      if (values.dateRange && values.dateRange[0] && values.dateRange[1]) {
         filters.dateFrom = values.dateRange[0].format('YYYY-MM-DD')
         filters.dateTo = values.dateRange[1].format('YYYY-MM-DD')
       }
 
-      // استدعاء API المناسبة حسب نوع التقرير
+      // Call appropriate API based on report type
       let fileBlob = null
       switch (selectedReportType) {
         case REPORT_TYPES.DETAILED:
@@ -175,20 +320,27 @@ export default function ExcelReports() {
           throw new Error('Unknown report type')
       }
 
-      // تحميل الملف
+      // Download file
       downloadFile(fileBlob, selectedReportType, isArabic)
       message.success('تم توليد التقرير بنجاح / Report generated successfully')
     } catch (error) {
       console.error('Error generating report:', error)
-      message.error('خطأ في توليد التقرير / Error generating report')
+      const errorMsg = error?.response?.data?.message || 'خطأ في توليد التقرير / Error generating report'
+      message.error(errorMsg)
     } finally {
       setLoading(false)
     }
-  }, [form, selectedReportType, isArabic])
+  }, [form, selectedReportType, isArabic, uiLang])
 
   const handleReset = () => {
     form.resetFields()
-    setReportData(null)
+    setSelectedOrganizationId(null)
+  }
+
+  const handleOrganizationChange = (value) => {
+    setSelectedOrganizationId(value)
+    // Clear branch selection when organization changes
+    form.setFieldsValue({ organizationBranchId: null })
   }
 
   return (
@@ -249,23 +401,45 @@ export default function ExcelReports() {
                           name="organization"
                         >
                           <Select
-                            placeholder={isArabic ? 'اختر منظمة' : 'Select organization'}
+                            mode="multiple"
+                            placeholder={isArabic ? 'اختر منظمة (اختياري)' : 'Select organization(s) (optional)'}
                             allowClear
-                            options={getOrganizations(isArabic)}
+                            options={organizationOptions}
+                            loading={loadingLookups}
+                            onChange={handleOrganizationChange}
+                            showSearch
+                            filterOption={(input, option) =>
+                              (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                            }
                           />
                         </Form.Item>
                       </Col>
 
-                      {/* المركز */}
+                      {/* المركز / الفرع */}
                       <Col xs={24} sm={12} lg={6}>
                         <Form.Item
-                          label={isArabic ? 'المركز' : 'Center'}
-                          name="center"
+                          label={isArabic ? 'المركز / الفرع' : 'Center / Branch'}
+                          name="organizationBranchId"
                         >
                           <Select
-                            placeholder={isArabic ? 'اختر مركزاً' : 'Select center'}
+                            mode="multiple"
+                            placeholder={
+                              selectedOrganizationId && (Array.isArray(selectedOrganizationId) ? selectedOrganizationId.length > 0 : true)
+                                ? isArabic
+                                  ? 'اختر فرعاً (اختياري)'
+                                  : 'Select branch(es) (optional)'
+                                : isArabic
+                                ? 'اختر منظمة أولاً'
+                                : 'Select organization first'
+                            }
                             allowClear
-                            options={getCenters(isArabic)}
+                            options={branchOptions}
+                            loading={loadingLookups}
+                            disabled={!selectedOrganizationId || (Array.isArray(selectedOrganizationId) ? selectedOrganizationId.length === 0 : false)}
+                            showSearch
+                            filterOption={(input, option) =>
+                              (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                            }
                           />
                         </Form.Item>
                       </Col>
@@ -277,9 +451,15 @@ export default function ExcelReports() {
                           name="status"
                         >
                           <Select
-                            placeholder={isArabic ? 'اختر الحالة' : 'Select status'}
+                            mode="multiple"
+                            placeholder={isArabic ? 'اختر الحالة (اختياري)' : 'Select status(es) (optional)'}
                             allowClear
-                            options={getStatuses(isArabic)}
+                            options={statusOptions}
+                            loading={loadingLookups}
+                            showSearch
+                            filterOption={(input, option) =>
+                              (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                            }
                           />
                         </Form.Item>
                       </Col>
@@ -291,9 +471,14 @@ export default function ExcelReports() {
                           name="priority"
                         >
                           <Select
-                            placeholder={isArabic ? 'اختر الأولوية' : 'Select priority'}
+                            mode="multiple"
+                            placeholder={isArabic ? 'اختر الأولوية (اختياري)' : 'Select priority(ies) (optional)'}
                             allowClear
-                            options={getPriorities(isArabic)}
+                            options={priorityOptions}
+                            showSearch
+                            filterOption={(input, option) =>
+                              (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                            }
                           />
                         </Form.Item>
                       </Col>

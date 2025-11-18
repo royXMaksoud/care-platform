@@ -1,0 +1,135 @@
+{
+  "warehouse": {
+    "title": "إدارة المستودعات",
+    "warehouses": {
+      "title": "المستودعات",
+      "list": "قائمة المستودعات",
+      "create": "إنشاء مستودع",
+      "edit": "تعديل مستودع",
+      "details": "تفاصيل المستودع",
+      "delete": "حذف مستودع",
+      "restore": "استعادة مستودع",
+      "deleteConfirm": "هل أنت متأكد من حذف هذا المستودع؟",
+      "restoreConfirm": "هل أنت متأكد من استعادة هذا المستودع؟",
+      "code": "الكود",
+      "name": "الاسم",
+      "type": "النوع",
+      "status": "الحالة",
+      "location": "الموقع",
+      "active": "نشط",
+      "inactive": "غير نشط",
+      "deleted": "محذوف",
+      "createdAt": "تاريخ الإنشاء",
+      "updatedAt": "تاريخ التحديث"
+    },
+    "materials": {
+      "title": "المواد والكتالوج",
+      "list": "قائمة المواد",
+      "create": "إنشاء مادة",
+      "edit": "تعديل مادة",
+      "details": "تفاصيل المادة",
+      "code": "كود المادة",
+      "name": "الاسم",
+      "category": "الفئة",
+      "brand": "العلامة التجارية",
+      "status": "الحالة",
+      "trackable": "قابل للتتبع",
+      "reorderLevel": "مستوى إعادة الطلب",
+      "unit": "الوحدة"
+    },
+    "stock": {
+      "title": "معاملات المخزون",
+      "stockIn": "إدخال مخزون",
+      "stockOut": "إخراج مخزون",
+      "transfer": "نقل",
+      "adjustment": "تعديل",
+      "ledger": "سجل المخزون",
+      "transactionType": "نوع المعاملة",
+      "quantity": "الكمية",
+      "sourceWarehouse": "المستودع المصدر",
+      "targetWarehouse": "المستودع الهدف",
+      "reason": "السبب",
+      "referenceDocument": "وثيقة مرجعية",
+      "notes": "ملاحظات",
+      "createTransaction": "إنشاء معاملة",
+      "transactionCreated": "تم إنشاء المعاملة بنجاح",
+      "insufficientStock": "المخزون غير كافٍ"
+    },
+    "dashboard": {
+      "title": "لوحة التحكم",
+      "totalWarehouses": "إجمالي المستودعات",
+      "totalMaterials": "إجمالي المواد",
+      "totalOrders": "إجمالي الطلبات",
+      "itemsBelowReorder": "عناصر أقل من مستوى إعادة الطلب",
+      "lowStock": "مخزون منخفض",
+      "export": "تصدير",
+      "refresh": "تحديث"
+    },
+    "interfaces": {
+      "title": "نظام إدارة المستودعات",
+      "subtitle": "الواجهات المتاحة",
+      "summary": "الملخص",
+      "available": "متاح",
+      "comingSoon": "قريباً",
+      "planned": "مخطط",
+      "interface": "واجهة",
+      "interfaces": "واجهات",
+      "open": "فتح",
+      "items": {
+        "dashboard": {
+          "name": "لوحة التحكم",
+          "description": "نظرة عامة على المخزون والمواد وأداء المستودعات"
+        },
+        "warehouses": {
+          "name": "المستودعات",
+          "description": "إدارة مواقع المستودعات وتفاصيلها"
+        },
+        "materials": {
+          "name": "المواد",
+          "description": "إدارة المواد والفئات والعلامات التجارية"
+        },
+        "orders": {
+          "name": "الطلبات",
+          "description": "إدارة طلبات المستودعات والمعاملات"
+        },
+        "stock": {
+          "name": "إدارة المخزون",
+          "description": "عرض وإدارة مستويات المخزون والمعاملات"
+        },
+        "reports": {
+          "name": "التقارير",
+          "description": "إنشاء التقارير والتحليلات"
+        },
+        "customFields": {
+          "name": "الحقول المخصصة",
+          "description": "تكوين تعريفات الحقول المخصصة"
+        }
+      },
+      "categories": {
+        "overview": "نظرة عامة",
+        "management": "الإدارة",
+        "analytics": "التحليلات",
+        "configuration": "التكوين"
+      }
+    },
+    "common": {
+      "save": "حفظ",
+      "cancel": "إلغاء",
+      "delete": "حذف",
+      "edit": "تعديل",
+      "view": "عرض",
+      "create": "إنشاء",
+      "search": "بحث",
+      "filter": "تصفية",
+      "export": "تصدير",
+      "loading": "جاري التحميل...",
+      "noData": "لا توجد بيانات",
+      "error": "حدث خطأ",
+      "retry": "إعادة المحاولة",
+      "success": "نجح",
+      "confirm": "تأكيد",
+      "close": "إغلاق"
+    }
+  }
+}
+

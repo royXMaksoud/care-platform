@@ -43,6 +43,9 @@ export function useAuth() {
         storedTimeout: authStorage.getSessionTimeoutMinutes(),
       })
 
+      // Set flag to prevent immediate logout after login
+      sessionStorage.setItem('just_logged_in', 'true')
+      
       // Small delay to ensure all data is written to localStorage
       setTimeout(() => {
         // Verify data was saved
@@ -54,6 +57,7 @@ export function useAuth() {
         console.log('✔️ Data verification before navigation:', verify)
 
         // Go home (ProtectedRoute will allow)
+        // The flag will be cleared in App.jsx when fetching user data
         window.location.href = '/'
       }, 100)
     } finally {

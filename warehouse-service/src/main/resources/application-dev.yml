@@ -1,0 +1,58 @@
+# Development profile configuration
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:warehouse_db}?currentSchema=public&searchPath=public
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:P@ssw0rd}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      schema: public
+  jpa:
+    hibernate:
+      # Use 'validate' instead of 'update' when using Flyway for migrations
+      # This prevents Hibernate from modifying the schema that Flyway manages
+      # 'validate' checks that the schema matches the entities without making changes
+      ddl-auto: validate
+    show-sql: true
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+    # Disable validation on migrate in dev mode - we handle repair in FlywayConfig
+    # This allows us to repair checksums before validation fails
+    validate-on-migrate: false
+    # Automatically repair checksums when they don't match (for development only)
+    # This fixes checksum mismatches when migration files are modified after being applied
+    # The FlywayConfig class will use this property to enable automatic repair
+    repair-on-migrate: true
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+
+logging:
+  level:
+    root: INFO
+    com.care.warehouse: DEBUG
+    org.springframework.web: DEBUG
+    org.hibernate.SQL: DEBUG
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+    healthcheck:
+      enabled: true
+  instance:
+    prefer-ip-address: true
+    hostname: localhost
+    instance-id: ${spring.application.name}:${server.port}
+    lease-renewal-interval-in-seconds: 5
+    lease-expiration-duration-in-seconds: 15
+    status-page-url: http://${eureka.instance.hostname}:${server.port}/actuator/info
+    health-check-url: http://${eureka.instance.hostname}:${server.port}/actuator/health
+    health-check-url-path: /actuator/health
+
